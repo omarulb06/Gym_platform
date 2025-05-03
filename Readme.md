@@ -1,143 +1,129 @@
-
-# Gym Management Platform - Project Description
+# Gym Management Platform
 
 ## Project Overview
+The Gym Management Platform simplifies scheduling and managing training sessions for personal trainers, gym managers, and clients. It enables gym managers to manage gyms and trainers, clients to book sessions, and trainers to create personalized programs. The platform includes a scheduling optimization algorithm for efficient session management.
 
-This project aims to develop a **Gym Management Platform** that facilitates the management of training sessions for both **customers** and **personal trainers**. The platform will allow customers to **schedule sessions** with their preferred trainer, while trainers can **create personalized training programs** for customers. Additionally, the platform will feature an **algorithm to find the optimal schedule** for both trainers and customers.
+## Objectives
+- **Gym Management**: Manage gyms and assign trainers (one-to-many relationship).
+- **Trainer Management**: Handle trainer details, gym associations, and clients.
+- **Customer Management**: Allow session bookings, memberships, and trainer interactions.
+- **Schedule Optimization**: Algorithm-driven scheduling based on availability.
+- **Personalized Programs**: Trainers create custom programs for clients.
+- **Access Control**: Role-based access (Admin, Manager, Trainer, Customer, Visitor).
 
-The system will consist of:
-- A **web interface** for both trainers and customers.
-- A **backend system** for managing data related to users, sessions, schedules, and gym memberships.
-- **API endpoints** to enable interaction between the frontend and backend.
+## Entities
 
-## System Features
+### Gym
+**Attributes**:
+- **Gym ID** (Primary Key)
+- **Gym Name**
+- **Address**
+- **Contact Number**
+- **Email**
+- **Trainers** (linked via relationship)
 
-### 1. User Roles
-The platform will support two main user roles:
-- **Customers:** Users who sign up and book training sessions.
-- **Trainers:** Users who manage training sessions and programs for customers. They can be **associated with gyms** or operate independently.
+**Description**:  
+A physical location with multiple trainers. Trainers are linked to one gym; clients book sessions at the gym.
 
-### 2. Trainer & Customer Associations
-- **Trainer-Gym Association:** A trainer can be associated with one or more gyms.
-- **Customer-Training Association:** A customer can be related to:
-  - A specific gym and its available trainers.
-  - A specific trainer but not tied to a gym.
-  - Neither (in this case, the customer can only browse the available information without being able to book sessions).
+---
 
-### 3. Scheduling System
-- Customers will be able to **view available trainers** and **book training sessions** based on the trainer's schedule.
-- Trainers will input their **availability** and allow customers to choose a time for training.
-- The system will also allow the creation of **personalized programs** for customers based on their fitness goals.
+### Trainer
+**Attributes**:
+- **Trainer ID** (Primary Key)
+- **Name**
+- **Email**
+- **Phone Number**
+- **Associated Gym** (one gym)
+- **Clients** (linked via relationship)
+- **Schedule** (session availability)
 
-### 4. Trainer & Gym Association
-- Each trainer can be linked to one or more gyms, and a gym can have multiple trainers working at the same time.
-- Trainers who are **not associated with any gym** can still work independently and provide training sessions for customers.
+**Description**:  
+Trainers create personalized programs and manage schedules. They can work independently or be linked to a gym.
 
-### 5. Customer Preferences & Scheduling Algorithm
-- Customers can specify their preferred training times (e.g., afternoons, weekends).
-- The system will have an **optimal scheduling algorithm** that finds the best available time for a session based on the **trainer’s availability** and the **customer’s preferences**.
-- The system will check for **conflicts** in the schedule and suggest time slots when both the customer and trainer are available.
+---
 
-### 6. Customer Profile and Membership
-- Customers will have a **profile** that includes their personal information, goals, and preferences for training times.
-- A customer can be **part of a gym** or work with a **freelance trainer**.
-- **Gym members** will have access to trainers within that gym, while customers working with freelance trainers will book independently of a gym’s schedule.
+### Customer
+**Attributes**:
+- **Customer ID** (Primary Key)
+- **Name**
+- **Email**
+- **Phone Number**
+- **Membership Type** (Gym and/or Trainer)
+- **Associated Trainers**
+- **Gym Membership** (if applicable)
+- **Schedule** (session bookings)
 
-### 7. Training Session Management
-- Both trainers and customers can view upcoming and past sessions.
-- Trainers will be able to **create, modify, and delete training programs** for customers.
-- **Session reminders** will be sent to customers and trainers before each session to ensure punctuality.
+**Description**:  
+Customers book sessions with trainers (at a gym or privately). Memberships can be gym-based or trainer-specific.
 
-## Data Models and Relationships
+---
 
-### 1. Users
-- **Customers**
-  - `id`: Unique identifier for the customer.
-  - `first_name`: First name of the customer.
-  - `last_name`: Last name of the customer.
-  - `email`: Email address.
-  - `phone_number`: Customer's phone number.
-  - `status`: Whether the customer is a **gym member** or **freelance trainer client**.
+## Functionalities
 
-- **Trainers**
-  - `id`: Unique identifier for the trainer.
-  - `first_name`: First name of the trainer.
-  - `last_name`: Last name of the trainer.
-  - `email`: Email address.
-  - `phone_number`: Trainer's phone number.
-  - `gym_id`: The gym the trainer is associated with (nullable if independent).
-  - `specialty`: The fitness area the trainer specializes in (e.g., weightlifting, yoga).
+### 1. Gym Management
+- Manager: Add/edit/remove gyms, assign trainers.
+- View trainers per gym.
 
-### 2. Gyms
-- **Gyms**
-  - `id`: Unique identifier for the gym.
-  - `name`: Name of the gym.
-  - `location`: Location of the gym.
-  - `contact_number`: Gym's contact number.
-  
-### 3. Sessions
-- **Sessions**
-  - `id`: Unique identifier for the session.
-  - `trainer_id`: The ID of the trainer for the session.
-  - `customer_id`: The ID of the customer for the session.
-  - `start_time`: Start time of the session.
-  - `end_time`: End time of the session.
-  - `session_type`: Type of session (e.g., one-on-one, group session).
+### 2. Trainer Management
+- Trainers create programs and set availability.
+- Add/edit/remove assign customers.
 
-### 4. Scheduling
-- **Availability**
-  - `id`: Unique identifier for availability.
-  - `trainer_id`: The ID of the trainer providing availability.
-  - `start_time`: Start time of the available time slot.
-  - `end_time`: End time of the available time slot.
+### 3. Customer Management
+- Customers view/book trainers.
+- Admin manages accounts and memberships.
 
-### 5. Programs
-- **Programs**
-  - `id`: Unique identifier for the program.
-  - `trainer_id`: The ID of the trainer who created the program.
-  - `customer_id`: The ID of the customer who will follow the program.
-  - `program_name`: Name of the program (e.g., "Beginner Fitness").
-  - `description`: Detailed description of the program.
+### 4. Scheduling System
+- Algorithm optimizes schedules to avoid conflicts.
+- Real-time updates for trainer availability.
 
-## User Interface (UI)
+### 5. Communication
+- Notifications for bookings/cancellations.
+- Email/SMS reminders for sessions.
 
-The web interface will allow customers and trainers to interact with the platform through the following features:
+---
 
-### 1. Customer UI
-- **Login/Registration:** Customers will be able to create an account and log in to access their personalized dashboard.
-- **Trainer Search:** Customers can search for trainers by specialty and gym.
-- **Schedule a Session:** Customers can view available time slots for their preferred trainer and book a session.
-- **Profile Management:** Customers can update their personal information and session preferences.
-
-### 2. Trainer UI
-- **Login/Registration:** Trainers will create their accounts and set up their availability.
-- **Manage Sessions:** Trainers will be able to manage their scheduled sessions with customers.
-- **Create Programs:** Trainers can create personalized training programs for each customer based on their goals.
-- **View Bookings:** Trainers will be able to see all upcoming sessions with customers and manage them.
-
-### 3. Admin UI (Manager)
-- **Gym Management:** The admin (gym manager) can add or remove gyms and assign trainers to gyms.
-- **Manage Trainers and Customers:** The admin can view, add, or remove trainers and customers from the system.
-
-## Technologies
+## Technology Stack
 
 ### Frontend
-- **HTML, CSS, JavaScript** for the web interface.
-- **React.js** (optional for dynamic and responsive user interfaces).
+- **HTML5**: Website structure.
+- **CSS3**: Styling and responsiveness.
+- **JavaScript**: Dynamic content.
 
 ### Backend
-- **Flask (Python)** to build the API and handle business logic.
-- **MySQL** for managing the database and storing data related to users, trainers, gyms, sessions, and programs.
-- **SQLAlchemy** (optional for ORM support) to simplify interactions with the database.
+- **Python (Flask)**: RESTful APIs and logic.
+- **MySQL**: Database management.
 
-### API
-- RESTful API for communication between the frontend and backend.
-- Endpoints for managing users, sessions, programs, and availability.
+### Scheduling Algorithm
+- **Greedy Algorithm**: Minimizes scheduling conflicts.
 
-### Hosting/Deployment
-- **Heroku**, **AWS**, or **DigitalOcean** to host the web app and the backend.
-- **MySQL Database** hosted on the cloud or locally.
+### Additional Libraries
+- **SQLAlchemy**: Database interaction.
+
+---
+
+## Flowchart
+
+### 1. User Authentication
+- Role-based access (Admin, Manager, Trainer, Customer).
+
+### 2. Gym/Trainer/Customer Interactions
+- Admin manages gyms/trainers.
+- Trainers manage programs/schedules.
+- Customers book sessions.
+
+### 3. Scheduling and Optimization
+- System checks trainer availability before booking.
+- Algorithm updates schedules dynamically.
+
+---
+
+## Non-Functional Requirements
+- **Scalability**: Support growing user base.
+- **Security**: Encrypt sensitive data (e.g., passwords).
+- **Performance**: Fast response times for bookings.
+- **Usability**: Intuitive interface for all roles.
+
+---
 
 ## Conclusion
-
-This platform will streamline the management of gym sessions, making it easier for trainers to manage their schedules and customers to find available trainers. The system’s scheduling algorithm will optimize session timings, and its ability to manage both gym and freelance trainers will provide flexibility for both trainers and customers.
+The Gym Management Platform streamlines gym operations by automating scheduling, memberships, and personalized training programs. It enhances efficiency for managers, trainers, and clients, creating a seamless fitness management experience.
