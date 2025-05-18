@@ -1,129 +1,181 @@
 # Gym Management Platform
 
 ## Project Overview
-The Gym Management Platform simplifies scheduling and managing training sessions for personal trainers, gym managers, and clients. It enables gym managers to manage gyms and trainers, clients to book sessions, and trainers to create personalized programs. The platform includes a scheduling optimization algorithm for efficient session management.
 
-## Objectives
-- **Gym Management**: Manage gyms and assign trainers (one-to-many relationship).
-- **Trainer Management**: Handle trainer details, gym associations, and clients.
-- **Customer Management**: Allow session bookings, memberships, and trainer interactions.
-- **Schedule Optimization**: Algorithm-driven scheduling based on availability.
-- **Personalized Programs**: Trainers create custom programs for clients.
-- **Access Control**: Role-based access (Admin, Manager, Trainer, Customer, Visitor).
+The Gym Management Platform is a comprehensive web-based solution designed to streamline the interaction between gym customers and personal trainers. The platform facilitates session scheduling, program management, and optimal time slot allocation for training sessions.
 
-## Entities
+## Core Features
 
-### Gym
-**Attributes**:
-- **Gym ID** (Primary Key)
-- **Gym Name**
-- **Address**
-- **Contact Number**
-- **Email**
-- **Trainers** (linked via relationship)
+### User Management
+- **Customer Portal**
+  - Account creation and profile management
+  - Session booking and scheduling
+  - Program tracking and progress monitoring
+  - Preference settings for training times
 
-**Description**:  
-A physical location with multiple trainers. Trainers are linked to one gym; clients book sessions at the gym.
+- **Trainer Portal**
+  - Profile and availability management
+  - Session scheduling and management
+  - Program creation and customization
+  - Client progress tracking
 
----
+- **Admin Portal**
+  - Gym and trainer management
+  - User oversight and system administration
+  - Analytics and reporting
 
-### Trainer
-**Attributes**:
-- **Trainer ID** (Primary Key)
-- **Name**
-- **Email**
-- **Phone Number**
-- **Associated Gym** (one gym)
-- **Clients** (linked via relationship)
-- **Schedule** (session availability)
+### Key Functionalities
+- Smart scheduling system with conflict resolution
+- Personalized training program creation
+- Real-time availability tracking
+- Automated session reminders
+- Multi-gym support for trainers
 
-**Description**:  
-Trainers create personalized programs and manage schedules. They can work independently or be linked to a gym.
+## Database Structure
 
----
+### Users Table
+```sql
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone_number VARCHAR(20),
+    password_hash VARCHAR(255) NOT NULL,
+    user_type ENUM('customer', 'trainer', 'admin') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
 
-### Customer
-**Attributes**:
-- **Customer ID** (Primary Key)
-- **Name**
-- **Email**
-- **Phone Number**
-- **Membership Type** (Gym and/or Trainer)
-- **Associated Trainers**
-- **Gym Membership** (if applicable)
-- **Schedule** (session bookings)
+### Gyms Table
+```sql
+CREATE TABLE gyms (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    contact_number VARCHAR(20),
+    address TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
 
-**Description**:  
-Customers book sessions with trainers (at a gym or privately). Memberships can be gym-based or trainer-specific.
+### Trainer_Gym_Association Table
+```sql
+CREATE TABLE trainer_gym_association (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    trainer_id INT NOT NULL,
+    gym_id INT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (trainer_id) REFERENCES users(id),
+    FOREIGN KEY (gym_id) REFERENCES gyms(id)
+);
+```
 
----
+### Trainer_Profiles Table
+```sql
+CREATE TABLE trainer_profiles (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    specialty VARCHAR(100),
+    certification TEXT,
+    experience_years INT,
+    hourly_rate DECIMAL(10,2),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
 
-## Functionalities
+### Customer_Profiles Table
+```sql
+CREATE TABLE customer_profiles (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    fitness_goals TEXT,
+    medical_conditions TEXT,
+    preferred_training_times JSON,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
 
-### 1. Gym Management
-- Manager: Add/edit/remove gyms, assign trainers.
-- View trainers per gym.
+### Sessions Table
+```sql
+CREATE TABLE sessions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    trainer_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    gym_id INT,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    status ENUM('scheduled', 'completed', 'cancelled') DEFAULT 'scheduled',
+    session_type ENUM('one-on-one', 'group') DEFAULT 'one-on-one',
+    notes TEXT,
+    FOREIGN KEY (trainer_id) REFERENCES users(id),
+    FOREIGN KEY (customer_id) REFERENCES users(id),
+    FOREIGN KEY (gym_id) REFERENCES gyms(id)
+);
+```
 
-### 2. Trainer Management
-- Trainers create programs and set availability.
-- Add/edit/remove assign customers.
+### Training_Programs Table
+```sql
+CREATE TABLE training_programs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    trainer_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    status ENUM('active', 'completed', 'cancelled') DEFAULT 'active',
+    FOREIGN KEY (trainer_id) REFERENCES users(id),
+    FOREIGN KEY (customer_id) REFERENCES users(id)
+);
+```
 
-### 3. Customer Management
-- Customers view/book trainers.
-- Admin manages accounts and memberships.
+### Program_Exercises Table
+```sql
+CREATE TABLE program_exercises (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    program_id INT NOT NULL,
+    exercise_name VARCHAR(100) NOT NULL,
+    sets INT,
+    reps INT,
+    duration INT,
+    notes TEXT,
+    FOREIGN KEY (program_id) REFERENCES training_programs(id)
+);
+```
 
-### 4. Scheduling System
-- Algorithm optimizes schedules to avoid conflicts.
-- Real-time updates for trainer availability.
-
-### 5. Communication
-- Notifications for bookings/cancellations.
-- Email/SMS reminders for sessions.
-
----
-
-## Technology Stack
+## Technical Stack
 
 ### Frontend
-- **HTML5**: Website structure.
-- **CSS3**: Styling and responsiveness.
-- **JavaScript**: Dynamic content.
+- NiceGUI for modern, responsive web interface
+- Built-in components and styling
+- Real-time updates and interactive elements
+- Easy integration with Python backend
 
 ### Backend
-- **Python (Flask)**: RESTful APIs and logic.
-- **MySQL**: Database management.
+- Python Flask framework
+- RESTful API architecture
+- JWT authentication
 
-### Scheduling Algorithm
-- **Greedy Algorithm**: Minimizes scheduling conflicts.
+### Database
+- MySQL for data persistence
+- SQLAlchemy ORM for database operations
 
-### Additional Libraries
-- **SQLAlchemy**: Database interaction.
+## Getting Started
 
----
-
-## Flowchart
-
-### 1. User Authentication
-- Role-based access (Admin, Manager, Trainer, Customer).
-
-### 2. Gym/Trainer/Customer Interactions
-- Admin manages gyms/trainers.
-- Trainers manage programs/schedules.
-- Customers book sessions.
-
-### 3. Scheduling and Optimization
-- System checks trainer availability before booking.
-- Algorithm updates schedules dynamically.
-
----
-
-## Non-Functional Requirements
-- **Scalability**: Support growing user base.
-- **Security**: Encrypt sensitive data (e.g., passwords).
-- **Performance**: Fast response times for bookings.
-- **Usability**: Intuitive interface for all roles.
-
----
-
-## Conclusion
-The Gym Management Platform streamlines gym operations by automating scheduling, memberships, and personalized training programs. It enhances efficiency for managers, trainers, and clients, creating a seamless fitness management experience.
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   npm install
+   ```
+3. Set up the database:
+   ```bash
+   python scripts/init_db.py
+   ```
+4. Run the development server:
+   ```bash
+   python app.py
+   npm start
+   ```
