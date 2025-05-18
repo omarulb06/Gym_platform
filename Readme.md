@@ -172,7 +172,7 @@ CREATE TABLE program_exercises (
    ```
 3. Set up the database:
    ```bash
-   python scripts/init_db.py
+   python seed_data.py
    ```
 4. Run the development server:
    ```bash
