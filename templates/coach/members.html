@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}My Members - PowerFit{% endblock %}
+
+{% block role_title %}My Members{% endblock %}
+
+{% block sidebar %}
+<a href="/dashboard" class="block py-2 px-4 hover:bg-indigo-700">Dashboard</a>
+<a href="/coach/members" class="block py-2 px-4 bg-indigo-900">My Members</a>
+<a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">Schedule</a>
+<a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">Progress</a>
+{% endblock %}
+
+{% block content_title %}My Members{% endblock %}
+
+{% block content %}
+<!-- Search and Filter -->
+<div class="mb-6 flex flex-col md:flex-row gap-4">
+    <div class="flex-1">
+        <input type="text" id="search-member" placeholder="Search members..." 
+               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    </div>
+    <div class="flex gap-4">
+        <select id="filter-status" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+        </select>
+        <select id="filter-membership" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="all">All Memberships</option>
+            <option value="basic">Basic</option>
+            <option value="premium">Premium</option>
+            <option value="vip">VIP</option>
+        </select>
+    </div>
+</div>
+
+<!-- Members Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="members-grid">
+    <!-- Member cards will be loaded here -->
+</div>
+
+<!-- Loading Indicator -->
+<div id="loading" class="hidden text-center py-8">
+    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent"></div>
+    <p class="mt-2 text-gray-600">Loading members...</p>
+</div>
+
+<!-- No Results Message -->
+<div id="no-results" class="hidden text-center py-8">
+    <p class="text-gray-600">No members found matching your criteria.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allMembers = [];
+    const searchInput = document.getElementById('search-member');
+    const statusFilter = document.getElementById('filter-status');
+    const membershipFilter = document.getElementById('filter-membership');
+    const membersGrid = document.getElementById('members-grid');
+    const loadingIndicator = document.getElementById('loading');
+    const noResultsMessage = document.getElementById('no-results');
+
+    // Load members
+    async function loadMembers() {
+        try {
+            loadingIndicator.classList.remove('hidden');
+            membersGrid.innerHTML = '';
+            noResultsMessage.classList.add('hidden');
+
+            const response = await fetch('/api/coach/members');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to load members');
+            }
+            
+            allMembers = await response.json();
+            console.log('Loaded members:', allMembers); // Debug log
+            
+            if (!Array.isArray(allMembers)) {
+                throw new Error('Invalid response format');
+            }
+            
+            filterAndDisplayMembers();
+        } catch (error) {
+            console.error('Error loading members:', error);
+            membersGrid.innerHTML = `
+                <div class="col-span-full text-center py-8">
+                    <p class="text-red-500">Error loading members: ${error.message}</p>
+                    <button onclick="loadMembers()" class="mt-4 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">
+                        Try Again
+                    </button>
+                </div>
+            `;
+        } finally {
+            loadingIndicator.classList.add('hidden');
+        }
+    }
+
+    // Filter and display members
+    function filterAndDisplayMembers() {
+        if (!Array.isArray(allMembers)) {
+            console.error('allMembers is not an array:', allMembers);
+            return;
+        }
+
+        const searchTerm = searchInput.value.toLowerCase();
+        const statusValue = statusFilter.value;
+        const membershipValue = membershipFilter.value;
+
+        const filteredMembers = allMembers.filter(member => {
+            if (!member || typeof member !== 'object') {
+                console.error('Invalid member data:', member);
+                return false;
+            }
+
+            const matchesSearch = (member.name || '').toLowerCase().includes(searchTerm) ||
+                                (member.email || '').toLowerCase().includes(searchTerm);
+            const matchesStatus = statusValue === 'all' || member.status === statusValue;
+            const matchesMembership = membershipValue === 'all' || member.membership_type === membershipValue;
+
+            return matchesSearch && matchesStatus && matchesMembership;
+        });
+
+        if (filteredMembers.length === 0) {
+            noResultsMessage.classList.remove('hidden');
+            membersGrid.innerHTML = '';
+            return;
+        }
+
+        noResultsMessage.classList.add('hidden');
+        membersGrid.innerHTML = filteredMembers.map(member => `
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-indigo-500"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="font-semibold">${member.name || 'Unknown'}</h3>
+                        <p class="text-sm text-gray-500">${member.email || 'No email'}</p>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Membership:</span>
+                        <span class="font-medium">${member.membership_type || 'Basic'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Status:</span>
+                        <span class="font-medium ${member.status === 'active' ? 'text-green-500' : 'text-red-500'}">
+                            ${member.status || 'unknown'}
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Sessions:</span>
+                        <span class="font-medium">${member.total_sessions || 0}</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t">
+                    <button onclick="viewMemberDetails(${member.id})" 
+                            class="w-full bg-indigo-500 text-white py-2 rounded-lg hover:bg-indigo-600 transition-colors">
+                        View Details
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // View member details
+    function viewMemberDetails(memberId) {
+        if (!memberId) {
+            console.error('Invalid member ID');
+            return;
+        }
+        window.location.href = `/coach/members/${memberId}`;
+    }
+
+    // Event listeners
+    searchInput.addEventListener('input', filterAndDisplayMembers);
+    statusFilter.addEventListener('change', filterAndDisplayMembers);
+    membershipFilter.addEventListener('change', filterAndDisplayMembers);
+
+    // Load members when page loads
+    document.addEventListener('DOMContentLoaded', loadMembers);
+</script>
+{% endblock %} 
