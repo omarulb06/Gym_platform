@@ -1,181 +1,122 @@
-# Gym Management Platform
+# PowerFit - Gym Management Platform
 
-## Project Overview
+A modern web-based gym management system that connects gyms, coaches, and members in a seamless platform.
 
-The Gym Management Platform is a comprehensive web-based solution designed to streamline the interaction between gym customers and personal trainers. The platform facilitates session scheduling, program management, and optimal time slot allocation for training sessions.
+## Features
 
-## Core Features
+### For Gyms
+- Manage multiple coaches and members
+- Track membership types and status
+- Monitor session schedules
+- View gym statistics and performance metrics
 
-### User Management
-- **Customer Portal**
-  - Account creation and profile management
-  - Session booking and scheduling
-  - Program tracking and progress monitoring
-  - Preference settings for training times
+### For Coaches
+- Manage assigned members
+- Schedule and track training sessions
+- View member progress and history
+- Access daily schedule and upcoming sessions
 
-- **Trainer Portal**
-  - Profile and availability management
-  - Session scheduling and management
-  - Program creation and customization
-  - Client progress tracking
+### For Members
+- View assigned coach information
+- Track training sessions and progress
+- Manage membership details
+- Access session history
 
-- **Admin Portal**
-  - Gym and trainer management
-  - User oversight and system administration
-  - Analytics and reporting
+## Tech Stack
 
-### Key Functionalities
-- Smart scheduling system with conflict resolution
-- Personalized training program creation
-- Real-time availability tracking
-- Automated session reminders
-- Multi-gym support for trainers
+- **Backend**: FastAPI (Python)
+- **Database**: MySQL
+- **Frontend**: HTML, Tailwind CSS, JavaScript
+- **Authentication**: Session-based authentication
 
-## Database Structure
+## Prerequisites
 
-### Users Table
-```sql
-CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    phone_number VARCHAR(20),
-    password_hash VARCHAR(255) NOT NULL,
-    user_type ENUM('customer', 'trainer', 'admin') NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+- Python 3.7+
+- MySQL Server
+- pip (Python package manager)
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd gym-management-platform
 ```
 
-### Gyms Table
-```sql
-CREATE TABLE gyms (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    location VARCHAR(255) NOT NULL,
-    contact_number VARCHAR(20),
-    address TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+2. Install required Python packages:
+```bash
+pip install -r requirements.txt
 ```
 
-### Trainer_Gym_Association Table
-```sql
-CREATE TABLE trainer_gym_association (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    trainer_id INT NOT NULL,
-    gym_id INT NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    FOREIGN KEY (trainer_id) REFERENCES users(id),
-    FOREIGN KEY (gym_id) REFERENCES gyms(id)
-);
+3. Set up the MySQL database:
+```bash
+mysql -u root -p
+CREATE DATABASE trainer_app;
 ```
 
-### Trainer_Profiles Table
-```sql
-CREATE TABLE trainer_profiles (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    specialty VARCHAR(100),
-    certification TEXT,
-    experience_years INT,
-    hourly_rate DECIMAL(10,2),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
+4. Configure the database connection in `api.py`:
+```python
+def get_db_connection():
+    return pymysql.connect(
+        host="localhost",
+        user="your_username",
+        password="your_password",
+        database="trainer_app",
+        cursorclass=pymysql.cursors.DictCursor
+    )
 ```
 
-### Customer_Profiles Table
-```sql
-CREATE TABLE customer_profiles (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    fitness_goals TEXT,
-    medical_conditions TEXT,
-    preferred_training_times JSON,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
+## Running the Application
+
+1. Start the FastAPI server:
+```bash
+python api.py
 ```
 
-### Sessions Table
-```sql
-CREATE TABLE sessions (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    trainer_id INT NOT NULL,
-    customer_id INT NOT NULL,
-    gym_id INT,
-    start_time DATETIME NOT NULL,
-    end_time DATETIME NOT NULL,
-    status ENUM('scheduled', 'completed', 'cancelled') DEFAULT 'scheduled',
-    session_type ENUM('one-on-one', 'group') DEFAULT 'one-on-one',
-    notes TEXT,
-    FOREIGN KEY (trainer_id) REFERENCES users(id),
-    FOREIGN KEY (customer_id) REFERENCES users(id),
-    FOREIGN KEY (gym_id) REFERENCES gyms(id)
-);
+2. Access the application at:
+```
+http://localhost:8000
 ```
 
-### Training_Programs Table
-```sql
-CREATE TABLE training_programs (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    trainer_id INT NOT NULL,
-    customer_id INT NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    start_date DATE NOT NULL,
-    end_date DATE,
-    status ENUM('active', 'completed', 'cancelled') DEFAULT 'active',
-    FOREIGN KEY (trainer_id) REFERENCES users(id),
-    FOREIGN KEY (customer_id) REFERENCES users(id)
-);
+## Test Data
+
+The application includes endpoints to create test data:
+
+1. Create a test coach:
+```
+http://localhost:8000/api/create-test-coach
 ```
 
-### Program_Exercises Table
-```sql
-CREATE TABLE program_exercises (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    program_id INT NOT NULL,
-    exercise_name VARCHAR(100) NOT NULL,
-    sets INT,
-    reps INT,
-    duration INT,
-    notes TEXT,
-    FOREIGN KEY (program_id) REFERENCES training_programs(id)
-);
+2. Create test members and sessions:
+```
+http://localhost:8000/api/create-test-data
 ```
 
-## Technical Stack
+## API Endpoints
 
-### Frontend
-- NiceGUI for modern, responsive web interface
-- Built-in components and styling
-- Real-time updates and interactive elements
-- Easy integration with Python backend
+### Authentication
+- `POST /api/login` - User login
 
-### Backend
-- Python Flask framework
-- RESTful API architecture
-- JWT authentication
+### Gym Endpoints
+- `GET /api/gym/{gym_id}/coaches` - Get gym coaches
+- `GET /api/gym/{gym_id}/members` - Get gym members
+- `GET /api/gym/{gym_id}/sessions` - Get gym sessions
 
-### Database
-- MySQL for data persistence
-- SQLAlchemy ORM for database operations
+### Coach Endpoints
+- `GET /api/coach/members` - Get coach's members
+- `GET /api/coach/{coach_id}/schedule` - Get coach's schedule
+- `POST /api/coach/sessions` - Schedule new session
 
-## Getting Started
+### Member Endpoints
+- `GET /api/member/{member_id}/sessions` - Get member's sessions
+- `GET /api/member/{member_id}/coach` - Get member's coach
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   npm install
-   ```
-3. Set up the database:
-   ```bash
-   python scripts/init_db.py
-   ```
-4. Run the development server:
-   ```bash
-   python app.py
-   npm start
-   ```
+## Database Schema
+
+The application uses the following main tables:
+- `gyms` - Gym information
+- `coaches` - Coach details
+- `members` - Member information
+- `sessions` - Training sessions
+- `member_coach` - Member-Coach relationships
+
