@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Coach Dashboard - PowerFit{% endblock %}
+
+{% block role_title %}Coach Dashboard{% endblock %}
+
+{% block sidebar %}
+<a href="/dashboard" class="block py-2 px-4 bg-indigo-900">Dashboard</a>
+<a href="/coach/members" class="block py-2 px-4 hover:bg-indigo-700">My Members</a>
+<a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">Schedule</a>
+<a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">Progress</a>
+{% endblock %}
+
+{% block content_title %}Coach Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 bg-blue-100 rounded-full">
+                <i class="fas fa-users text-blue-500"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-gray-500">Total Members</p>
+                <p class="text-2xl font-semibold">{{ stats.total_members }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 bg-purple-100 rounded-full">
+                <i class="fas fa-calendar-check text-purple-500"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-gray-500">Total Sessions</p>
+                <p class="text-2xl font-semibold">{{ stats.total_sessions }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 bg-orange-100 rounded-full">
+                <i class="fas fa-clock text-orange-500"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-gray-500">Upcoming Sessions</p>
+                <p class="text-2xl font-semibold">{{ stats.upcoming_sessions }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Schedule -->
+<div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-xl font-semibold mb-4">Today's Schedule</h3>
+    <div class="space-y-4" id="today-schedule">
+        <!-- Schedule items will be loaded here -->
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load today's schedule
+    async function loadTodaySchedule() {
+        try {
+            const response = await fetch('/api/coach/schedule/today');
+            const schedule = await response.json();
+            const scheduleContainer = document.getElementById('today-schedule');
+            
+            if (schedule.length === 0) {
+                scheduleContainer.innerHTML = '<p class="text-gray-500">No sessions scheduled for today</p>';
+                return;
+            }
+            
+            scheduleContainer.innerHTML = schedule.map(session => `
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded">
+                    <div class="flex items-center">
+                        <i class="fas fa-user text-blue-500 mr-3"></i>
+                        <div>
+                            <p class="font-medium">${session.member_name}</p>
+                            <p class="text-sm text-gray-500">${session.session_type || 'Training Session'}</p>
+                        </div>
+                    </div>
+                    <span class="text-sm text-gray-500">${session.session_time}</span>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading schedule:', error);
+        }
+    }
+
+    // Load schedule when page loads
+    document.addEventListener('DOMContentLoaded', loadTodaySchedule);
+</script>
+{% endblock %} 
