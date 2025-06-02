@@ -21,9 +21,6 @@
                     </div>
                     <div class="flex items-center">
                         <span class="text-gray-600">{{ user.name }}</span>
-                        <button onclick="logout()" class="ml-4 text-gray-600 hover:text-gray-800">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -120,7 +117,7 @@
 
     <script>
         // Get member ID from URL
-        const memberId = window.location.pathname.split('/').pop();
+        const memberId = window.location.pathname.split('/')[3]; // Get the member ID from the URL path
 
         // Add exercise field
         function addExercise() {
@@ -146,25 +143,44 @@
         document.getElementById('addSessionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // Validate member ID
+            if (!memberId || isNaN(memberId)) {
+                alert('Invalid member ID');
+                return;
+            }
+
             // Get all exercises
             const exercises = Array.from(document.getElementsByName('exercises[]'))
                 .map(input => input.value)
                 .filter(value => value.trim() !== '');
 
-            // Create workout notes
+            // Validate required fields
+            const sessionDate = document.getElementById('sessionDate').value;
+            const sessionTime = document.getElementById('sessionTime').value;
+            const duration = document.getElementById('duration').value;
             const workoutType = document.getElementById('workoutType').value;
+
+            if (!sessionDate || !sessionTime || !duration || !workoutType) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            // Create workout notes
             let notes = `Workout Type: ${workoutType}\n`;
             exercises.forEach((exercise, index) => {
                 notes += `${index + 1}. ${exercise}\n`;
             });
-            notes += document.getElementById('notes').value;
+            const additionalNotes = document.getElementById('notes').value;
+            if (additionalNotes) {
+                notes += `\nAdditional Notes:\n${additionalNotes}`;
+            }
 
             // Prepare session data
             const sessionData = {
-                member_id: memberId,
-                session_date: document.getElementById('sessionDate').value,
-                session_time: document.getElementById('sessionTime').value,
-                duration: parseInt(document.getElementById('duration').value),
+                member_id: parseInt(memberId),
+                session_date: sessionDate,
+                session_time: sessionTime,
+                duration: parseInt(duration),
                 notes: notes
             };
 
@@ -177,16 +193,17 @@
                     body: JSON.stringify(sessionData)
                 });
 
+                const result = await response.json();
+
                 if (!response.ok) {
-                    throw new Error('Failed to create session');
+                    throw new Error(result.detail || 'Failed to create session');
                 }
 
-                const result = await response.json();
                 alert('Session created successfully!');
                 window.close();
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to create session. Please try again.');
+                alert(error.message || 'Failed to create session. Please try again.');
             }
         });
 
