@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Progress Tracking - PowerFit{% endblock %}
+
+{% block content %}
+    <!-- Welcome Section -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Progress Tracking</h3>
+            <p class="mt-1 text-sm text-gray-500">Monitor and analyze member progress</p>
+        </div>
+    </div>
+
+    <!-- Member Selection -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0 md:space-x-4">
+                <div class="flex-1 min-w-0">
+                    <select id="memberSelect" 
+                            class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md sm:text-sm">
+                        <option value="">Select a member...</option>
+                        <!-- Members will be populated here -->
+                    </select>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <select id="timeRange" 
+                            class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md sm:text-sm">
+                        <option value="week">Last Week</option>
+                        <option value="month">Last Month</option>
+                        <option value="quarter">Last 3 Months</option>
+                        <option value="year">Last Year</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <!-- Sessions Completed -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+                        <i class="fas fa-calendar-check text-white text-xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Sessions Completed</dt>
+                            <dd class="flex items-baseline">
+                                <div class="text-2xl font-semibold text-gray-900" id="sessionsCompleted">-</div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Rate -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+                        <i class="fas fa-chart-line text-white text-xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Attendance Rate</dt>
+                            <dd class="flex items-baseline">
+                                <div class="text-2xl font-semibold text-gray-900" id="attendanceRate">-</div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Most Common Workout -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-purple-500 rounded-md p-3">
+                        <i class="fas fa-dumbbell text-white text-xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Most Common Workout</dt>
+                            <dd class="flex items-baseline">
+                                <div class="text-2xl font-semibold text-gray-900" id="commonWorkout">-</div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Charts -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Session History -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h4 class="text-lg font-medium text-gray-900 mb-4">Session History</h4>
+                <div class="h-64" id="sessionHistoryChart">
+                    <!-- Chart will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Workout Distribution -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h4 class="text-lg font-medium text-gray-900 mb-4">Workout Distribution</h4>
+                <div class="h-64" id="workoutDistributionChart">
+                    <!-- Chart will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sessions -->
+    <div class="bg-white shadow rounded-lg mt-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h4 class="text-lg font-medium text-gray-900 mb-4">Recent Sessions</h4>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="recentSessionsTable">
+                        <!-- Recent sessions will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block sidebar %}
+<a href="/coach/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-home mr-2"></i> Dashboard
+</a>
+<a href="/coach/members" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-users mr-2"></i> My Members
+</a>
+<a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-calendar mr-2"></i> Schedule
+</a>
+<a href="/coach/sessions" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-list mr-2"></i> All Sessions
+</a>
+<a href="/coach/progress" class="block py-2 px-4 bg-indigo-700">
+    <i class="fas fa-chart-line mr-2"></i> Progress
+</a>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let sessionHistoryChart;
+    let workoutDistributionChart;
+
+    // Load members for selection
+    async function loadMembers() {
+        try {
+            const response = await fetch('/api/coach/members');
+            const members = await response.json();
+            
+            const memberSelect = document.getElementById('memberSelect');
+            members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.id;
+                option.textContent = member.name;
+                memberSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading members:', error);
+        }
+    }
+
+    // Load progress data
+    async function loadProgressData(memberId, timeRange) {
+        try {
+            const response = await fetch(`/api/coach/progress/${memberId}?time_range=${timeRange}`);
+            const data = await response.json();
+            
+            // Update overview stats
+            document.getElementById('sessionsCompleted').textContent = data.sessions_completed;
+            document.getElementById('attendanceRate').textContent = `${data.attendance_rate}%`;
+            document.getElementById('commonWorkout').textContent = data.common_workout;
+
+            // Update session history chart
+            updateSessionHistoryChart(data.session_history);
+
+            // Update workout distribution chart
+            updateWorkoutDistributionChart(data.workout_distribution);
+
+            // Update recent sessions table
+            updateRecentSessionsTable(data.recent_sessions);
+        } catch (error) {
+            console.error('Error loading progress data:', error);
+        }
+    }
+
+    // Update session history chart
+    function updateSessionHistoryChart(data) {
+        const ctx = document.getElementById('sessionHistoryChart').getContext('2d');
+        
+        if (sessionHistoryChart) {
+            sessionHistoryChart.destroy();
+        }
+
+        sessionHistoryChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Sessions',
+                    data: data.values,
+                    borderColor: 'rgb(79, 70, 229)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Update workout distribution chart
+    function updateWorkoutDistributionChart(data) {
+        const ctx = document.getElementById('workoutDistributionChart').getContext('2d');
+        
+        if (workoutDistributionChart) {
+            workoutDistributionChart.destroy();
+        }
+
+        workoutDistributionChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: [
+                        'rgb(79, 70, 229)',
+                        'rgb(16, 185, 129)',
+                        'rgb(245, 158, 11)',
+                        'rgb(239, 68, 68)',
+                        'rgb(139, 92, 246)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // Update recent sessions table
+    function updateRecentSessionsTable(sessions) {
+        const table = document.getElementById('recentSessionsTable');
+        table.innerHTML = '';
+        
+        sessions.forEach(session => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.date}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${session.workout.type}</div>
+                    <div class="text-sm text-gray-500">${session.workout.exercises.length} exercises</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        ${session.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                          session.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
+                          'bg-yellow-100 text-yellow-800'}">
+                        ${session.status}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">${session.notes || '-'}</td>
+            `;
+            table.appendChild(row);
+        });
+    }
+
+    // Handle member selection change
+    document.getElementById('memberSelect').addEventListener('change', (e) => {
+        const memberId = e.target.value;
+        const timeRange = document.getElementById('timeRange').value;
+        if (memberId) {
+            loadProgressData(memberId, timeRange);
+        }
+    });
+
+    // Handle time range change
+    document.getElementById('timeRange').addEventListener('change', (e) => {
+        const memberId = document.getElementById('memberSelect').value;
+        const timeRange = e.target.value;
+        if (memberId) {
+            loadProgressData(memberId, timeRange);
+        }
+    });
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        loadMembers();
+    });
+</script>
+{% endblock %} 

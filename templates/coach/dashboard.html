@@ -2,98 +2,163 @@
 
 {% block title %}Coach Dashboard - PowerFit{% endblock %}
 
-{% block role_title %}Coach Dashboard{% endblock %}
+{% block content %}
+    <!-- Welcome Section -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Welcome, <span id="coachName">-</span></h3>
+            <p class="mt-1 text-sm text-gray-500">Here's an overview of your coaching activities</p>
+        </div>
+    </div>
 
-{% block sidebar %}
-<a href="/dashboard" class="block py-2 px-4 bg-indigo-900">Dashboard</a>
-<a href="/coach/members" class="block py-2 px-4 hover:bg-indigo-700">My Members</a>
-<a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">Schedule</a>
-<a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">Progress</a>
+    <!-- Stats Section -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <!-- Total Members -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+                    <i class="fas fa-users text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Total Members</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="total-members">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed Sessions -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+                    <i class="fas fa-calendar-check text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Completed Sessions</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="completed-sessions">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Sessions -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+                    <i class="fas fa-calendar text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Total Sessions</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="total-sessions">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Sessions -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-yellow-500 rounded-md p-3">
+                    <i class="fas fa-clock text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Upcoming Sessions</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="upcoming-sessions">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sessions -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Sessions</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="sessions-table">
+                        <!-- Sessions will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
-{% block content_title %}Coach Dashboard{% endblock %}
-
-{% block content %}
-<!-- Stats Grid -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-            <div class="p-3 bg-blue-100 rounded-full">
-                <i class="fas fa-users text-blue-500"></i>
-            </div>
-            <div class="ml-4">
-                <p class="text-gray-500">Total Members</p>
-                <p class="text-2xl font-semibold">{{ stats.total_members }}</p>
-            </div>
-        </div>
-    </div>
-    
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-            <div class="p-3 bg-purple-100 rounded-full">
-                <i class="fas fa-calendar-check text-purple-500"></i>
-            </div>
-            <div class="ml-4">
-                <p class="text-gray-500">Total Sessions</p>
-                <p class="text-2xl font-semibold">{{ stats.total_sessions }}</p>
-            </div>
-        </div>
-    </div>
-    
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-            <div class="p-3 bg-orange-100 rounded-full">
-                <i class="fas fa-clock text-orange-500"></i>
-            </div>
-            <div class="ml-4">
-                <p class="text-gray-500">Upcoming Sessions</p>
-                <p class="text-2xl font-semibold">{{ stats.upcoming_sessions }}</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Today's Schedule -->
-<div class="bg-white rounded-lg shadow p-6">
-    <h3 class="text-xl font-semibold mb-4">Today's Schedule</h3>
-    <div class="space-y-4" id="today-schedule">
-        <!-- Schedule items will be loaded here -->
-    </div>
-</div>
+{% block sidebar %}
+<a href="/coach/dashboard" class="block py-2 px-4 bg-indigo-700">
+    <i class="fas fa-home mr-2"></i> Dashboard
+</a>
+<a href="/coach/members" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-users mr-2"></i> My Members
+</a>
+<a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-calendar mr-2"></i> Schedule
+</a>
+<a href="/coach/sessions" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-list mr-2"></i> All Sessions
+</a>
+<a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-chart-line mr-2"></i> Progress
+</a>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Load today's schedule
-    async function loadTodaySchedule() {
+    // Load dashboard data
+    async function loadDashboardData() {
         try {
-            const response = await fetch('/api/coach/schedule/today');
-            const schedule = await response.json();
-            const scheduleContainer = document.getElementById('today-schedule');
+            const response = await fetch('/api/coach/dashboard');
+            const data = await response.json();
             
-            if (schedule.length === 0) {
-                scheduleContainer.innerHTML = '<p class="text-gray-500">No sessions scheduled for today</p>';
-                return;
-            }
+            // Update coach name
+            document.getElementById('coachName').textContent = data.coach.name;
             
-            scheduleContainer.innerHTML = schedule.map(session => `
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded">
-                    <div class="flex items-center">
-                        <i class="fas fa-user text-blue-500 mr-3"></i>
-                        <div>
-                            <p class="font-medium">${session.member_name}</p>
-                            <p class="text-sm text-gray-500">${session.session_type || 'Training Session'}</p>
-                        </div>
-                    </div>
-                    <span class="text-sm text-gray-500">${session.session_time}</span>
-                </div>
-            `).join('');
+            // Update stats
+            document.getElementById('total-members').textContent = data.stats.total_members;
+            document.getElementById('completed-sessions').textContent = data.stats.completed_sessions;
+            document.getElementById('total-sessions').textContent = data.stats.total_sessions;
+            document.getElementById('upcoming-sessions').textContent = data.stats.upcoming_sessions;
+            
+            // Update sessions table
+            const sessionsTable = document.getElementById('sessions-table');
+            sessionsTable.innerHTML = '';
+            
+            data.recent_sessions.forEach(session => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${session.member.name}</div>
+                        <div class="text-sm text-gray-500">${session.member.membership_type}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.time}</td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-gray-900">${session.workout.type}</div>
+                        <div class="text-sm text-gray-500">${session.workout.exercises.length} exercises</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            ${session.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                              session.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
+                              'bg-yellow-100 text-yellow-800'}">
+                            ${session.status}
+                        </span>
+                    </td>
+                `;
+                sessionsTable.appendChild(row);
+            });
         } catch (error) {
-            console.error('Error loading schedule:', error);
+            console.error('Error loading dashboard data:', error);
         }
     }
 
-    // Load schedule when page loads
-    document.addEventListener('DOMContentLoaded', loadTodaySchedule);
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', loadDashboardData);
 </script>
 {% endblock %} 

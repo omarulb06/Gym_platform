@@ -1,206 +1,164 @@
-{% extends "base.html" %}
-
-{% block title %}Member Details - PowerFit{% endblock %}
-
-{% block role_title %}Member Details{% endblock %}
-
-{% block sidebar %}
-<a href="/dashboard" class="block py-2 px-4 hover:bg-indigo-700">Dashboard</a>
-<a href="/coach/members" class="block py-2 px-4 hover:bg-indigo-700">My Members</a>
-<a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">Schedule</a>
-<a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">Progress</a>
-{% endblock %}
-
-{% block content_title %}Member Details{% endblock %}
-
-{% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Member Info Card -->
-    <div class="lg:col-span-1">
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center mb-6">
-                <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center">
-                    <i class="fas fa-user text-indigo-500 text-2xl"></i>
-                </div>
-                <div class="ml-4">
-                    <h2 class="text-xl font-semibold" id="member-name">Loading...</h2>
-                    <p class="text-gray-500" id="member-email">Loading...</p>
-                </div>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Membership Type:</span>
-                    <span class="font-medium" id="membership-type">Loading...</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Status:</span>
-                    <span class="font-medium" id="member-status">Loading...</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Join Date:</span>
-                    <span class="font-medium" id="join-date">Loading...</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Membership End:</span>
-                    <span class="font-medium" id="membership-end">Loading...</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-500">Total Sessions:</span>
-                    <span class="font-medium" id="total-sessions">Loading...</span>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Details - PowerFit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <i class="fas fa-dumbbell text-indigo-600 text-2xl"></i>
+                            <span class="ml-2 text-xl font-bold text-gray-800">PowerFit</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-gray-600">{{ user.name }}</span>
+                        <button onclick="logout()" class="ml-4 text-gray-600 hover:text-gray-800">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
-            
-            <div class="mt-6 pt-6 border-t">
-                <button onclick="scheduleSession()" 
-                        class="w-full bg-indigo-500 text-white py-2 rounded-lg hover:bg-indigo-600 transition-colors">
-                    Schedule Session
-                </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Back Button -->
+            <div class="mb-6">
+                <a href="/coach/members" class="text-indigo-600 hover:text-indigo-800">
+                    <i class="fas fa-arrow-left"></i> Back to Members
+                </a>
             </div>
-        </div>
+
+            <!-- Member Details -->
+            <div class="bg-white shadow rounded-lg p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold text-gray-900">Member Details</h1>
+                    <button onclick="window.open('/coach/members/{{ member.id }}/add-session', 'Add Session', 'width=800,height=800')" 
+                            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        <i class="fas fa-plus mr-2"></i>Add Session
+                    </button>
+                </div>
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900" id="memberName">Loading...</h1>
+                        <p class="text-gray-600" id="memberEmail">Loading...</p>
+                    </div>
+                    <div class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm" id="membershipType">
+                        Loading...
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-500">Total Sessions</h3>
+                        <p class="text-2xl font-bold text-gray-900" id="totalSessions">0</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-500">Completed Sessions</h3>
+                        <p class="text-2xl font-bold text-gray-900" id="completedSessions">0</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-500">Last Session</h3>
+                        <p class="text-2xl font-bold text-gray-900" id="lastSession">Never</p>
+                    </div>
+                </div>
+
+                <!-- Recent Sessions -->
+                <div class="mt-8">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Recent Sessions</h2>
+                    <div class="space-y-4" id="recentSessions">
+                        <div class="text-center text-gray-500">Loading sessions...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
-    
-    <!-- Recent Sessions -->
-    <div class="lg:col-span-2">
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold mb-4">Recent Sessions</h3>
-            <div class="space-y-4" id="recent-sessions">
-                <!-- Sessions will be loaded here -->
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Schedule Session Modal -->
-<div id="schedule-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg p-6 w-full max-w-md">
-        <h3 class="text-lg font-semibold mb-4">Schedule New Session</h3>
-        <form id="schedule-form" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Date</label>
-                <input type="date" id="session-date" required
-                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Time</label>
-                <input type="time" id="session-time" required
-                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Session Type</label>
-                <select id="session-type" required
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                    <option value="personal">Personal Training</option>
-                    <option value="group">Group Session</option>
-                    <option value="assessment">Fitness Assessment</option>
-                </select>
-            </div>
-            <div class="flex justify-end space-x-3">
-                <button type="button" onclick="closeScheduleModal()"
-                        class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                    Cancel
-                </button>
-                <button type="submit"
-                        class="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600">
-                    Schedule
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-{% endblock %}
+    <script>
+        // Get member ID from URL
+        const memberId = window.location.pathname.split('/').pop();
 
-{% block scripts %}
-<script>
-    const memberId = window.location.pathname.split('/').pop();
-    const scheduleModal = document.getElementById('schedule-modal');
-    
-    // Load member details
-    async function loadMemberDetails() {
-        try {
-            const response = await fetch(`/api/coach/members/${memberId}`);
-            const data = await response.json();
+        // Fetch member details
+        async function fetchMemberDetails() {
+            try {
+                const response = await fetch(`/api/coach/members/${memberId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch member details');
+                }
+                const data = await response.json();
+                updateMemberDetails(data);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to load member details');
+            }
+        }
+
+        // Update member details in the UI
+        function updateMemberDetails(data) {
+            const { member, recent_sessions } = data;
             
-            // Update member info
-            document.getElementById('member-name').textContent = data.member.name;
-            document.getElementById('member-email').textContent = data.member.email;
-            document.getElementById('membership-type').textContent = data.member.membership_type;
-            document.getElementById('member-status').textContent = data.member.status;
-            document.getElementById('join-date').textContent = new Date(data.member.join_date).toLocaleDateString();
-            document.getElementById('membership-end').textContent = new Date(data.member.membership_end_date).toLocaleDateString();
-            document.getElementById('total-sessions').textContent = data.member.total_sessions;
+            // Update basic info
+            document.getElementById('memberName').textContent = member.name;
+            document.getElementById('memberEmail').textContent = member.email;
+            document.getElementById('membershipType').textContent = member.membership_type;
             
-            // Update status color
-            const statusElement = document.getElementById('member-status');
-            statusElement.className = `font-medium ${data.member.status === 'active' ? 'text-green-500' : 'text-red-500'}`;
+            // Update stats
+            document.getElementById('totalSessions').textContent = member.total_sessions;
+            document.getElementById('completedSessions').textContent = member.completed_sessions;
+            document.getElementById('lastSession').textContent = member.last_session || 'Never';
             
             // Update recent sessions
-            const sessionsContainer = document.getElementById('recent-sessions');
-            if (data.recent_sessions.length === 0) {
-                sessionsContainer.innerHTML = '<p class="text-gray-500">No recent sessions found.</p>';
-                return;
-            }
-            
-            sessionsContainer.innerHTML = data.recent_sessions.map(session => `
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded">
-                    <div>
-                        <p class="font-medium">${session.session_type}</p>
-                        <p class="text-sm text-gray-500">
-                            ${new Date(session.session_date).toLocaleDateString()} at 
-                            ${new Date(session.session_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </p>
-                    </div>
-                    <span class="text-sm text-gray-500">${session.status || 'Scheduled'}</span>
-                </div>
-            `).join('');
-        } catch (error) {
-            console.error('Error loading member details:', error);
-        }
-    }
-    
-    // Schedule session functions
-    function scheduleSession() {
-        scheduleModal.classList.remove('hidden');
-    }
-    
-    function closeScheduleModal() {
-        scheduleModal.classList.add('hidden');
-    }
-    
-    // Handle schedule form submission
-    document.getElementById('schedule-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const formData = {
-            member_id: memberId,
-            session_date: document.getElementById('session-date').value,
-            session_time: document.getElementById('session-time').value,
-            session_type: document.getElementById('session-type').value
-        };
-        
-        try {
-            const response = await fetch('/api/coach/sessions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-            
-            if (response.ok) {
-                closeScheduleModal();
-                loadMemberDetails(); // Refresh the page data
+            const sessionsContainer = document.getElementById('recentSessions');
+            if (recent_sessions.length === 0) {
+                sessionsContainer.innerHTML = '<div class="text-center text-gray-500">No recent sessions</div>';
             } else {
-                const error = await response.json();
-                alert(error.detail || 'Failed to schedule session');
+                sessionsContainer.innerHTML = recent_sessions.map(session => `
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-medium text-gray-900">${session.date} at ${session.time}</h3>
+                                <p class="text-sm text-gray-500">${session.workout.type}</p>
+                            </div>
+                            <span class="px-2 py-1 text-sm rounded-full ${
+                                session.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                session.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                            }">${session.status}</span>
+                        </div>
+                        ${session.workout.exercises.length > 0 ? `
+                            <div class="mt-2">
+                                <h4 class="text-sm font-medium text-gray-700">Exercises:</h4>
+                                <ul class="mt-1 text-sm text-gray-600">
+                                    ${session.workout.exercises.map(exercise => `
+                                        <li>${exercise}</li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
             }
-        } catch (error) {
-            console.error('Error scheduling session:', error);
-            alert('Failed to schedule session');
         }
-    });
-    
-    // Load member details when page loads
-    document.addEventListener('DOMContentLoaded', loadMemberDetails);
-</script>
-{% endblock %} 
+
+        // Logout function
+        function logout() {
+            fetch('/api/logout', { method: 'POST' })
+                .then(() => window.location.href = '/')
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Load member details when page loads
+        fetchMemberDetails();
+    </script>
+</body>
+</html> 
