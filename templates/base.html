@@ -8,25 +8,81 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Sidebar -->
-        <div class="bg-indigo-800 text-white w-64 fixed h-full">
-            <div class="p-4">
-                <h1 class="text-2xl font-bold">PowerFit</h1>
-                <p class="text-sm text-indigo-200">{% block role_title %}{% endblock %}</p>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Top Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-dumbbell text-indigo-600 text-2xl"></i>
+                        <span class="ml-2 text-xl font-bold text-gray-800">PowerFit</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    {% if user %}
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-900">{{ user.name }}</p>
+                            <p class="text-xs text-gray-500">{{ user.user_type|title }}</p>
+                        </div>
+                        <a href="/logout" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            <nav class="mt-8">
-                {% block sidebar %}{% endblock %}
-            </nav>
         </div>
+    </nav>
 
-        <!-- Main Content -->
-        <div class="ml-64 p-8">
-            <h2 class="text-3xl font-bold mb-8">{% block content_title %}{% endblock %}</h2>
-            {% block content %}{% endblock %}
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex">
+            <!-- Sidebar -->
+            <div class="w-64 bg-indigo-800 text-white rounded-lg shadow-lg p-4 mr-8">
+                {% block sidebar %}
+                <a href="/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
+                    <i class="fas fa-home mr-2"></i> Dashboard
+                </a>
+                <a href="/coach/members" class="block py-2 px-4 hover:bg-indigo-700">
+                    <i class="fas fa-users mr-2"></i> My Members
+                </a>
+                <a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">
+                    <i class="fas fa-calendar mr-2"></i> Schedule
+                </a>
+                <a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">
+                    <i class="fas fa-chart-line mr-2"></i> Progress
+                </a>
+                {% endblock %}
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1">
+                <h1 class="text-2xl font-bold text-gray-800 mb-6">{% block content_title %}{% endblock %}</h1>
+                {% block content %}{% endblock %}
+            </div>
         </div>
     </div>
-    {% block scripts %}{% endblock %}
+
+    {% block scripts %}
+    <script>
+        // Load user data for sidebar
+        async function loadUserData() {
+            try {
+                const response = await fetch('/api/user');
+                const user = await response.json();
+                
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userRole').textContent = user.user_type.charAt(0).toUpperCase() + user.user_type.slice(1);
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        // Load user data when page loads
+        document.addEventListener('DOMContentLoaded', loadUserData);
+    </script>
+    {% endblock %}
 </body>
 </html> 

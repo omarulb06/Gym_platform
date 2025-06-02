@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Member Dashboard - PowerFit{% endblock %}
+
+{% block content %}
+    <!-- Welcome Section -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Welcome, <span id="memberName">-</span></h3>
+            <p class="mt-1 text-sm text-gray-500">Here's an overview of your fitness journey</p>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <!-- Total Sessions -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+                    <i class="fas fa-calendar-check text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Total Sessions</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="totalSessions">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed Sessions -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+                    <i class="fas fa-check-circle text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Completed Sessions</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="completedSessions">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Sessions -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+                    <i class="fas fa-calendar-alt text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Upcoming Sessions</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="upcomingSessions">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coach Information -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">My Coach</h3>
+            <div id="coachInfo" class="flex items-center space-x-4">
+                <div class="flex-shrink-0">
+                    <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-tie text-indigo-600 text-2xl"></i>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-lg font-medium text-gray-900" id="coachName">-</h4>
+                    <p class="text-sm text-gray-500" id="coachSpecialization">-</p>
+                    <p class="text-sm text-gray-500" id="coachEmail">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sessions -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Sessions</h3>
+            <div id="recentSessions" class="space-y-4">
+                <!-- Sessions will be loaded here -->
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load member dashboard data
+    async function loadDashboardData() {
+        try {
+            const response = await fetch('/api/member/dashboard');
+            const data = await response.json();
+            
+            // Update member name
+            document.getElementById('memberName').textContent = data.member.name;
+            
+            // Update stats
+            document.getElementById('totalSessions').textContent = data.stats.total_sessions;
+            document.getElementById('completedSessions').textContent = data.stats.completed_sessions;
+            document.getElementById('upcomingSessions').textContent = data.stats.upcoming_sessions;
+            
+            // Update coach info
+            if (data.coach) {
+                document.getElementById('coachName').textContent = data.coach.name;
+                document.getElementById('coachSpecialization').textContent = data.coach.specialization;
+                document.getElementById('coachEmail').textContent = data.coach.email;
+            } else {
+                document.getElementById('coachInfo').innerHTML = '<p class="text-gray-500">No coach assigned yet.</p>';
+            }
+            
+            // Update recent sessions
+            const recentSessionsDiv = document.getElementById('recentSessions');
+            if (data.recent_sessions.length === 0) {
+                recentSessionsDiv.innerHTML = '<p class="text-gray-500">No recent sessions.</p>';
+                return;
+            }
+            
+            recentSessionsDiv.innerHTML = data.recent_sessions.map(session => {
+                const statusColor = {
+                    'Scheduled': 'text-blue-600',
+                    'Completed': 'text-green-600',
+                    'Cancelled': 'text-red-600'
+                }[session.status] || 'text-gray-600';
+                
+                return `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <h4 class="font-medium text-gray-900">${session.session_type}</h4>
+                            <p class="text-sm text-gray-500">${session.formatted_date} at ${session.formatted_time}</p>
+                            <p class="text-xs text-gray-400">${session.duration} minutes</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                ${session.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                                  session.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
+                                  'bg-blue-100 text-blue-800'}">
+                                ${session.status}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+        }
+    }
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', loadDashboardData);
+</script>
+{% endblock %}
+
+{% block sidebar %}
+<a href="/member/dashboard" class="block py-2 px-4 bg-indigo-700">
+    <i class="fas fa-home mr-2"></i> Dashboard
+</a>
+<a href="/member/schedule" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-calendar mr-2"></i> My Schedule
+</a>
+<a href="/member/progress" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-chart-line mr-2"></i> Progress
+</a>
+{% endblock %} 

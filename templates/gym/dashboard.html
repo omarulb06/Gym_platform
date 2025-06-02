@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Gym Dashboard - PowerFit{% endblock %}
+
+{% block content %}
+    <!-- Welcome Section -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Welcome, <span id="gymName">-</span></h3>
+            <p class="mt-1 text-sm text-gray-500">Here's an overview of your gym's performance</p>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <!-- Total Members -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+                    <i class="fas fa-users text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Total Members</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="totalMembers">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Coaches -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+                    <i class="fas fa-user-tie text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Active Coaches</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="activeCoaches">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Sessions -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+                    <i class="fas fa-calendar-check text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Today's Sessions</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="todaySessions">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Revenue -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-yellow-500 rounded-md p-3">
+                    <i class="fas fa-dollar-sign text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Monthly Revenue</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="monthlyRevenue">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Recent Members -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Members</h3>
+                <div id="recentMembers" class="space-y-4">
+                    <!-- Members will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Sessions -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Sessions</h3>
+                <div id="recentSessions" class="space-y-4">
+                    <!-- Sessions will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load gym dashboard data
+    async function loadDashboardData() {
+        try {
+            const response = await fetch('/api/gym/dashboard');
+            const data = await response.json();
+            
+            // Update gym name
+            document.getElementById('gymName').textContent = data.gym.name;
+            
+            // Update stats
+            document.getElementById('totalMembers').textContent = data.stats.total_members;
+            document.getElementById('activeCoaches').textContent = data.stats.active_coaches;
+            document.getElementById('todaySessions').textContent = data.stats.today_sessions;
+            document.getElementById('monthlyRevenue').textContent = `$${data.stats.monthly_revenue.toLocaleString()}`;
+            
+            // Update recent members
+            const recentMembersDiv = document.getElementById('recentMembers');
+            if (data.recent_members.length === 0) {
+                recentMembersDiv.innerHTML = '<p class="text-gray-500">No recent members.</p>';
+            } else {
+                recentMembersDiv.innerHTML = data.recent_members.map(member => `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <h4 class="font-medium text-gray-900">${member.name}</h4>
+                            <p class="text-sm text-gray-500">${member.membership_type}</p>
+                            <p class="text-xs text-gray-400">Joined ${new Date(member.join_date).toLocaleDateString()}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                ${member.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${member.status}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Update recent sessions
+            const recentSessionsDiv = document.getElementById('recentSessions');
+            if (data.recent_sessions.length === 0) {
+                recentSessionsDiv.innerHTML = '<p class="text-gray-500">No recent sessions.</p>';
+            } else {
+                recentSessionsDiv.innerHTML = data.recent_sessions.map(session => `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <h4 class="font-medium text-gray-900">${session.member_name}</h4>
+                            <p class="text-sm text-gray-500">${session.session_type}</p>
+                            <p class="text-xs text-gray-400">${new Date(session.session_date).toLocaleDateString()} at ${session.session_time}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                ${session.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                                  session.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
+                                  'bg-blue-100 text-blue-800'}">
+                                ${session.status}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+        }
+    }
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', loadDashboardData);
+</script>
+{% endblock %}
+
+{% block sidebar %}
+<a href="/gym/dashboard" class="block py-2 px-4 bg-indigo-700">
+    <i class="fas fa-home mr-2"></i> Dashboard
+</a>
+<a href="/gym/members" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-users mr-2"></i> Members
+</a>
+<a href="/gym/coaches" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-user-tie mr-2"></i> Coaches
+</a>
+<a href="/gym/sessions" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-calendar mr-2"></i> Sessions
+</a>
+<a href="/gym/reports" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-chart-bar mr-2"></i> Reports
+</a>
+{% endblock %} 
