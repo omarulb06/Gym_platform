@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}My Progress - PowerFit{% endblock %}
+
+{% block content %}
+    <!-- Progress Overview -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Progress Overview</h3>
+            <p class="mt-1 text-sm text-gray-500">Your fitness journey in the last 30 days</p>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <!-- Total Sessions -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+                    <i class="fas fa-calendar-check text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Total Sessions</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="totalSessions">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed Sessions -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+                    <i class="fas fa-check-circle text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Completed Sessions</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="completedSessions">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion Rate -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+                    <i class="fas fa-chart-line text-white text-2xl"></i>
+                </div>
+                <div class="ml-5">
+                    <h4 class="text-lg font-medium text-gray-900">Completion Rate</h4>
+                    <p class="text-2xl font-semibold text-gray-900" id="completionRate">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Types Distribution -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Session Types</h3>
+            <div id="sessionTypes" class="space-y-4">
+                <!-- Session types will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sessions -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Sessions</h3>
+            <div id="recentSessions" class="space-y-4">
+                <!-- Recent sessions will be loaded here -->
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load progress data
+    async function loadProgressData() {
+        try {
+            const response = await fetch('/api/member/progress');
+            const data = await response.json();
+            
+            // Update stats
+            document.getElementById('totalSessions').textContent = data.session_stats.total;
+            document.getElementById('completedSessions').textContent = data.session_stats.completed;
+            document.getElementById('completionRate').textContent = `${Math.round(data.session_stats.completion_rate)}%`;
+            
+            // Update session types
+            const sessionTypesDiv = document.getElementById('sessionTypes');
+            if (data.session_types.length === 0) {
+                sessionTypesDiv.innerHTML = '<p class="text-gray-500">No session data available.</p>';
+            } else {
+                sessionTypesDiv.innerHTML = data.session_types.map(type => `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <h4 class="font-medium text-gray-900">${type.session_type}</h4>
+                            <p class="text-sm text-gray-500">${type.count} sessions</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
+                                ${Math.round((type.count / data.session_stats.total) * 100)}%
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Update recent sessions
+            const recentSessionsDiv = document.getElementById('recentSessions');
+            if (data.recent_sessions.length === 0) {
+                recentSessionsDiv.innerHTML = '<p class="text-gray-500">No recent sessions.</p>';
+            } else {
+                recentSessionsDiv.innerHTML = data.recent_sessions.map(session => `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <h4 class="font-medium text-gray-900">${session.session_type || 'Regular'}</h4>
+                            <p class="text-sm text-gray-500">${session.formatted_date} at ${session.formatted_time}</p>
+                            <p class="text-xs text-gray-400">${session.duration} minutes</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Completed
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading progress data:', error);
+        }
+    }
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', loadProgressData);
+</script>
+{% endblock %}
+
+{% block sidebar %}
+<a href="/member/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-home mr-2"></i> Dashboard
+</a>
+<a href="/member/schedule" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-calendar mr-2"></i> My Schedule
+</a>
+<a href="/member/progress" class="block py-2 px-4 bg-indigo-700">
+    <i class="fas fa-chart-line mr-2"></i> Progress
+</a>
+{% endblock %} 
