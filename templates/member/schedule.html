@@ -3,209 +3,57 @@
 {% block title %}My Schedule - PowerFit{% endblock %}
 
 {% block content %}
-    <!-- Upcoming Sessions -->
-    <div class="bg-white shadow rounded-lg">
+    <!-- Welcome Section -->
+    <div class="bg-white shadow rounded-lg mb-6">
         <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">My Schedule</h3>
-            <div id="schedule" class="space-y-6">
-                <!-- Schedule will be loaded here -->
-            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900">My Schedule</h3>
+            <p class="mt-1 text-sm text-gray-500">View and manage your training sessions</p>
         </div>
     </div>
 
-    <!-- Session Details Modal -->
-    <div id="sessionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3">
-                <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Session Details</h3>
-                <div class="mt-2 px-7 py-3">
-                    <div class="space-y-3">
-                        <div>
-                            <p class="text-sm text-gray-500">Session Type</p>
-                            <p class="text-base font-medium text-gray-900" id="modalSessionType">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Date & Time</p>
-                            <p class="text-base font-medium text-gray-900" id="modalDateTime">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Duration</p>
-                            <p class="text-base font-medium text-gray-900" id="modalDuration">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Status</p>
-                            <p class="text-base font-medium text-gray-900" id="modalStatus">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Notes</p>
-                            <p class="text-base font-medium text-gray-900" id="modalNotes">-</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-end mt-4">
-                    <button onclick="closeSessionModal()" 
-                            class="px-4 py-2 bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">
-                        Close
+    <!-- Weekly Schedule View -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h4 class="text-lg font-medium text-gray-900">Weekly Schedule</h4>
+                <div class="flex space-x-2">
+                    <button id="prevWeek" class="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
+                        <i class="fas fa-chevron-left"></i> Previous Week
+                    </button>
+                    <button id="nextWeek" class="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
+                        Next Week <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
             </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="monday">Monday</th>
+                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="tuesday">Tuesday</th>
+                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="wednesday">Wednesday</th>
+                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="thursday">Thursday</th>
+                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="friday">Friday</th>
+                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="saturday">Saturday</th>
+                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="sunday">Sunday</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="scheduleTable">
+                        <!-- Schedule will be populated here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-{% endblock %}
 
-{% block scripts %}
-<script>
-    const sessionModal = document.getElementById('sessionModal');
-    let currentSession = null;
-
-    // Show session modal
-    function showSessionModal(session) {
-        currentSession = session;
-        
-        // Format date and time
-        let dateTime = '';
-        try {
-            if (session.session_date && session.session_time) {
-                const dateStr = `${session.session_date}T${session.session_time}:00`;
-                const date = new Date(dateStr);
-                if (!isNaN(date.getTime())) {
-                    const formattedDate = date.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    });
-                    const formattedTime = date.toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    });
-                    dateTime = `${formattedDate} at ${formattedTime}`;
-                }
-            }
-        } catch (error) {
-            console.error('Error formatting date/time:', error);
-        }
-        
-        // Update modal content
-        document.getElementById('modalSessionType').textContent = session.session_type || 'Regular';
-        document.getElementById('modalDateTime').textContent = dateTime || 'Date and time not available';
-        document.getElementById('modalDuration').textContent = `${session.duration || 60} minutes`;
-        document.getElementById('modalStatus').textContent = session.status || 'Scheduled';
-        
-        // Handle notes display
-        const notesElement = document.getElementById('modalNotes');
-        if (session.notes && session.notes.trim() !== '') {
-            notesElement.textContent = session.notes;
-        } else {
-            notesElement.textContent = 'No notes';
-        }
-        
-        // Set status color
-        const statusElement = document.getElementById('modalStatus');
-        statusElement.className = 'text-base font-medium ' + 
-            (session.status === 'Completed' ? 'text-green-600' : 
-             session.status === 'Cancelled' ? 'text-red-600' : 
-             'text-blue-600');
-        
-        sessionModal.classList.remove('hidden');
-    }
-
-    // Close session modal
-    function closeSessionModal() {
-        sessionModal.classList.add('hidden');
-        currentSession = null;
-    }
-
-    // Close modal when clicking outside
-    sessionModal.addEventListener('click', (e) => {
-        if (e.target === sessionModal) {
-            closeSessionModal();
-        }
-    });
-
-    // Load schedule
-    async function loadSchedule() {
-        try {
-            const response = await fetch('/api/member/schedule');
-            const schedule = await response.json();
-            
-            const scheduleDiv = document.getElementById('schedule');
-            if (Object.keys(schedule).length === 0) {
-                scheduleDiv.innerHTML = '<p class="text-gray-500">No upcoming sessions scheduled.</p>';
-                return;
-            }
-
-            scheduleDiv.innerHTML = Object.entries(schedule).map(([date, sessions]) => {
-                // Format the date header
-                let formattedHeaderDate = date;
-                try {
-                    const headerDate = new Date(date + 'T00:00:00');
-                    if (!isNaN(headerDate.getTime())) {
-                        formattedHeaderDate = headerDate.toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            month: 'long',
-                            day: 'numeric',
-                            year: 'numeric'
-                        });
-                    }
-                } catch (error) {
-                    console.error('Error formatting header date:', error);
-                }
-
-                return `
-                    <div class="mb-6">
-                        <h4 class="text-md font-medium text-gray-700 mb-3">${formattedHeaderDate}</h4>
-                        <div class="space-y-3">
-                            ${sessions.map(session => {
-                                // Format time
-                                let formattedTime = '';
-                                try {
-                                    if (session.session_time) {
-                                        const dateStr = `${session.session_date}T${session.session_time}:00`;
-                                        const date = new Date(dateStr);
-                                        if (!isNaN(date.getTime())) {
-                                            formattedTime = date.toLocaleTimeString('en-US', {
-                                                hour: 'numeric',
-                                                minute: '2-digit',
-                                                hour12: true
-                                            });
-                                        }
-                                    }
-                                } catch (error) {
-                                    console.error('Error formatting time:', error);
-                                }
-
-                                return `
-                                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
-                                         onclick='showSessionModal(${JSON.stringify(session)})'>
-                                        <div>
-                                            <h4 class="font-medium text-gray-900">${session.session_type || 'Regular'}</h4>
-                                            <p class="text-sm text-gray-500">${formattedTime || 'Time not available'}</p>
-                                            <p class="text-xs text-gray-400">${session.duration || 60} minutes</p>
-                                        </div>
-                                        <div class="text-right">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                ${session.status === 'Completed' ? 'bg-green-100 text-green-800' : 
-                                                  session.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
-                                                  'bg-blue-100 text-blue-800'}">
-                                                ${session.status}
-                                            </span>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        } catch (error) {
-            console.error('Error loading schedule:', error);
-        }
-    }
-
-    // Load schedule when page loads
-    document.addEventListener('DOMContentLoaded', loadSchedule);
-</script>
+    <!-- Selected Session Details -->
+    <div class="bg-white shadow rounded-lg mb-6" id="sessionDetails" style="display: none;">
+        <div class="px-4 py-5 sm:p-6">
+            <h4 class="text-lg font-medium text-gray-900 mb-4">Session Details</h4>
+            <div id="selectedSessionDetails"></div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block sidebar %}
@@ -213,9 +61,185 @@
     <i class="fas fa-home mr-2"></i> Dashboard
 </a>
 <a href="/member/schedule" class="block py-2 px-4 bg-indigo-700">
-    <i class="fas fa-calendar mr-2"></i> My Schedule
+    <i class="fas fa-calendar mr-2"></i> Schedule
 </a>
 <a href="/member/progress" class="block py-2 px-4 hover:bg-indigo-700">
     <i class="fas fa-chart-line mr-2"></i> Progress
 </a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentDate = new Date();
+    let sessions = [];
+
+    // Get start of week (Monday)
+    function getStartOfWeek(date) {
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+        return new Date(date.setDate(diff));
+    }
+
+    // Format date as YYYY-MM-DD
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    // Format time as HH:MM
+    function formatTime(time) {
+        return time.split(':').slice(0, 2).join(':');
+    }
+
+    // Generate time slots
+    function generateTimeSlots() {
+        const slots = [];
+        for (let hour = 8; hour <= 20; hour++) {
+            slots.push(`${hour.toString().padStart(2, '0')}:00`);
+        }
+        return slots;
+    }
+
+    // Update week display
+    function updateWeekDisplay(startDate) {
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        days.forEach((day, index) => {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + index);
+            const header = document.getElementById(day);
+            header.textContent = `${day.charAt(0).toUpperCase() + day.slice(1)} (${formatDate(date)})`;
+        });
+    }
+
+    // Generate schedule
+    function generateSchedule() {
+        const startOfWeek = getStartOfWeek(currentDate);
+        updateWeekDisplay(startOfWeek);
+        
+        const timeSlots = generateTimeSlots();
+        const scheduleTable = document.getElementById('scheduleTable');
+        scheduleTable.innerHTML = '';
+        
+        timeSlots.forEach(time => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${time}</td>
+                ${Array(7).fill().map((_, dayIndex) => {
+                    const date = new Date(startOfWeek);
+                    date.setDate(startOfWeek.getDate() + dayIndex);
+                    const dateStr = formatDate(date);
+                    const timeStr = time;
+                    
+                    const daySessions = sessions.filter(s => 
+                        s.date === dateStr && 
+                        formatTime(s.time) === timeStr
+                    );
+                    
+                    if (daySessions.length === 0) {
+                        return `<td class="px-6 py-4 border border-gray-200"></td>`;
+                    }
+                    
+                    return daySessions.map(session => {
+                        const statusColor = session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                                          session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                          'bg-blue-100 text-blue-800';
+                        return `
+                            <td class="px-6 py-4 border border-gray-200">
+                                <div class="cursor-pointer p-2 rounded ${statusColor}" 
+                                     onclick="showSessionDetails('${session.id}')">
+                                    <div class="font-medium">${session.workout.type}</div>
+                                    <div class="text-xs">${session.coach.name}</div>
+                                    <div class="text-xs">${session.duration} min</div>
+                                </div>
+                            </td>
+                        `;
+                    }).join('');
+                }).join('')}
+            `;
+            scheduleTable.appendChild(row);
+        });
+    }
+
+    // Show session details
+    function showSessionDetails(sessionId) {
+        const session = sessions.find(s => s.id === sessionId);
+        if (!session) return;
+
+        const detailsDiv = document.getElementById('selectedSessionDetails');
+        detailsDiv.innerHTML = `
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <h5 class="text-sm font-medium text-gray-500">Date & Time</h5>
+                    <p class="mt-1">${session.date} at ${session.time}</p>
+                </div>
+                <div>
+                    <h5 class="text-sm font-medium text-gray-500">Coach</h5>
+                    <p class="mt-1">${session.coach.name} (${session.coach.specialization})</p>
+                </div>
+                <div>
+                    <h5 class="text-sm font-medium text-gray-500">Workout</h5>
+                    <p class="mt-1">${session.workout.type}</p>
+                    <ul class="mt-1 text-sm text-gray-500">
+                        ${session.workout.exercises.map(ex => `<li>${ex}</li>`).join('')}
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="text-sm font-medium text-gray-500">Status</h5>
+                    <p class="mt-1">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            ${session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 
+                              session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' : 
+                              'bg-yellow-100 text-yellow-800'}">
+                            ${session.status}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        `;
+        document.getElementById('sessionDetails').style.display = 'block';
+    }
+
+    // Load sessions
+    async function loadSessions() {
+        try {
+            const startOfWeek = getStartOfWeek(currentDate);
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            
+            const response = await fetch(`/api/member/schedule?start_date=${formatDate(startOfWeek)}&end_date=${formatDate(endOfWeek)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            sessions = await response.json();
+            
+            generateSchedule();
+            
+        } catch (error) {
+            console.error('Error loading sessions:', error);
+            const scheduleTable = document.getElementById('scheduleTable');
+            scheduleTable.innerHTML = `
+                <tr>
+                    <td colspan="8" class="px-6 py-4 text-center text-red-500">
+                        Failed to load schedule. Please try again.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSessions();
+        
+        // Add event listeners for week navigation
+        document.getElementById('prevWeek').addEventListener('click', () => {
+            currentDate.setDate(currentDate.getDate() - 7);
+            loadSessions();
+        });
+        
+        document.getElementById('nextWeek').addEventListener('click', () => {
+            currentDate.setDate(currentDate.getDate() + 7);
+            loadSessions();
+        });
+    });
+</script>
 {% endblock %} 
