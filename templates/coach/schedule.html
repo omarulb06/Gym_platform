@@ -11,30 +11,34 @@
         </div>
     </div>
 
-    <!-- Calendar View -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Calendar</h3>
-                <div class="flex space-x-2">
-                    <button id="prevMonth" class="px-3 py-1 bg-gray-100 rounded-md hover:bg-gray-200">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <button id="nextMonth" class="px-3 py-1 bg-gray-100 rounded-md hover:bg-gray-200">
-                        <i class="fas fa-chevron-right"></i>
+    <!-- Weekly Schedule -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-lg font-medium text-gray-900">Weekly Schedule</h2>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <input type="date" 
+                           id="startDate" 
+                           class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <span class="text-gray-500">to</span>
+                    <input type="date" 
+                           id="endDate" 
+                           class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <button onclick="loadSchedule()" 
+                            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        <i class="fas fa-search mr-2"></i>Search
                     </button>
                 </div>
             </div>
-            <div id="calendar" class="grid grid-cols-7 gap-2">
-                <!-- Calendar will be populated by JavaScript -->
-            </div>
+        </div>
+        <div class="grid grid-cols-7 gap-4" id="weeklySchedule">
+            <!-- Days will be populated here -->
         </div>
     </div>
 
-    <!-- Upcoming Sessions -->
+    <!-- Sessions Table -->
     <div class="bg-white shadow rounded-lg">
         <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Upcoming Sessions</h3>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead>
@@ -51,6 +55,54 @@
                         <!-- Sessions will be populated here -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Details Modal -->
+    <div id="sessionModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-lg font-medium text-gray-900">Session Details</h3>
+                        <button onclick="closeSessionModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="mt-4 space-y-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Member</p>
+                            <p class="text-base font-medium text-gray-900" id="modalMemberName">-</p>
+                            <p class="text-sm text-gray-500" id="modalMemberEmail">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Date & Time</p>
+                            <p class="text-base font-medium text-gray-900" id="modalDateTime">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Duration</p>
+                            <p class="text-base font-medium text-gray-900" id="modalDuration">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Workout Type</p>
+                            <p class="text-base font-medium text-gray-900" id="modalWorkoutType">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Exercises</p>
+                            <ul class="text-sm text-gray-900 list-disc list-inside" id="modalExercises">
+                                <!-- Exercises will be populated here -->
+                            </ul>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <p class="text-base font-medium text-gray-900" id="modalStatus">-</p>
+                        </div>
+                        <div id="modalActions" class="flex space-x-2">
+                            <!-- Action buttons will be populated here -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -76,76 +128,204 @@
 
 {% block scripts %}
 <script>
-    // Load schedule data
-    async function loadScheduleData() {
-        try {
-            const response = await fetch('/api/coach/schedule');
-            const data = await response.json();
-            
-            // Update sessions table
-            const sessionsTable = document.getElementById('sessions-table');
-            sessionsTable.innerHTML = '';
-            
-            data.sessions.forEach(session => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">${session.member_name}</div>
-                        <div class="text-sm text-gray-500">${session.gym_name}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.session_date}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.session_time}</td>
-                    <td class="px-6 py-4">
-                        <div class="text-sm text-gray-900">${session.notes ? session.notes.split('\n')[0] : 'No workout specified'}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            ${session.status === 'Completed' ? 'bg-green-100 text-green-800' : 
-                              session.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
-                              'bg-yellow-100 text-yellow-800'}">
-                            ${session.status}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button onclick="updateSessionStatus(${session.id}, 'Completed')" 
-                                class="text-green-600 hover:text-green-900 mr-2">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button onclick="updateSessionStatus(${session.id}, 'Cancelled')"
-                                class="text-red-600 hover:text-red-900">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </td>
-                `;
-                sessionsTable.appendChild(row);
-            });
-        } catch (error) {
-            console.error('Error loading schedule data:', error);
+    let currentDate = new Date();
+    let sessions = [];
+    let allSessions = []; // Store all sessions for filtering
+
+    // Format date as YYYY-MM-DD
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    // Get week range
+    function getWeekRange(date) {
+        const start = new Date(date);
+        start.setDate(date.getDate() - date.getDay());
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return { start, end };
+    }
+
+    // Format week range for display
+    function formatWeekRange(start, end) {
+        const options = { month: 'short', day: 'numeric' };
+        return `${start.toLocaleDateString('default', options)} - ${end.toLocaleDateString('default', options)}`;
+    }
+
+    // Show session details modal
+    function showSessionDetails(session) {
+        const modal = document.getElementById('sessionModal');
+        document.getElementById('modalMemberName').textContent = session.member.name;
+        document.getElementById('modalMemberEmail').textContent = session.member.email;
+        document.getElementById('modalDateTime').textContent = `${session.date} at ${session.time}`;
+        document.getElementById('modalDuration').textContent = `${session.duration} minutes`;
+        document.getElementById('modalWorkoutType').textContent = session.workout.type;
+        document.getElementById('modalStatus').textContent = session.status;
+
+        // Populate exercises
+        const exercisesList = document.getElementById('modalExercises');
+        exercisesList.innerHTML = '';
+        session.workout.exercises.forEach(exercise => {
+            const li = document.createElement('li');
+            li.textContent = exercise;
+            exercisesList.appendChild(li);
+        });
+
+        // Set up action buttons
+        const actionsDiv = document.getElementById('modalActions');
+        actionsDiv.innerHTML = '';
+        if (session.status.toLowerCase() === 'scheduled') {
+            actionsDiv.innerHTML = `
+                <button onclick="updateSessionStatus(${session.id}, 'completed')" 
+                        class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                    <i class="fas fa-check mr-2"></i> Mark as Completed
+                </button>
+                <button onclick="updateSessionStatus(${session.id}, 'cancelled')"
+                        class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                    <i class="fas fa-times mr-2"></i> Cancel Session
+                </button>
+            `;
         }
+
+        modal.classList.remove('hidden');
+    }
+
+    // Close session details modal
+    function closeSessionModal() {
+        document.getElementById('sessionModal').classList.add('hidden');
     }
 
     // Update session status
     async function updateSessionStatus(sessionId, status) {
         try {
-            const response = await fetch(`/api/coach/sessions/${sessionId}/status`, {
+            const response = await fetch(`/api/coach/sessions/${sessionId}/status?status=${status}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ status })
+                }
             });
             
-            if (response.ok) {
-                loadScheduleData(); // Reload the schedule
-            } else {
-                console.error('Failed to update session status');
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to update session status');
             }
+            
+            // Close modal if open
+            closeSessionModal();
+            
+            // Reload the schedule
+            await loadSchedule();
+            
+            // Show success message
+            alert(`Session marked as ${status}`);
         } catch (error) {
             console.error('Error updating session status:', error);
+            alert(error.message || 'Failed to update session status. Please try again.');
         }
     }
 
-    // Load data when page loads
-    document.addEventListener('DOMContentLoaded', loadScheduleData);
+    // Set default date range (current week)
+    function setDefaultDateRange() {
+        const today = new Date();
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+        
+        const endDate = new Date(today);
+        endDate.setDate(today.getDate() + (6 - today.getDay())); // End of week (Saturday)
+        
+        document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+        document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+    }
+
+    // Load schedule with date range
+    async function loadSchedule() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/coach/schedule?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch schedule');
+            }
+            const sessions = await response.json();
+            displaySchedule(sessions);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to load schedule');
+        }
+    }
+
+    // Display schedule
+    function displaySchedule(sessions) {
+        const scheduleContainer = document.getElementById('weeklySchedule');
+        const startDate = new Date(document.getElementById('startDate').value);
+        const endDate = new Date(document.getElementById('endDate').value);
+        
+        // Clear existing schedule
+        scheduleContainer.innerHTML = '';
+        
+        // Create day columns
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            const daySessions = sessions.filter(session => 
+                session.date === currentDate.toISOString().split('T')[0]
+            );
+            
+            const dayColumn = document.createElement('div');
+            dayColumn.className = 'space-y-2';
+            
+            // Day header
+            const dayHeader = document.createElement('div');
+            dayHeader.className = 'text-center font-medium text-gray-900 mb-2';
+            dayHeader.textContent = currentDate.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            dayColumn.appendChild(dayHeader);
+            
+            // Sessions for this day
+            if (daySessions.length === 0) {
+                const noSessions = document.createElement('div');
+                noSessions.className = 'text-center text-gray-500 text-sm';
+                noSessions.textContent = 'No sessions';
+                dayColumn.appendChild(noSessions);
+            } else {
+                daySessions.forEach(session => {
+                    const sessionCard = document.createElement('div');
+                    sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
+                    sessionCard.onclick = () => showSessionDetails(session);
+                    
+                    sessionCard.innerHTML = `
+                        <div class="text-sm font-medium text-gray-900">${session.time}</div>
+                        <div class="text-xs text-gray-500">${session.member.name}</div>
+                        <div class="mt-1">
+                            <span class="px-2 py-1 text-xs rounded-full ${
+                                session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                                session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                'bg-blue-100 text-blue-800'
+                            }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+                        </div>
+                    `;
+                    
+                    dayColumn.appendChild(sessionCard);
+                });
+            }
+            
+            scheduleContainer.appendChild(dayColumn);
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+    }
+
+    // Initialize date range and load schedule when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        setDefaultDateRange();
+        loadSchedule();
+    });
 </script>
 {% endblock %} 

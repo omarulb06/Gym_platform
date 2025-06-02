@@ -52,7 +52,7 @@
                     <div class="mt-1 relative rounded-md shadow-sm">
                         <input type="text" id="searchInput" 
                                class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-4 pr-12 sm:text-sm border-gray-300 rounded-md"
-                               placeholder="Search sessions...">
+                               placeholder="Search by member, email, or workout type...">
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                             <i class="fas fa-search text-gray-400"></i>
                         </div>
@@ -84,6 +84,54 @@
             </div>
         </div>
     </div>
+
+    <!-- Session Details Modal -->
+    <div id="sessionModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-lg font-medium text-gray-900">Session Details</h3>
+                        <button onclick="closeSessionModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="mt-4 space-y-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Member</p>
+                            <p class="text-base font-medium text-gray-900" id="modalMemberName">-</p>
+                            <p class="text-sm text-gray-500" id="modalMemberEmail">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Date & Time</p>
+                            <p class="text-base font-medium text-gray-900" id="modalDateTime">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Duration</p>
+                            <p class="text-base font-medium text-gray-900" id="modalDuration">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Workout Type</p>
+                            <p class="text-base font-medium text-gray-900" id="modalWorkoutType">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Exercises</p>
+                            <ul class="text-sm text-gray-900 list-disc list-inside" id="modalExercises">
+                                <!-- Exercises will be populated here -->
+                            </ul>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <p class="text-base font-medium text-gray-900" id="modalStatus">-</p>
+                        </div>
+                        <div id="modalActions" class="flex space-x-2">
+                            <!-- Action buttons will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block sidebar %}
@@ -106,12 +154,15 @@
 
 {% block scripts %}
 <script>
+    // Store sessions globally
+    let sessions = [];
+
     // Load sessions data
     async function loadSessionsData(filters = {}) {
         try {
             const queryParams = new URLSearchParams(filters).toString();
             const response = await fetch(`/api/coach/sessions?${queryParams}`);
-            const sessions = await response.json();
+            sessions = await response.json();  // Store sessions globally
             
             // Update sessions table
             const sessionsTable = document.getElementById('sessions-table');
@@ -132,10 +183,10 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            ${session.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                              session.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
-                              'bg-yellow-100 text-yellow-800'}">
-                            ${session.status}
+                            ${session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 
+                              session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' : 
+                              'bg-blue-100 text-blue-800'}">
+                            ${session.status.charAt(0).toUpperCase() + session.status.slice(1)}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -182,18 +233,62 @@
 
     // View session details
     function viewSessionDetails(sessionId) {
-        window.location.href = `/coach/sessions/${sessionId}`;
+        // Find the session in the current sessions array
+        const session = sessions.find(s => s.id === sessionId);
+        if (!session) {
+            console.error('Session not found');
+            return;
+        }
+
+        const modal = document.getElementById('sessionModal');
+        document.getElementById('modalMemberName').textContent = session.member.name;
+        document.getElementById('modalMemberEmail').textContent = session.member.email;
+        document.getElementById('modalDateTime').textContent = `${session.date} at ${session.time}`;
+        document.getElementById('modalDuration').textContent = `${session.duration} minutes`;
+        document.getElementById('modalWorkoutType').textContent = session.workout.type;
+        document.getElementById('modalStatus').textContent = session.status.charAt(0).toUpperCase() + session.status.slice(1);
+
+        // Populate exercises
+        const exercisesList = document.getElementById('modalExercises');
+        exercisesList.innerHTML = '';
+        session.workout.exercises.forEach(exercise => {
+            const li = document.createElement('li');
+            li.textContent = exercise;
+            exercisesList.appendChild(li);
+        });
+
+        // Set up action buttons
+        const actionsDiv = document.getElementById('modalActions');
+        actionsDiv.innerHTML = '';
+        if (session.status === 'scheduled') {
+            actionsDiv.innerHTML = `
+                <button onclick="updateSessionStatus(${session.id}, 'completed')" 
+                        class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                    <i class="fas fa-check mr-2"></i> Mark as Completed
+                </button>
+                <button onclick="updateSessionStatus(${session.id}, 'cancelled')"
+                        class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                    <i class="fas fa-times mr-2"></i> Cancel Session
+                </button>
+            `;
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    // Close session details modal
+    function closeSessionModal() {
+        document.getElementById('sessionModal').classList.add('hidden');
     }
 
     // Update session status
     async function updateSessionStatus(sessionId, status) {
         try {
-            const response = await fetch(`/api/coach/sessions/${sessionId}/status`, {
+            const response = await fetch(`/api/coach/sessions/${sessionId}/status?status=${status}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ status }),
+                }
             });
             
             if (response.ok) {
@@ -218,6 +313,7 @@
             status: document.getElementById('statusFilter').value,
             member: document.getElementById('memberFilter').value,
             search: document.getElementById('searchInput').value,
+            searchType: 'all'  // This will search in member name, email, and workout type
         };
         loadSessionsData(filters);
     }

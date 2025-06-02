@@ -18,7 +18,7 @@
                 <div class="flex-1 min-w-0">
                     <select id="memberSelect" 
                             class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md sm:text-sm">
-                        <option value="">Select a member...</option>
+                        <option value="0">All Members</option>
                         <!-- Members will be populated here -->
                     </select>
                 </div>
@@ -101,8 +101,8 @@
         <div class="bg-white shadow rounded-lg">
             <div class="px-4 py-5 sm:p-6">
                 <h4 class="text-lg font-medium text-gray-900 mb-4">Session History</h4>
-                <div class="h-64" id="sessionHistoryChart">
-                    <!-- Chart will be rendered here -->
+                <div class="h-64">
+                    <canvas id="sessionHistoryChart"></canvas>
                 </div>
             </div>
         </div>
@@ -111,8 +111,8 @@
         <div class="bg-white shadow rounded-lg">
             <div class="px-4 py-5 sm:p-6">
                 <h4 class="text-lg font-medium text-gray-900 mb-4">Workout Distribution</h4>
-                <div class="h-64" id="workoutDistributionChart">
-                    <!-- Chart will be rendered here -->
+                <div class="h-64">
+                    <canvas id="workoutDistributionChart"></canvas>
                 </div>
             </div>
         </div>
@@ -162,163 +162,183 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    let sessionHistoryChart;
-    let workoutDistributionChart;
+    let sessionHistoryChart = null;
+    let workoutDistributionChart = null;
 
-    // Load members for selection
-    async function loadMembers() {
-        try {
-            const response = await fetch('/api/coach/members');
-            const members = await response.json();
-            
-            const memberSelect = document.getElementById('memberSelect');
-            members.forEach(member => {
-                const option = document.createElement('option');
-                option.value = member.id;
-                option.textContent = member.name;
-                memberSelect.appendChild(option);
+    // Initialize charts
+    function initCharts() {
+        // Session History Chart
+        const sessionHistoryCtx = document.getElementById('sessionHistoryChart');
+        if (sessionHistoryCtx) {
+            sessionHistoryChart = new Chart(sessionHistoryCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Sessions',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
             });
-        } catch (error) {
-            console.error('Error loading members:', error);
+        }
+
+        // Workout Distribution Chart
+        const workoutDistributionCtx = document.getElementById('workoutDistributionChart');
+        if (workoutDistributionCtx) {
+            workoutDistributionChart = new Chart(workoutDistributionCtx, {
+                type: 'pie',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            'rgb(255, 99, 132)',
+                            'rgb(54, 162, 235)',
+                            'rgb(255, 205, 86)',
+                            'rgb(75, 192, 192)',
+                            'rgb(153, 102, 255)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Update charts with new data
+    function updateCharts(data) {
+        if (sessionHistoryChart) {
+            sessionHistoryChart.data.labels = data.session_history.labels;
+            sessionHistoryChart.data.datasets[0].data = data.session_history.values;
+            sessionHistoryChart.update();
+        }
+
+        if (workoutDistributionChart) {
+            workoutDistributionChart.data.labels = data.workout_distribution.labels;
+            workoutDistributionChart.data.datasets[0].data = data.workout_distribution.values;
+            workoutDistributionChart.update();
         }
     }
 
     // Load progress data
     async function loadProgressData(memberId, timeRange) {
         try {
-            const response = await fetch(`/api/coach/progress/${memberId}?time_range=${timeRange}`);
+            const endpoint = memberId === '0' ? 
+                `/api/coach/progress?time_range=${timeRange}` : 
+                `/api/coach/progress/${memberId}?time_range=${timeRange}`;
+            
+            const response = await fetch(endpoint);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const data = await response.json();
             
-            // Update overview stats
+            // Update statistics
             document.getElementById('sessionsCompleted').textContent = data.sessions_completed;
             document.getElementById('attendanceRate').textContent = `${data.attendance_rate}%`;
             document.getElementById('commonWorkout').textContent = data.common_workout;
-
-            // Update session history chart
-            updateSessionHistoryChart(data.session_history);
-
-            // Update workout distribution chart
-            updateWorkoutDistributionChart(data.workout_distribution);
-
+            
+            // Update charts
+            updateCharts(data);
+            
             // Update recent sessions table
-            updateRecentSessionsTable(data.recent_sessions);
+            const recentSessionsBody = document.getElementById('recentSessionsTable');
+            recentSessionsBody.innerHTML = '';
+            
+            data.recent_sessions.forEach(session => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${session.date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${session.member_name ? `<span class="font-medium">${session.member_name}</span><br>` : ''}
+                        ${session.workout.type}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            ${session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 
+                              session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' : 
+                              'bg-yellow-100 text-yellow-800'}">
+                            ${session.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${session.notes || '-'}</td>
+                `;
+                recentSessionsBody.appendChild(row);
+            });
         } catch (error) {
             console.error('Error loading progress data:', error);
-        }
-    }
-
-    // Update session history chart
-    function updateSessionHistoryChart(data) {
-        const ctx = document.getElementById('sessionHistoryChart').getContext('2d');
-        
-        if (sessionHistoryChart) {
-            sessionHistoryChart.destroy();
-        }
-
-        sessionHistoryChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.labels,
-                datasets: [{
-                    label: 'Sessions',
-                    data: data.values,
-                    borderColor: 'rgb(79, 70, 229)',
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
-                        }
-                    }
-                }
+            // Show error message to user
+            const container = document.querySelector('.container');
+            if (container) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative';
+                errorDiv.textContent = 'Failed to load progress data. Please try again.';
+                container.prepend(errorDiv);
             }
-        });
+        }
     }
 
-    // Update workout distribution chart
-    function updateWorkoutDistributionChart(data) {
-        const ctx = document.getElementById('workoutDistributionChart').getContext('2d');
-        
-        if (workoutDistributionChart) {
-            workoutDistributionChart.destroy();
-        }
-
-        workoutDistributionChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: data.labels,
-                datasets: [{
-                    data: data.values,
-                    backgroundColor: [
-                        'rgb(79, 70, 229)',
-                        'rgb(16, 185, 129)',
-                        'rgb(245, 158, 11)',
-                        'rgb(239, 68, 68)',
-                        'rgb(139, 92, 246)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
+    // Load members
+    async function loadMembers() {
+        try {
+            const response = await fetch('/api/coach/members');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        });
+            const members = await response.json();
+            
+            const memberSelect = document.getElementById('memberSelect');
+            memberSelect.innerHTML = '<option value="0">All Members</option>';
+            
+            members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.id;
+                option.textContent = member.name;
+                memberSelect.appendChild(option);
+            });
+            
+            // Load progress data for all members by default
+            loadProgressData('0', 'week');
+        } catch (error) {
+            console.error('Error loading members:', error);
+        }
     }
 
-    // Update recent sessions table
-    function updateRecentSessionsTable(sessions) {
-        const table = document.getElementById('recentSessionsTable');
-        table.innerHTML = '';
-        
-        sessions.forEach(session => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.date}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${session.workout.type}</div>
-                    <div class="text-sm text-gray-500">${session.workout.exercises.length} exercises</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${session.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                          session.status === 'cancelled' ? 'bg-red-100 text-red-800' : 
-                          'bg-yellow-100 text-yellow-800'}">
-                        ${session.status}
-                    </span>
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-500">${session.notes || '-'}</td>
-            `;
-            table.appendChild(row);
-        });
-    }
-
-    // Handle member selection change
-    document.getElementById('memberSelect').addEventListener('change', (e) => {
-        const memberId = e.target.value;
-        const timeRange = document.getElementById('timeRange').value;
-        if (memberId) {
-            loadProgressData(memberId, timeRange);
-        }
-    });
-
-    // Handle time range change
-    document.getElementById('timeRange').addEventListener('change', (e) => {
-        const memberId = document.getElementById('memberSelect').value;
-        const timeRange = e.target.value;
-        if (memberId) {
-            loadProgressData(memberId, timeRange);
-        }
-    });
-
-    // Load data when page loads
+    // Initialize everything when the page loads
     document.addEventListener('DOMContentLoaded', () => {
+        initCharts();
         loadMembers();
+        
+        // Add event listeners
+        document.getElementById('memberSelect').addEventListener('change', (e) => {
+            loadProgressData(e.target.value, document.getElementById('timeRange').value);
+        });
+        
+        document.getElementById('timeRange').addEventListener('change', (e) => {
+            loadProgressData(document.getElementById('memberSelect').value, e.target.value);
+        });
     });
 </script>
 {% endblock %} 
