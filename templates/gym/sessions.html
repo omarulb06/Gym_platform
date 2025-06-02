@@ -3,48 +3,80 @@
 {% block title %}Sessions - PowerFit{% endblock %}
 
 {% block content %}
-    <!-- Sessions Overview -->
+    <!-- Welcome Section -->
     <div class="bg-white shadow rounded-lg mb-6">
         <div class="px-4 py-5 sm:p-6">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h3 class="text-lg leading-6 font-medium text-gray-900">Sessions</h3>
-                    <p class="mt-1 text-sm text-gray-500">Manage your gym's training sessions</p>
-                </div>
-                <button onclick="openAddSessionModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
-                    <i class="fas fa-plus mr-2"></i> Add Session
-                </button>
-            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900">All Sessions</h3>
+            <p class="mt-1 text-sm text-gray-500">View and manage all training sessions</p>
         </div>
     </div>
 
-    <!-- Search and Filters -->
+    <!-- Weekly Schedule -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-lg font-medium text-gray-900">Weekly Schedule</h2>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <input type="date" 
+                           id="startDate" 
+                           class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <span class="text-gray-500">to</span>
+                    <input type="date" 
+                           id="endDate" 
+                           class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <button onclick="loadSchedule()" 
+                            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        <i class="fas fa-search mr-2"></i>Search
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-cols-7 gap-4" id="weeklySchedule">
+            <!-- Days will be populated here -->
+        </div>
+    </div>
+
+    <!-- Filters -->
     <div class="bg-white shadow rounded-lg mb-6">
         <div class="px-4 py-5 sm:p-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Date Range -->
                 <div>
-                    <label for="date" class="block text-sm font-medium text-gray-700">Date</label>
-                    <input type="date" id="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label for="member" class="block text-sm font-medium text-gray-700">Member</label>
-                    <select id="member" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">All Members</option>
+                    <label for="dateRange" class="block text-sm font-medium text-gray-700">Date Range</label>
+                    <select id="dateRange" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="all">All Time</option>
                     </select>
                 </div>
+
+                <!-- Status -->
                 <div>
-                    <label for="coach" class="block text-sm font-medium text-gray-700">Coach</label>
-                    <select id="coach" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">All Coaches</option>
+                    <label for="statusFilter" class="block text-sm font-medium text-gray-700">Status</label>
+                    <select id="statusFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <option value="all">All Status</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
                     </select>
                 </div>
+
+                <!-- Member -->
                 <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
-                    <select id="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">All Status</option>
-                        <option value="Scheduled">Scheduled</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Cancelled">Cancelled</option>
+                    <label for="memberFilter" class="block text-sm font-medium text-gray-700">Member</label>
+                    <select id="memberFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <option value="all">All Members</option>
+                        <!-- Members will be populated here -->
+                    </select>
+                </div>
+
+                <!-- Coach -->
+                <div>
+                    <label for="coachFilter" class="block text-sm font-medium text-gray-700">Coach</label>
+                    <select id="coachFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <option value="all">All Coaches</option>
+                        <!-- Coaches will be populated here -->
                     </select>
                 </div>
             </div>
@@ -54,189 +86,76 @@
     <!-- Sessions List -->
     <div class="bg-white shadow rounded-lg">
         <div class="px-4 py-5 sm:p-6">
-            <div id="sessionsList" class="space-y-4">
-                <!-- Sessions will be loaded here -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coach</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="sessions-table">
+                        <!-- Sessions will be populated here -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- Add Session Modal -->
-    <div id="addSessionModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
+    <!-- Session Details Modal -->
+    <div id="sessionModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
         <div class="flex items-center justify-center min-h-screen p-4">
             <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
                 <div class="px-4 py-5 sm:p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Add New Session</h3>
-                    <form id="addSessionForm" class="space-y-4">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-lg font-medium text-gray-900">Session Details</h3>
+                        <button onclick="closeSessionModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="mt-4 space-y-4">
                         <div>
-                            <label for="session_member" class="block text-sm font-medium text-gray-700">Member</label>
-                            <select id="session_member" name="member_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">Select Member</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="session_coach" class="block text-sm font-medium text-gray-700">Coach</label>
-                            <select id="session_coach" name="coach_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">Select Coach</option>
-                            </select>
+                            <p class="text-sm text-gray-500">Member</p>
+                            <p class="text-base font-medium text-gray-900" id="modalMemberName">-</p>
+                            <p class="text-sm text-gray-500" id="modalMemberEmail">-</p>
                         </div>
                         <div>
-                            <label for="session_date" class="block text-sm font-medium text-gray-700">Date</label>
-                            <input type="date" id="session_date" name="session_date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <p class="text-sm text-gray-500">Coach</p>
+                            <p class="text-base font-medium text-gray-900" id="modalCoachName">-</p>
+                            <p class="text-sm text-gray-500" id="modalCoachSpecialization">-</p>
                         </div>
                         <div>
-                            <label for="session_time" class="block text-sm font-medium text-gray-700">Time</label>
-                            <input type="time" id="session_time" name="session_time" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <p class="text-sm text-gray-500">Date & Time</p>
+                            <p class="text-base font-medium text-gray-900" id="modalDateTime">-</p>
                         </div>
                         <div>
-                            <label for="session_type" class="block text-sm font-medium text-gray-700">Session Type</label>
-                            <select id="session_type" name="session_type" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">Select Type</option>
-                                <option value="Personal Training">Personal Training</option>
-                                <option value="Group Class">Group Class</option>
-                                <option value="Consultation">Consultation</option>
-                            </select>
+                            <p class="text-sm text-gray-500">Duration</p>
+                            <p class="text-base font-medium text-gray-900" id="modalDuration">-</p>
                         </div>
-                        <div class="flex justify-end space-x-3">
-                            <button type="button" onclick="closeAddSessionModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">
-                                Cancel
-                            </button>
-                            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
-                                Add Session
-                            </button>
+                        <div>
+                            <p class="text-sm text-gray-500">Workout Type</p>
+                            <p class="text-base font-medium text-gray-900" id="modalWorkoutType">-</p>
                         </div>
-                    </form>
+                        <div>
+                            <p class="text-sm text-gray-500">Exercises</p>
+                            <ul class="text-sm text-gray-900 list-disc list-inside" id="modalExercises">
+                                <!-- Exercises will be populated here -->
+                            </ul>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <p class="text-base font-medium text-gray-900" id="modalStatus">-</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    // Load sessions data
-    async function loadSessions() {
-        try {
-            const date = document.getElementById('date').value;
-            const member = document.getElementById('member').value;
-            const coach = document.getElementById('coach').value;
-            const status = document.getElementById('status').value;
-            
-            const response = await fetch(`/api/gym/sessions?date=${date}&member=${member}&coach=${coach}&status=${status}`);
-            const sessions = await response.json();
-            
-            const sessionsListDiv = document.getElementById('sessionsList');
-            if (sessions.length === 0) {
-                sessionsListDiv.innerHTML = '<p class="text-gray-500">No sessions found.</p>';
-            } else {
-                sessionsListDiv.innerHTML = sessions.map(session => `
-                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div>
-                            <h4 class="font-medium text-gray-900">${session.member_name}</h4>
-                            <p class="text-sm text-gray-500">with ${session.coach_name}</p>
-                            <p class="text-xs text-gray-400">${session.session_type} • ${new Date(session.session_date).toLocaleDateString()} at ${session.session_time}</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                ${session.status === 'Completed' ? 'bg-green-100 text-green-800' : 
-                                  session.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
-                                  'bg-blue-100 text-blue-800'}">
-                                ${session.status}
-                            </span>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        } catch (error) {
-            console.error('Error loading sessions:', error);
-        }
-    }
-
-    // Load members and coaches for dropdowns
-    async function loadDropdowns() {
-        try {
-            // Load members
-            const membersResponse = await fetch('/api/gym/members');
-            const members = await membersResponse.json();
-            const memberSelect = document.getElementById('member');
-            const sessionMemberSelect = document.getElementById('session_member');
-            
-            members.forEach(member => {
-                const option = new Option(member.name, member.id);
-                memberSelect.add(option);
-                sessionMemberSelect.add(new Option(member.name, member.id));
-            });
-
-            // Load coaches
-            const coachesResponse = await fetch('/api/gym/coaches');
-            const coaches = await coachesResponse.json();
-            const coachSelect = document.getElementById('coach');
-            const sessionCoachSelect = document.getElementById('session_coach');
-            
-            coaches.forEach(coach => {
-                const option = new Option(coach.name, coach.id);
-                coachSelect.add(option);
-                sessionCoachSelect.add(new Option(coach.name, coach.id));
-            });
-        } catch (error) {
-            console.error('Error loading dropdowns:', error);
-        }
-    }
-
-    // Modal functions
-    function openAddSessionModal() {
-        document.getElementById('addSessionModal').classList.remove('hidden');
-    }
-
-    function closeAddSessionModal() {
-        document.getElementById('addSessionModal').classList.add('hidden');
-    }
-
-    // Add session form submission
-    document.getElementById('addSessionForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const formData = {
-            member_id: document.getElementById('session_member').value,
-            coach_id: document.getElementById('session_coach').value,
-            session_date: document.getElementById('session_date').value,
-            session_time: document.getElementById('session_time').value,
-            session_type: document.getElementById('session_type').value
-        };
-        
-        try {
-            const response = await fetch('/api/gym/sessions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-            
-            if (response.ok) {
-                closeAddSessionModal();
-                loadSessions();
-            } else {
-                const error = await response.json();
-                alert(error.detail || 'Error adding session');
-            }
-        } catch (error) {
-            console.error('Error adding session:', error);
-            alert('Error adding session');
-        }
-    });
-
-    // Load data when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-        loadDropdowns();
-        loadSessions();
-    });
-
-    // Add event listeners for search and filters
-    document.getElementById('date').addEventListener('change', loadSessions);
-    document.getElementById('member').addEventListener('change', loadSessions);
-    document.getElementById('coach').addEventListener('change', loadSessions);
-    document.getElementById('status').addEventListener('change', loadSessions);
-</script>
 {% endblock %}
 
 {% block sidebar %}
@@ -252,4 +171,297 @@
 <a href="/gym/sessions" class="block py-2 px-4 bg-indigo-700">
     <i class="fas fa-calendar mr-2"></i> Sessions
 </a>
+<a href="/gym/reports" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-chart-bar mr-2"></i> Reports
+</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Store sessions globally
+    let sessions = [];
+
+    // Format date as YYYY-MM-DD
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    // Get week range
+    function getWeekRange(date) {
+        const start = new Date(date);
+        start.setDate(date.getDate() - date.getDay());
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return { start, end };
+    }
+
+    // Set default date range (current week)
+    function setDefaultDateRange() {
+        const today = new Date();
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+        
+        const endDate = new Date(today);
+        endDate.setDate(today.getDate() + (6 - today.getDay())); // End of week (Saturday)
+        
+        document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+        document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+    }
+
+    // Load schedule with date range
+    async function loadSchedule() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/gym/sessions?start_date=${startDate}&end_date=${endDate}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch schedule');
+            }
+            const sessions = await response.json();
+            displaySchedule(sessions);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to load schedule');
+        }
+    }
+
+    // Display schedule
+    function displaySchedule(sessions) {
+        const scheduleContainer = document.getElementById('weeklySchedule');
+        const startDate = new Date(document.getElementById('startDate').value);
+        const endDate = new Date(document.getElementById('endDate').value);
+        
+        // Clear existing schedule
+        scheduleContainer.innerHTML = '';
+        
+        // Create day columns
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            const daySessions = sessions.filter(session => 
+                session.date === currentDate.toISOString().split('T')[0]
+            );
+            
+            const dayColumn = document.createElement('div');
+            dayColumn.className = 'space-y-2';
+            
+            // Day header
+            const dayHeader = document.createElement('div');
+            dayHeader.className = 'text-center font-medium text-gray-900 mb-2';
+            dayHeader.textContent = currentDate.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            dayColumn.appendChild(dayHeader);
+            
+            // Sessions for this day
+            if (daySessions.length === 0) {
+                const noSessions = document.createElement('div');
+                noSessions.className = 'text-center text-gray-500 text-sm';
+                noSessions.textContent = 'No sessions';
+                dayColumn.appendChild(noSessions);
+            } else {
+                daySessions.forEach(session => {
+                    const sessionCard = document.createElement('div');
+                    sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
+                    sessionCard.onclick = () => viewSessionDetails(session.id);
+                    
+                    sessionCard.innerHTML = `
+                        <div class="text-sm font-medium text-gray-900">${session.time}</div>
+                        <div class="text-xs text-gray-500">${session.member.name}</div>
+                        <div class="text-xs text-gray-500">${session.coach.name}</div>
+                        <div class="mt-1">
+                            <span class="px-2 py-1 text-xs rounded-full ${
+                                session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                                session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                'bg-blue-100 text-blue-800'
+                            }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+                        </div>
+                    `;
+                    
+                    dayColumn.appendChild(sessionCard);
+                });
+            }
+            
+            scheduleContainer.appendChild(dayColumn);
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+    }
+
+    // Load sessions data
+    async function loadSessionsData(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams(filters).toString();
+            const response = await fetch(`/api/gym/sessions?${queryParams}`);
+            sessions = await response.json();
+            
+            // Update sessions table
+            const sessionsTable = document.getElementById('sessions-table');
+            sessionsTable.innerHTML = '';
+            
+            sessions.forEach(session => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${session.member.name}</div>
+                        <div class="text-sm text-gray-500">${session.member.email}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${session.coach.name}</div>
+                        <div class="text-sm text-gray-500">${session.coach.specialization}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.time}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${session.workout.type}</div>
+                        <div class="text-sm text-gray-500">${session.workout.exercises.length} exercises</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            ${session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 
+                              session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' : 
+                              'bg-blue-100 text-blue-800'}">
+                            ${session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="viewSessionDetails(${session.id})" 
+                                class="text-indigo-600 hover:text-indigo-900">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+                sessionsTable.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Error loading sessions data:', error);
+        }
+    }
+
+    // Load members for filter
+    async function loadMembers() {
+        try {
+            const response = await fetch('/api/gym/members');
+            const members = await response.json();
+            
+            const memberFilter = document.getElementById('memberFilter');
+            members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.id;
+                option.textContent = member.name;
+                memberFilter.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading members:', error);
+        }
+    }
+
+    // Load coaches for filter
+    async function loadCoaches() {
+        try {
+            const response = await fetch('/api/gym/coaches');
+            const coaches = await response.json();
+            
+            const coachFilter = document.getElementById('coachFilter');
+            coaches.forEach(coach => {
+                const option = document.createElement('option');
+                option.value = coach.id;
+                option.textContent = coach.name;
+                coachFilter.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading coaches:', error);
+        }
+    }
+
+    // View session details
+    function viewSessionDetails(sessionId) {
+        const session = sessions.find(s => s.id === sessionId);
+        if (!session) {
+            console.error('Session not found');
+            return;
+        }
+
+        const modal = document.getElementById('sessionModal');
+        document.getElementById('modalMemberName').textContent = session.member.name;
+        document.getElementById('modalMemberEmail').textContent = session.member.email;
+        document.getElementById('modalCoachName').textContent = session.coach.name;
+        document.getElementById('modalCoachSpecialization').textContent = session.coach.specialization;
+        document.getElementById('modalDateTime').textContent = `${session.date} at ${session.time}`;
+        document.getElementById('modalDuration').textContent = `${session.duration} minutes`;
+        document.getElementById('modalWorkoutType').textContent = session.workout.type;
+        document.getElementById('modalStatus').textContent = session.status.charAt(0).toUpperCase() + session.status.slice(1);
+
+        // Populate exercises
+        const exercisesList = document.getElementById('modalExercises');
+        exercisesList.innerHTML = '';
+        session.workout.exercises.forEach(exercise => {
+            const li = document.createElement('li');
+            li.textContent = exercise;
+            exercisesList.appendChild(li);
+        });
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeSessionModal() {
+        document.getElementById('sessionModal').classList.add('hidden');
+    }
+
+    // Add event listeners for filters
+    document.getElementById('dateRange').addEventListener('change', () => {
+        const filters = {
+            date_range: document.getElementById('dateRange').value,
+            status: document.getElementById('statusFilter').value,
+            member: document.getElementById('memberFilter').value,
+            coach: document.getElementById('coachFilter').value
+        };
+        loadSessionsData(filters);
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', () => {
+        const filters = {
+            date_range: document.getElementById('dateRange').value,
+            status: document.getElementById('statusFilter').value,
+            member: document.getElementById('memberFilter').value,
+            coach: document.getElementById('coachFilter').value
+        };
+        loadSessionsData(filters);
+    });
+
+    document.getElementById('memberFilter').addEventListener('change', () => {
+        const filters = {
+            date_range: document.getElementById('dateRange').value,
+            status: document.getElementById('statusFilter').value,
+            member: document.getElementById('memberFilter').value,
+            coach: document.getElementById('coachFilter').value
+        };
+        loadSessionsData(filters);
+    });
+
+    document.getElementById('coachFilter').addEventListener('change', () => {
+        const filters = {
+            date_range: document.getElementById('dateRange').value,
+            status: document.getElementById('statusFilter').value,
+            member: document.getElementById('memberFilter').value,
+            coach: document.getElementById('coachFilter').value
+        };
+        loadSessionsData(filters);
+    });
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', () => {
+        setDefaultDateRange();
+        loadMembers();
+        loadCoaches();
+        loadSessionsData();
+        loadSchedule();
+    });
+</script>
 {% endblock %} 

@@ -101,6 +101,55 @@
             </div>
         </div>
     </div>
+
+    <!-- Edit Member Modal -->
+    <div id="editMemberModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Edit Member</h3>
+                    <form id="editMemberForm" class="space-y-4">
+                        <input type="hidden" id="edit_member_id">
+                        <div>
+                            <label for="edit_name" class="block text-sm font-medium text-gray-700">Name</label>
+                            <input type="text" id="edit_name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="edit_email" class="block text-sm font-medium text-gray-700">Email</label>
+                            <input type="email" id="edit_email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="edit_phone" class="block text-sm font-medium text-gray-700">Phone</label>
+                            <input type="tel" id="edit_phone" name="phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="edit_membership_type" class="block text-sm font-medium text-gray-700">Membership Type</label>
+                            <select id="edit_membership_type" name="membership_type" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="Basic">Basic</option>
+                                <option value="Premium">Premium</option>
+                                <option value="VIP">VIP</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="edit_status" class="block text-sm font-medium text-gray-700">Status</label>
+                            <select id="edit_status" name="status" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="closeEditMemberModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">
+                                Cancel
+                            </button>
+                            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
@@ -126,10 +175,16 @@
                             <p class="text-sm text-gray-500">${member.email}</p>
                             <p class="text-xs text-gray-400">${member.membership_type} • Joined ${new Date(member.join_date).toLocaleDateString()}</p>
                         </div>
-                        <div class="text-right">
+                        <div class="flex items-center space-x-2">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
                                 ${member.status}
                             </span>
+                            <button onclick="openEditMemberModal(${JSON.stringify(member).replace(/"/g, '&quot;')})" class="text-indigo-600 hover:text-indigo-900">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteMember(${member.id})" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                     </div>
                 `).join('');
@@ -189,6 +244,79 @@
     document.getElementById('search').addEventListener('input', loadMembers);
     document.getElementById('membership_type').addEventListener('change', loadMembers);
     document.getElementById('status').addEventListener('change', loadMembers);
+
+    // Edit member functions
+    function openEditMemberModal(member) {
+        document.getElementById('edit_member_id').value = member.id;
+        document.getElementById('edit_name').value = member.name;
+        document.getElementById('edit_email').value = member.email;
+        document.getElementById('edit_phone').value = member.phone;
+        document.getElementById('edit_membership_type').value = member.membership_type;
+        document.getElementById('edit_status').value = member.status;
+        document.getElementById('editMemberModal').classList.remove('hidden');
+    }
+
+    function closeEditMemberModal() {
+        document.getElementById('editMemberModal').classList.add('hidden');
+    }
+
+    // Edit member form submission
+    document.getElementById('editMemberForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const memberId = document.getElementById('edit_member_id').value;
+        const formData = {
+            name: document.getElementById('edit_name').value,
+            email: document.getElementById('edit_email').value,
+            phone: document.getElementById('edit_phone').value,
+            membership_type: document.getElementById('edit_membership_type').value,
+            status: document.getElementById('edit_status').value
+        };
+        
+        try {
+            const response = await fetch(`/api/gym/members/${memberId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            if (response.ok) {
+                closeEditMemberModal();
+                loadMembers();
+            } else {
+                const error = await response.json();
+                alert(error.detail || 'Error updating member');
+            }
+        } catch (error) {
+            console.error('Error updating member:', error);
+            alert('Error updating member');
+        }
+    });
+
+    // Delete member function
+    async function deleteMember(memberId) {
+        if (!confirm('Are you sure you want to delete this member?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/gym/members/${memberId}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                loadMembers();
+            } else {
+                const error = await response.json();
+                alert(error.detail || 'Error deleting member');
+            }
+        } catch (error) {
+            console.error('Error deleting member:', error);
+            alert('Error deleting member');
+        }
+    }
 </script>
 {% endblock %}
 
@@ -204,5 +332,8 @@
 </a>
 <a href="/gym/sessions" class="block py-2 px-4 hover:bg-indigo-700">
     <i class="fas fa-calendar mr-2"></i> Sessions
+</a>
+<a href="/gym/reports" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-chart-bar mr-2"></i> Reports
 </a>
 {% endblock %} 
