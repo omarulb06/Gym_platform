@@ -1078,17 +1078,26 @@ async def get_gym_dashboard(request: Request):
         cursor.execute("SELECT * FROM gyms WHERE id = %s", (user["id"],))
         gym = cursor.fetchone()
         
-        # Get stats
+        # Get stats with proper revenue calculation (membership fees only)
         cursor.execute("""
             SELECT 
                 (SELECT COUNT(*) FROM members WHERE gym_id = %s) as total_members,
                 (SELECT COUNT(*) FROM coaches WHERE gym_id = %s AND status = 'Active') as active_coaches,
                 (SELECT COUNT(*) FROM sessions WHERE gym_id = %s AND DATE(session_date) = CURDATE()) as today_sessions,
-                (SELECT COALESCE(SUM(amount), 0) FROM payments 
-                 WHERE gym_id = %s 
-                 AND payment_date >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01')
-                 AND payment_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL 1 MONTH)
-                 AND status = 'Completed') as monthly_revenue
+                (
+                    -- Calculate membership revenue only
+                    SELECT COALESCE(SUM(
+                        CASE 
+                            WHEN m.membership_type = 'Basic' THEN 50.00
+                            WHEN m.membership_type = 'Premium' THEN 100.00
+                            WHEN m.membership_type = 'VIP' THEN 200.00
+                        END
+                    ), 0)
+                    FROM members m
+                    WHERE m.gym_id = %s
+                    AND m.join_date >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01')
+                    AND m.join_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL 1 MONTH)
+                ) as monthly_revenue
         """, (user["id"], user["id"], user["id"], user["id"]))
         stats = cursor.fetchone()
         
@@ -3055,6 +3064,118 @@ async def get_member_progress_data(current_user: dict = Depends(get_current_user
     except Exception as e:
         print(f"Error in get_member_progress_data: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving progress data")
+
+@app.get("/gym/reports", response_class=HTMLResponse)
+async def get_gym_reports_page(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        return RedirectResponse(url="/")
+    
+    # Get gym details from database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get gym details
+        cursor.execute("SELECT * FROM gyms WHERE id = %s", (user["id"],))
+        gym_details = cursor.fetchone()
+        
+        # Return the reports page template with gym details
+        return templates.TemplateResponse(
+            "gym/reports.html",
+            {
+                "request": request,
+                "gym": gym_details,
+                "user": user
+            }
+        )
+    except Exception as e:
+        print(f"Error getting gym reports page: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/api/gym/reports")
+async def get_gym_reports(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get membership statistics
+        cursor.execute("""
+            SELECT 
+                membership_type,
+                COUNT(*) as count,
+                SUM(CASE WHEN join_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as new_members
+            FROM members 
+            WHERE gym_id = %s
+            GROUP BY membership_type
+        """, (user["id"],))
+        membership_stats = cursor.fetchall()
+        
+        # Get session statistics
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_sessions,
+                SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_sessions,
+                SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_sessions,
+                COUNT(DISTINCT member_id) as active_members,
+                COUNT(DISTINCT coach_id) as active_coaches
+            FROM sessions 
+            WHERE gym_id = %s
+            AND session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        """, (user["id"],))
+        session_stats = cursor.fetchone()
+        
+        # Get revenue statistics
+        cursor.execute("""
+            SELECT 
+                SUM(CASE 
+                    WHEN membership_type = 'Basic' THEN 50.00
+                    WHEN membership_type = 'Premium' THEN 100.00
+                    WHEN membership_type = 'VIP' THEN 200.00
+                END) as monthly_revenue
+            FROM members 
+            WHERE gym_id = %s
+            AND join_date >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01')
+            AND join_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL 1 MONTH)
+        """, (user["id"],))
+        revenue_stats = cursor.fetchone()
+        
+        # Get coach performance
+        cursor.execute("""
+            SELECT 
+                c.name as coach_name,
+                COUNT(s.id) as total_sessions,
+                SUM(CASE WHEN s.status = 'Completed' THEN 1 ELSE 0 END) as completed_sessions,
+                COUNT(DISTINCT s.member_id) as unique_members
+            FROM coaches c
+            LEFT JOIN sessions s ON c.id = s.coach_id
+            WHERE c.gym_id = %s
+            AND (s.session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) OR s.session_date IS NULL)
+            GROUP BY c.id, c.name
+        """, (user["id"],))
+        coach_stats = cursor.fetchall()
+        
+        return {
+            "membership_stats": membership_stats,
+            "session_stats": session_stats,
+            "revenue_stats": revenue_stats,
+            "coach_stats": coach_stats
+        }
+    except Exception as e:
+        print(f"Error getting gym reports: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == "__main__":
     import uvicorn
