@@ -1,0 +1,18 @@
+{% block sidebar %}
+<a href="/member/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-home mr-2"></i> Dashboard
+</a>
+<a href="/member/schedule" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-calendar mr-2"></i> Schedule
+</a>
+<a href="/member/progress" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-chart-line mr-2"></i> Progress
+</a>
+<div class="border-t border-indigo-700 my-2"></div>
+<a href="/member/messages" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-envelope mr-2"></i> Messages
+</a>
+<button onclick="showNewMessageModal('member')" class="w-full text-left py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-pen-to-square mr-2"></i> New Message
+</button>
+{% endblock %} 

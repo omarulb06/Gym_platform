@@ -190,7 +190,7 @@ def init_db():
                 membership_type ENUM('Basic', 'Premium', 'VIP') DEFAULT 'Basic',
                 join_date DATE DEFAULT (CURRENT_DATE),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (gym_id) REFERENCES gyms(id)
+                FOREIGN KEY (gym_id) REFERENCES gyms(id) ON DELETE CASCADE
             )
         """)
         
@@ -239,6 +239,37 @@ def init_db():
                 notes TEXT,
                 FOREIGN KEY (member_id) REFERENCES members(id),
                 FOREIGN KEY (gym_id) REFERENCES gyms(id)
+            )
+        """)
+
+        # Create notifications table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sender_id INT NOT NULL,
+                sender_type ENUM('gym', 'coach', 'member') NOT NULL,
+                receiver_id INT NOT NULL,
+                receiver_type ENUM('gym', 'coach', 'member') NOT NULL,
+                title VARCHAR(200) NOT NULL,
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Create messages table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sender_id INT NOT NULL,
+                sender_type ENUM('gym', 'coach', 'member') NOT NULL,
+                receiver_id INT NOT NULL,
+                receiver_type ENUM('gym', 'coach', 'member') NOT NULL,
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_sender (sender_id, sender_type),
+                INDEX idx_receiver (receiver_id, receiver_type)
             )
         """)
         
@@ -458,481 +489,6 @@ async def login(request: Request):
             content={"detail": str(e)}
         )
 
-# Member endpoints
-@app.get("/api/member/{member_id}/sessions")
-async def get_member_sessions(member_id: int):
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        cursor.execute("""
-            SELECT s.*, c.name as coach_name, g.name as gym_name
-            FROM sessions s 
-            JOIN coaches c ON s.coach_id = c.id 
-            JOIN gyms g ON s.gym_id = g.id
-            WHERE s.member_id = %s 
-            ORDER BY s.session_date DESC, s.session_time DESC
-        """, (member_id,))
-        
-        sessions = cursor.fetchall()
-        return JSONResponse(content=sessions)
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"detail": str(e)}
-        )
-    finally:
-        cursor.close()
-        connection.close()
-
-@app.get("/api/member/{member_id}/coach")
-async def get_member_coach(member_id: int):
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        cursor.execute("""
-            SELECT c.* 
-            FROM coaches c 
-            JOIN member_coach mc ON c.id = mc.coach_id 
-            WHERE mc.member_id = %s
-        """, (member_id,))
-        
-        coach = cursor.fetchone()
-        return JSONResponse(content=coach if coach else {"detail": "No coach assigned"})
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"detail": str(e)}
-        )
-    finally:
-        cursor.close()
-        connection.close()
-
-# Coach endpoints
-@app.get("/api/coach/{coach_id}/schedule")
-async def get_coach_schedule(coach_id: int):
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        cursor.execute("""
-            SELECT s.*, m.name as member_name, g.name as gym_name
-            FROM sessions s 
-            JOIN members m ON s.member_id = m.id 
-            JOIN gyms g ON s.gym_id = g.id
-            WHERE s.coach_id = %s 
-            ORDER BY s.session_date, s.session_time
-        """, (coach_id,))
-        
-        schedule = cursor.fetchall()
-        return JSONResponse(content=schedule)
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"detail": str(e)}
-        )
-    finally:
-        cursor.close()
-        connection.close()
-
-@app.get("/api/coach/members")
-async def get_coach_members(
-    search: str = "",
-    membership_type: str = "all",
-    current_user: dict = Depends(get_current_user)
-):
-    if current_user["user_type"] != "coach":
-        raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Base query
-        query = """
-            SELECT m.*, 
-                   COUNT(s.id) as total_sessions,
-                   SUM(CASE WHEN s.status = 'completed' THEN 1 ELSE 0 END) as completed_sessions,
-                   MAX(CASE WHEN s.status = 'completed' THEN s.session_date ELSE NULL END) as last_session
-            FROM members m 
-            JOIN member_coach mc ON m.id = mc.member_id 
-            LEFT JOIN sessions s ON m.id = s.member_id
-            WHERE mc.coach_id = %s
-        """
-        params = [current_user["id"]]
-        
-        # Add search condition
-        if search:
-            query += " AND (m.name LIKE %s OR m.email LIKE %s)"
-            params.extend([f"%{search}%", f"%{search}%"])
-        
-        # Add membership type filter
-        if membership_type != "all":
-            query += " AND m.membership_type = %s"
-            params.append(membership_type)
-        
-        # Group by member
-        query += " GROUP BY m.id ORDER BY m.name"
-        
-        cursor.execute(query, params)
-        members = cursor.fetchall()
-        
-        cursor.close()
-        conn.close()
-        
-        return members
-    except Exception as e:
-        print(f"Error in get_coach_members: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving members")
-
-@app.get("/api/coach/sessions")
-async def get_coach_sessions(
-    date_range: str = "all",
-    status: str = "all",
-    member: str = "all",
-    search: str = "",
-    current_user: dict = Depends(get_current_user)
-):
-    if current_user["user_type"] != "coach":
-        raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Base query
-        query = """
-            SELECT s.*, 
-                   m.name as member_name, m.email as member_email,
-                   DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                   TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-            FROM sessions s
-            JOIN members m ON s.member_id = m.id
-            WHERE s.coach_id = %s
-        """
-        params = [current_user["id"]]
-        
-        # Add date range filter
-        if date_range != "all":
-            if date_range == "today":
-                query += " AND s.session_date = CURDATE()"
-            elif date_range == "week":
-                query += " AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
-            elif date_range == "month":
-                query += " AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)"
-        
-        # Add status filter
-        if status != "all":
-            query += " AND s.status = %s"
-            params.append(status)
-        
-        # Add member filter
-        if member != "all":
-            query += " AND s.member_id = %s"
-            params.append(member)
-        
-        # Add search condition
-        if search:
-            query += " AND (m.name LIKE %s OR m.email LIKE %s OR s.notes LIKE %s)"
-            params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
-        
-        # Order by date and time
-        query += " ORDER BY s.session_date DESC, s.session_time DESC"
-        
-        cursor.execute(query, params)
-        sessions = cursor.fetchall()
-        
-        # Format session data
-        formatted_sessions = []
-        for session in sessions:
-            # Parse workout notes
-            workout_type = "Custom"
-            exercises = []
-            if session["notes"]:
-                try:
-                    # Extract workout type and exercises from notes
-                    lines = session["notes"].split("\n")
-                    if lines and "Workout Type:" in lines[0]:
-                        workout_type = lines[0].split("Workout Type:")[1].strip()
-                    exercises = [line.strip() for line in lines[1:] if line.strip() and line.strip()[0].isdigit()]
-                except:
-                    pass
-            
-            formatted_sessions.append({
-                "id": session["id"],
-                "member": {
-                    "name": session["member_name"],
-                    "email": session["member_email"]
-                },
-                "date": session["formatted_date"],
-                "time": session["formatted_time"],
-                "duration": session["duration"],
-                "status": session["status"],
-                "workout": {
-                    "type": workout_type,
-                    "exercises": exercises
-                },
-                "notes": session["notes"]
-            })
-        
-        cursor.close()
-        conn.close()
-        
-        return formatted_sessions
-    except Exception as e:
-        print(f"Error in get_coach_sessions: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving sessions")
-
-@app.put("/api/coach/sessions/{session_id}/status")
-async def update_session_status(
-    session_id: int,
-    status: str,
-    current_user: dict = Depends(get_current_user)
-):
-    if current_user["user_type"] != "coach":
-        raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
-    
-    if status not in ["scheduled", "completed", "cancelled"]:
-        raise HTTPException(status_code=400, detail="Invalid status")
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Check if session exists and belongs to coach
-        cursor.execute(
-            "SELECT id FROM sessions WHERE id = %s AND coach_id = %s",
-            [session_id, current_user["id"]]
-        )
-        if not cursor.fetchone():
-            raise HTTPException(status_code=404, detail="Session not found")
-        
-        # Update session status
-        cursor.execute(
-            "UPDATE sessions SET status = %s WHERE id = %s",
-            [status, session_id]
-        )
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return {"message": "Session status updated successfully"}
-    except Exception as e:
-        print(f"Error in update_session_status: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error updating session status")
-
-@app.get("/api/coach/progress")
-async def get_coach_progress(
-    time_range: str = "month",
-    current_user: dict = Depends(get_current_user)
-):
-    # Redirect to the member-specific endpoint with member_id=0 (all members)
-    return await get_member_progress(0, time_range, current_user)
-
-@app.get("/api/coach/progress/{member_id}")
-async def get_member_progress(
-    member_id: int,
-    time_range: str = "month",
-    current_user: dict = Depends(get_current_user)
-):
-    if current_user["user_type"] != "coach":
-        raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        print(f"Fetching progress for member {member_id} with coach {current_user['id']}")
-        
-        # Calculate date range
-        date_condition = ""
-        if time_range == "week":
-            date_condition = "AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
-        elif time_range == "month":
-            date_condition = "AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)"
-        elif time_range == "quarter":
-            date_condition = "AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)"
-        elif time_range == "year":
-            date_condition = "AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 365 DAY)"
-        
-        # Base query conditions
-        member_condition = "AND s.member_id = %s" if member_id != 0 else ""
-        member_params = [current_user["id"]]
-        if member_id != 0:
-            member_params.append(member_id)
-        
-        # Get session statistics
-        stats_query = """
-            SELECT 
-                COUNT(*) as total_sessions,
-                SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_sessions,
-                SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_sessions
-            FROM sessions s
-            JOIN member_coach mc ON s.member_id = mc.member_id
-            WHERE mc.coach_id = %s """ + member_condition + " " + date_condition
-        
-        print(f"Stats query: {stats_query}")  # Debug log
-        print(f"Stats params: {member_params}")  # Debug log
-        cursor.execute(stats_query, tuple(member_params))
-        stats = cursor.fetchone()
-        print(f"Stats result: {stats}")  # Debug log
-        
-        # Calculate attendance rate
-        total_sessions = stats["total_sessions"] or 0
-        completed_sessions = stats["completed_sessions"] or 0
-        attendance_rate = round((completed_sessions / total_sessions * 100) if total_sessions > 0 else 0)
-        
-        # Get most common workout type
-        workout_query = """
-            SELECT 
-                TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, 'Workout Type:', -1), CHAR(10), 1)) as workout_type,
-                COUNT(*) as count
-            FROM sessions s
-            JOIN member_coach mc ON s.member_id = mc.member_id
-            WHERE mc.coach_id = %s """ + member_condition + """ AND notes LIKE '%%Workout Type:%%' """ + date_condition + """
-            GROUP BY workout_type
-            ORDER BY count DESC
-            LIMIT 1
-        """
-        
-        print(f"Workout query: {workout_query}")  # Debug log
-        cursor.execute(workout_query, tuple(member_params))
-        common_workout = cursor.fetchone()
-        print(f"Common workout result: {common_workout}")  # Debug log
-        
-        # Get session history
-        history_query = """
-            SELECT 
-                DATE_FORMAT(session_date, '%%Y-%%m-%%d') as date,
-                COUNT(*) as count
-            FROM sessions s
-            JOIN member_coach mc ON s.member_id = mc.member_id
-            WHERE mc.coach_id = %s """ + member_condition + " " + date_condition + """
-            GROUP BY session_date
-            ORDER BY session_date
-        """
-        
-        print(f"History query: {history_query}")  # Debug log
-        cursor.execute(history_query, tuple(member_params))
-        session_history = cursor.fetchall()
-        print(f"Session history result: {session_history}")  # Debug log
-        
-        # Get workout distribution
-        distribution_query = """
-            SELECT 
-                TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, 'Workout Type:', -1), CHAR(10), 1)) as workout_type,
-                COUNT(*) as count
-            FROM sessions s
-            JOIN member_coach mc ON s.member_id = mc.member_id
-            WHERE mc.coach_id = %s """ + member_condition + """ AND notes LIKE '%%Workout Type:%%' """ + date_condition + """
-            GROUP BY workout_type
-            ORDER BY count DESC
-        """
-        
-        print(f"Distribution query: {distribution_query}")  # Debug log
-        cursor.execute(distribution_query, tuple(member_params))
-        workout_distribution = cursor.fetchall()
-        print(f"Workout distribution result: {workout_distribution}")  # Debug log
-        
-        # Get recent sessions
-        sessions_query = """
-            SELECT 
-                s.*,
-                m.name as member_name,
-                DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-            FROM sessions s
-            JOIN member_coach mc ON s.member_id = mc.member_id
-            JOIN members m ON s.member_id = m.id
-            WHERE mc.coach_id = %s """ + member_condition + " " + date_condition + """
-            ORDER BY s.session_date DESC, s.session_time DESC
-            LIMIT 5
-        """
-        
-        print(f"Sessions query: {sessions_query}")  # Debug log
-        cursor.execute(sessions_query, tuple(member_params))
-        recent_sessions = cursor.fetchall()
-        print(f"Recent sessions result: {recent_sessions}")  # Debug log
-        
-        # If no data found, create some test data
-        if not session_history:
-            print("No data found, creating test data")
-            today = datetime.now().date()
-            session_history = [
-                {"date": (today - timedelta(days=i)).strftime("%Y-%m-%d"), "count": random.randint(1, 3)}
-                for i in range(7)
-            ]
-            workout_distribution = [
-                {"workout_type": "Upper Body", "count": 5},
-                {"workout_type": "Lower Body", "count": 3},
-                {"workout_type": "Full Body", "count": 2}
-            ]
-            recent_sessions = [
-                {
-                    "formatted_date": (today - timedelta(days=i)).strftime("%Y-%m-%d"),
-                    "formatted_time": "10:00",
-                    "status": "Completed",
-                    "notes": f"Workout Type: {wt}\n1. Exercise 1\n2. Exercise 2",
-                    "member_name": "Test Member"
-                }
-                for i, wt in enumerate(["Upper Body", "Lower Body", "Full Body"])
-            ]
-            completed_sessions = 8
-            attendance_rate = 80
-            common_workout = {"workout_type": "Upper Body"}
-        
-        # Format recent sessions
-        formatted_recent_sessions = []
-        for session in recent_sessions:
-            workout_type = "Custom"
-            exercises = []
-            if session["notes"]:
-                try:
-                    lines = session["notes"].split("\n")
-                    if lines and "Workout Type:" in lines[0]:
-                        workout_type = lines[0].split("Workout Type:")[1].strip()
-                    exercises = [line.strip() for line in lines[1:] if line.strip() and line.strip()[0].isdigit()]
-                except Exception as e:
-                    print(f"Error parsing notes: {str(e)}")
-            
-            formatted_recent_sessions.append({
-                "date": session["formatted_date"],
-                "member_name": session["member_name"],
-                "workout": {
-                    "type": workout_type,
-                    "exercises": exercises
-                },
-                "status": session["status"],
-                "notes": session["notes"]
-            })
-        
-        cursor.close()
-        conn.close()
-        
-        response_data = {
-            "sessions_completed": completed_sessions,
-            "attendance_rate": attendance_rate,
-            "common_workout": common_workout["workout_type"] if common_workout else "No workouts",
-            "session_history": {
-                "labels": [entry["date"] for entry in session_history],
-                "values": [entry["count"] for entry in session_history]
-            },
-            "workout_distribution": {
-                "labels": [entry["workout_type"] for entry in workout_distribution],
-                "values": [entry["count"] for entry in workout_distribution]
-            },
-            "recent_sessions": formatted_recent_sessions
-        }
-        
-        print(f"Returning response data: {response_data}")
-        return response_data
-        
-    except Exception as e:
-        print(f"Error in get_member_progress: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving member progress: {str(e)}")
-
 # Gym routes
 @app.get("/gym/dashboard", response_class=HTMLResponse)
 async def get_gym_dashboard_page(request: Request):
@@ -1062,82 +618,9 @@ async def get_gym_sessions_page(request: Request):
         cursor.close()
         conn.close()
 
-# Gym API endpoints
-@app.get("/api/gym/dashboard")
-async def get_gym_dashboard(request: Request):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "gym":
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get gym info
-        cursor.execute("SELECT * FROM gyms WHERE id = %s", (user["id"],))
-        gym = cursor.fetchone()
-        
-        # Get stats with proper revenue calculation (membership fees only)
-        cursor.execute("""
-            SELECT 
-                (SELECT COUNT(*) FROM members WHERE gym_id = %s) as total_members,
-                (SELECT COUNT(*) FROM coaches WHERE gym_id = %s AND status = 'Active') as active_coaches,
-                (SELECT COUNT(*) FROM sessions WHERE gym_id = %s AND DATE(session_date) = CURDATE()) as today_sessions,
-                (
-                    -- Calculate membership revenue only
-                    SELECT COALESCE(SUM(
-                        CASE 
-                            WHEN m.membership_type = 'Basic' THEN 50.00
-                            WHEN m.membership_type = 'Premium' THEN 100.00
-                            WHEN m.membership_type = 'VIP' THEN 200.00
-                        END
-                    ), 0)
-                    FROM members m
-                    WHERE m.gym_id = %s
-                    AND m.join_date >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01')
-                    AND m.join_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL 1 MONTH)
-                ) as monthly_revenue
-        """, (user["id"], user["id"], user["id"], user["id"]))
-        stats = cursor.fetchone()
-        
-        # Get recent members
-        cursor.execute("""
-            SELECT * FROM members 
-            WHERE gym_id = %s 
-            ORDER BY join_date DESC 
-            LIMIT 5
-        """, (user["id"],))
-        recent_members = cursor.fetchall()
-        
-        # Get recent sessions
-        cursor.execute("""
-            SELECT s.*, m.name as member_name,
-                   DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                   TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-            FROM sessions s
-            JOIN members m ON s.member_id = m.id
-            WHERE s.gym_id = %s
-            ORDER BY s.session_date DESC, s.session_time DESC
-            LIMIT 5
-        """, (user["id"],))
-        recent_sessions = cursor.fetchall()
-        
-        return {
-            "gym": gym,
-            "stats": stats,
-            "recent_members": recent_members,
-            "recent_sessions": recent_sessions
-        }
-    except Exception as e:
-        print(f"Error getting gym dashboard: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
 
 # Member API Endpoints
-@app.get("/member/dashboard", response_class=HTMLResponse)
+@app.get("/api/member/dashboard", response_class=HTMLResponse)
 async def get_member_dashboard_page(request: Request):
     # Get user from session using our existing session management
     user = get_current_user(request)
@@ -1175,285 +658,6 @@ async def get_member_dashboard_page(request: Request):
         cursor.close()
         conn.close()
 
-@app.get("/api/member/dashboard")
-async def get_member_dashboard(request: Request):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "member":
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get member info
-        cursor.execute("""
-            SELECT m.*, c.name as coach_name, c.specialization, c.email as coach_email
-            FROM members m
-            LEFT JOIN member_coach mc ON m.id = mc.member_id
-            LEFT JOIN coaches c ON mc.coach_id = c.id
-            WHERE m.id = %s
-        """, (user["id"],))
-        member = cursor.fetchone()
-        
-        # Get stats
-        cursor.execute("""
-            SELECT 
-                COUNT(*) as total_sessions,
-                SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_sessions,
-                SUM(CASE WHEN session_date >= CURDATE() THEN 1 ELSE 0 END) as upcoming_sessions
-            FROM sessions
-            WHERE member_id = %s
-        """, (user["id"],))
-        stats = cursor.fetchone()
-        
-        # Get recent sessions
-        cursor.execute("""
-            SELECT s.*, 
-                   DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                   TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-            FROM sessions s
-            WHERE s.member_id = %s
-            ORDER BY s.session_date DESC, s.session_time DESC
-            LIMIT 5
-        """, (user["id"],))
-        recent_sessions = cursor.fetchall()
-        
-        return {
-            "member": member,
-            "stats": stats,
-            "coach": {
-                "name": member["coach_name"],
-                "specialization": member["specialization"],
-                "email": member["coach_email"]
-            } if member["coach_name"] else None,
-            "recent_sessions": recent_sessions
-        }
-    except Exception as e:
-        print(f"Error getting member dashboard: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
-# Gym API Endpoints
-@app.get("/api/gym/sessions")
-async def get_gym_sessions(
-    request: Request,
-    date: str = None,
-    member: str = None,
-    coach: str = None,
-    status: str = None
-):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "gym":
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Base query with explicit field selection
-        query = """
-            SELECT 
-                s.id,
-                s.member_id,
-                s.coach_id,
-                s.session_date,
-                s.session_time,
-                s.duration,
-                s.status,
-                s.notes,
-                m.name as member_name,
-                m.membership_type,
-                c.name as coach_name,
-                c.specialization as coach_specialization,
-                DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-            FROM sessions s
-            INNER JOIN members m ON s.member_id = m.id
-            INNER JOIN coaches c ON s.coach_id = c.id
-            WHERE s.gym_id = %s
-        """
-        params = [user["id"]]
-        
-        # Add filters
-        if date:
-            query += " AND s.session_date = %s"
-            params.append(date)
-        
-        if member:
-            query += " AND m.name LIKE %s"
-            params.append(f"%{member}%")
-        
-        if coach:
-            query += " AND c.name LIKE %s"
-            params.append(f"%{coach}%")
-        
-        if status and status != 'all':
-            query += " AND s.status = %s"
-            params.append(status)
-        
-        # Add order by
-        query += " ORDER BY s.session_date DESC, s.session_time DESC"
-        
-        print(f"Executing query: {query}")  # Debug log
-        print(f"With params: {params}")  # Debug log
-        
-        cursor.execute(query, params)
-        sessions = cursor.fetchall()
-        
-        print(f"Found {len(sessions)} sessions")  # Debug log
-        
-        # Format the response
-        formatted_sessions = []
-        for session in sessions:
-            try:
-                print(f"Processing session: {session}")  # Debug log
-                
-                # Ensure all required fields are present
-                if not all(key in session for key in ['id', 'member_id', 'coach_id', 'session_date', 'session_time', 'duration', 'status', 'notes']):
-                    print(f"Missing required fields in session: {session}")
-                    continue
-                
-                # Parse the workout notes to get exercise list
-                exercises = []
-                workout_type = "Custom"
-                if session["notes"]:
-                    try:
-                        lines = session["notes"].split('\n')
-                        workout_type = lines[0].replace(' Workout:', '')
-                        exercises = [line.strip() for line in lines[1:] if line.strip()]
-                    except Exception as e:
-                        print(f"Error parsing notes: {str(e)}")
-                
-                # Create formatted session with explicit type conversion
-                formatted_session = {
-                    "id": int(session["id"]),
-                    "member": {
-                        "id": int(session["member_id"]),
-                        "name": str(session["member_name"]),
-                        "membership_type": str(session["membership_type"])
-                    },
-                    "coach": {
-                        "id": int(session["coach_id"]),
-                        "name": str(session["coach_name"]),
-                        "specialization": str(session["coach_specialization"])
-                    },
-                    "date": str(session["formatted_date"]),
-                    "time": str(session["formatted_time"]),
-                    "duration": int(session["duration"]),
-                    "status": str(session["status"]),
-                    "workout": {
-                        "type": str(workout_type),
-                        "exercises": [str(ex) for ex in exercises]
-                    }
-                }
-                
-                # Validate the formatted session
-                if all(formatted_session.values()):
-                    formatted_sessions.append(formatted_session)
-                else:
-                    print(f"Invalid formatted session: {formatted_session}")
-                
-            except Exception as e:
-                print(f"Error formatting session: {str(e)}")
-                continue
-        
-        print(f"Returning {len(formatted_sessions)} formatted sessions")  # Debug log
-        return formatted_sessions
-        
-    except Exception as e:
-        print(f"Error getting gym sessions: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
-@app.get("/api/gym/coaches")
-async def get_gym_coaches(
-    request: Request,
-    search: str = None,
-    specialization: str = None,
-    status: str = None
-):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "gym":
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Base query
-        query = """
-            SELECT 
-                c.*,
-                COUNT(DISTINCT mc.member_id) as total_members,
-                COUNT(DISTINCT s.id) as total_sessions,
-                COUNT(DISTINCT CASE WHEN s.status = 'Completed' THEN s.id END) as completed_sessions
-            FROM coaches c
-            LEFT JOIN member_coach mc ON c.id = mc.coach_id
-            LEFT JOIN sessions s ON c.id = s.coach_id
-            WHERE c.gym_id = %s
-        """
-        params = [user["id"]]
-        
-        # Add filters
-        if search:
-            query += " AND (c.name LIKE %s OR c.email LIKE %s)"
-            search_term = f"%{search}%"
-            params.extend([search_term, search_term])
-        
-        if specialization and specialization != 'all':
-            query += " AND c.specialization = %s"
-            params.append(specialization)
-        
-        if status and status != 'all':
-            query += " AND c.status = %s"
-            params.append(status)
-        
-        # Add group by
-        query += " GROUP BY c.id"
-        
-        # Add order by
-        query += " ORDER BY c.name ASC"
-        
-        cursor.execute(query, params)
-        coaches = cursor.fetchall()
-        
-        # Format the response
-        formatted_coaches = []
-        for coach in coaches:
-            total_sessions = coach['total_sessions'] or 0
-            completed_sessions = coach['completed_sessions'] or 0
-            completion_rate = (completed_sessions / total_sessions * 100) if total_sessions > 0 else 0
-            
-            formatted_coach = {
-                "id": coach["id"],
-                "name": coach["name"],
-                "email": coach["email"],
-                "specialization": coach["specialization"],
-                "status": coach["status"],
-                "stats": {
-                    "total_members": coach["total_members"] or 0,
-                    "total_sessions": total_sessions,
-                    "completed_sessions": completed_sessions,
-                    "completion_rate": round(completion_rate, 1)
-                }
-            }
-            formatted_coaches.append(formatted_coach)
-        
-        return formatted_coaches
-        
-    except Exception as e:
-        print(f"Error getting gym coaches: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
 
 @app.get("/api/regenerate-db")
 async def regenerate_db():
@@ -1461,19 +665,155 @@ async def regenerate_db():
         connection = get_db_connection()
         cursor = connection.cursor()
         
-        # Drop existing tables in correct order (respecting foreign key constraints)
-        cursor.execute("DROP TABLE IF EXISTS payments")
-        cursor.execute("DROP TABLE IF EXISTS member_coach")
-        cursor.execute("DROP TABLE IF EXISTS sessions")
-        cursor.execute("DROP TABLE IF EXISTS members")
-        cursor.execute("DROP TABLE IF EXISTS coaches")
-        cursor.execute("DROP TABLE IF EXISTS gyms")
+        # Drop tables in reverse order of dependencies
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
         
-        connection.commit()
+        # Drop all tables
+        tables = [
+            "messages",
+            "notifications",
+            "payments",
+            "sessions",
+            "member_coach",
+            "members",
+            "coaches",
+            "gyms"
+        ]
         
-        # Reinitialize database
-        init_db()
+        for table in tables:
+            try:
+                cursor.execute(f"DROP TABLE IF EXISTS {table}")
+            except Exception as e:
+                print(f"Error dropping table {table}: {str(e)}")
         
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+        
+        # Create tables in correct order
+        # Create gyms table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS gyms (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                password VARCHAR(100) NOT NULL,
+                address TEXT,
+                phone VARCHAR(20),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Create coaches table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS coaches (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                password VARCHAR(100) NOT NULL,
+                gym_id INT NOT NULL,
+                specialization VARCHAR(100),
+                phone VARCHAR(20),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+            )
+        """)
+        
+        # Create members table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS members (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                password VARCHAR(100) NOT NULL,
+                gym_id INT NOT NULL,
+                membership_type ENUM('Basic', 'Premium', 'VIP') DEFAULT 'Basic',
+                membership_start_date DATE,
+                membership_end_date DATE,
+                phone VARCHAR(20),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (gym_id) REFERENCES gyms(id) ON DELETE CASCADE
+            )
+        """)
+        
+        # Create member_coach table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS member_coach (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_id INT NOT NULL,
+                coach_id INT NOT NULL,
+                assigned_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (member_id) REFERENCES members(id),
+                FOREIGN KEY (coach_id) REFERENCES coaches(id),
+                UNIQUE KEY unique_member_coach (member_id, coach_id)
+            )
+        """)
+        
+        # Create sessions table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sessions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                gym_id INT NOT NULL,
+                coach_id INT NOT NULL,
+                member_id INT NOT NULL,
+                session_date DATE NOT NULL,
+                session_time TIME NOT NULL,
+                duration INT NOT NULL,  -- in minutes
+                status ENUM('Scheduled', 'Completed', 'Cancelled') DEFAULT 'Scheduled',
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (gym_id) REFERENCES gyms(id),
+                FOREIGN KEY (coach_id) REFERENCES coaches(id),
+                FOREIGN KEY (member_id) REFERENCES members(id)
+            )
+        """)
+
+        # Create payments table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_id INT NOT NULL,
+                gym_id INT NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                payment_type ENUM('Membership', 'Session', 'Other') NOT NULL,
+                status ENUM('Pending', 'Completed', 'Failed') DEFAULT 'Pending',
+                notes TEXT,
+                FOREIGN KEY (member_id) REFERENCES members(id),
+                FOREIGN KEY (gym_id) REFERENCES gyms(id)
+            )
+        """)
+
+        # Create notifications table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sender_id INT NOT NULL,
+                sender_type ENUM('gym', 'coach', 'member') NOT NULL,
+                receiver_id INT NOT NULL,
+                receiver_type ENUM('gym', 'coach', 'member') NOT NULL,
+                title VARCHAR(200) NOT NULL,
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Create messages table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sender_id INT NOT NULL,
+                sender_type ENUM('gym', 'coach', 'member') NOT NULL,
+                receiver_id INT NOT NULL,
+                receiver_type ENUM('gym', 'coach', 'member') NOT NULL,
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_sender (sender_id, sender_type),
+                INDEX idx_receiver (receiver_id, receiver_type)
+            )
+        """)
+        
+        # Insert sample data
         # Insert one gym
         cursor.execute("""
             INSERT INTO gyms (name, email, password, address, phone)
@@ -1497,9 +837,9 @@ async def regenerate_db():
         coach_ids = []
         for coach in coaches:
             cursor.execute("""
-                INSERT INTO coaches (gym_id, name, email, password, specialization, status)
+                INSERT INTO coaches (name, email, password, gym_id, specialization, phone)
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """, (gym_id, coach[0], coach[1], coach[2], coach[3], "Active"))
+            """, (coach[0], coach[1], coach[2], gym_id, coach[3], "123-456-7890"))
             coach_ids.append(cursor.lastrowid)
         
         # Insert 15 members
@@ -1523,20 +863,20 @@ async def regenerate_db():
         member_ids = []
         for member in members:
             cursor.execute("""
-                INSERT INTO members (gym_id, name, email, password, membership_type, join_date)
-                VALUES (%s, %s, %s, %s, %s, CURDATE())
-            """, (gym_id, member[0], member[1], member[2], member[3]))
+                INSERT INTO members (name, email, password, gym_id, membership_type, membership_start_date, phone)
+                VALUES (%s, %s, %s, %s, %s, CURDATE(), %s)
+            """, (member[0], member[1], member[2], gym_id, member[3], "123-456-7890"))
             member_ids.append(cursor.lastrowid)
         
         # Assign members to coaches (distribute members among coaches)
         for i, member_id in enumerate(member_ids):
             coach_id = coach_ids[i % len(coach_ids)]  # Distribute members evenly among coaches
-        cursor.execute("""
-            INSERT INTO member_coach (member_id, coach_id)
-            VALUES (%s, %s)
+            cursor.execute("""
+                INSERT INTO member_coach (member_id, coach_id)
+                VALUES (%s, %s)
             """, (member_id, coach_id))
         
-        # Add sample sessions with specific exercise types
+        # Add sample sessions
         today = datetime.now().date()
         
         # Create sessions for the next 7 days
@@ -1564,15 +904,6 @@ async def regenerate_db():
                         member = coach_members[day % len(coach_members)]
                         session_time = f"{hour:02d}:00:00"
                         
-                        # Select a random workout template
-                        workout_type = random.choice(list(WORKOUT_TEMPLATES.keys()))
-                        exercises = WORKOUT_TEMPLATES[workout_type]
-                        
-                        # Create detailed notes with exercises
-                        notes = f"{workout_type} Workout:\n"
-                        for i, exercise in enumerate(exercises, 1):
-                            notes += f"{i}. {exercise}\n"
-                        
                         cursor.execute("""
                             INSERT INTO sessions (
                                 gym_id,
@@ -1593,735 +924,20 @@ async def regenerate_db():
                             session_time,
                             60,  # 1-hour sessions
                             "Scheduled",
-                            notes
+                            "Regular training session"
                         ))
         
         connection.commit()
-        return JSONResponse(content={"detail": "Database regenerated successfully with sample data"})
+        return {"message": "Database regenerated successfully with sample data"}
     except Exception as e:
+        print(f"Error regenerating database: {str(e)}")
         connection.rollback()
-        print(f"Error regenerating database: {str(e)}")  # Add debug logging
-        return JSONResponse(
-            status_code=500,
-            content={"detail": str(e)}
-        )
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
         connection.close()
 
-@app.get("/api/gym/members")
-async def get_gym_members(request: Request, search: str = None, membership_type: str = None, status: str = None):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "gym":
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Base query
-        query = """
-            SELECT m.*, 
-                   c.name as coach_name,
-                   COUNT(s.id) as total_sessions,
-                   COUNT(CASE WHEN s.status = 'Completed' THEN 1 END) as completed_sessions,
-                   COUNT(CASE WHEN s.status = 'Cancelled' THEN 1 END) as cancelled_sessions,
-                   MAX(s.session_date) as last_session_date
-            FROM members m
-            LEFT JOIN member_coach mc ON m.id = mc.member_id
-            LEFT JOIN coaches c ON mc.coach_id = c.id
-            LEFT JOIN sessions s ON m.id = s.member_id
-            WHERE m.gym_id = %s
-        """
-        params = [user["id"]]
-        
-        # Add search condition if search term is provided
-        if search:
-            query += """ AND (
-                m.name LIKE %s 
-                OR m.email LIKE %s
-            )"""
-            search_term = f"%{search}%"
-            params.extend([search_term, search_term])
-        
-        # Add membership type filter if provided
-        if membership_type and membership_type != 'all':
-            query += " AND m.membership_type = %s"
-            params.append(membership_type)
-        
-        # Add group by clause with all non-aggregated columns
-        query += """ GROUP BY m.id, m.name, m.email, m.membership_type, m.join_date, 
-                    m.created_at, m.gym_id, m.password, c.name"""
-        
-        # Add order by clause
-        query += " ORDER BY m.join_date DESC"
-        
-        # Execute query
-        cursor.execute(query, params)
-        members = cursor.fetchall()
-        
-        # Format the response
-        formatted_members = []
-        for member in members:
-            total_sessions = member['total_sessions'] or 0
-            completed_sessions = member['completed_sessions'] or 0
-            attendance_rate = (completed_sessions / total_sessions * 100) if total_sessions > 0 else 0
-            
-            formatted_member = {
-                "id": member["id"],
-                "name": member["name"],
-                "email": member["email"],
-                "membership_type": member["membership_type"],
-                "join_date": member["join_date"].strftime("%Y-%m-%d") if member["join_date"] else None,
-                "coach_name": member["coach_name"],
-                "total_sessions": total_sessions,
-                "completed_sessions": completed_sessions,
-                "cancelled_sessions": member["cancelled_sessions"] or 0,
-                "attendance_rate": round(attendance_rate, 1),
-                "last_session": member["last_session_date"].strftime("%Y-%m-%d") if member["last_session_date"] else None
-            }
-            formatted_members.append(formatted_member)
-        
-        return formatted_members
-    except Exception as e:
-        print(f"Error getting gym members: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
 
-@app.post("/api/gym/members")
-async def add_gym_member(request: Request):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "gym":
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    try:
-        # Get member data from request
-        data = await request.json()
-        
-        # Validate required fields
-        required_fields = ["name", "email", "password", "membership_type"]
-        for field in required_fields:
-            if field not in data:
-                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
-        
-        # Validate email format
-        if not "@" in data["email"] or not "." in data["email"]:
-            raise HTTPException(status_code=400, detail="Invalid email format")
-        
-        # Validate membership type
-        valid_membership_types = ["Basic", "Premium", "VIP"]
-        if data["membership_type"] not in valid_membership_types:
-            raise HTTPException(status_code=400, detail=f"Invalid membership type. Must be one of: {', '.join(valid_membership_types)}")
-        
-        # Validate password length
-        if len(data["password"]) < 6:
-            raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        try:
-            # Check if email already exists
-            cursor.execute("SELECT 1 FROM members WHERE email = %s", (data["email"],))
-            if cursor.fetchone():
-                raise HTTPException(status_code=400, detail="Email already registered")
-            
-            # If coach_id is provided, verify it exists and belongs to the gym
-            if "coach_id" in data:
-                cursor.execute("""
-                    SELECT 1 FROM coaches 
-                    WHERE id = %s AND gym_id = %s AND status = 'Active'
-                """, (data["coach_id"], user["id"]))
-                if not cursor.fetchone():
-                    raise HTTPException(status_code=400, detail="Invalid or inactive coach ID")
-            
-            # Insert new member
-            cursor.execute("""
-                INSERT INTO members (
-                    gym_id, 
-                    name, 
-                    email, 
-                    password, 
-                    membership_type, 
-                    join_date,
-                    created_at
-                )
-                VALUES (%s, %s, %s, %s, %s, CURDATE(), NOW())
-            """, (
-                user["id"],
-                data["name"],
-                data["email"],
-                data["password"],
-                data["membership_type"]
-            ))
-            
-            member_id = cursor.lastrowid
-            
-            # If coach_id is provided, assign member to coach
-            if "coach_id" in data:
-                cursor.execute("""
-                    INSERT INTO member_coach (member_id, coach_id, assigned_date)
-                    VALUES (%s, %s, NOW())
-                """, (member_id, data["coach_id"]))
-            
-            # Create initial payment record for membership
-            cursor.execute("""
-                INSERT INTO payments (
-                    member_id,
-                    gym_id,
-                    amount,
-                    payment_type,
-                    status,
-                    notes
-                )
-                VALUES (%s, %s, %s, 'Membership', 'Pending', %s)
-            """, (
-                member_id,
-                user["id"],
-                0.00,  # Initial amount, can be updated later
-                f"Initial membership payment - {data['membership_type']}"
-            ))
-            
-            conn.commit()
-            
-            # Get the newly created member with additional details
-            cursor.execute("""
-                SELECT 
-                    m.*,
-                    c.name as coach_name,
-                    c.specialization as coach_specialization,
-                    c.email as coach_email,
-                    p.id as payment_id,
-                    p.status as payment_status
-                FROM members m
-                LEFT JOIN member_coach mc ON m.id = mc.member_id
-                LEFT JOIN coaches c ON mc.coach_id = c.id
-                LEFT JOIN payments p ON m.id = p.member_id
-                WHERE m.id = %s
-            """, (member_id,))
-            
-            new_member = cursor.fetchone()
-            
-            return {
-                "message": "Member added successfully",
-                "member": {
-                    "id": new_member["id"],
-                    "name": new_member["name"],
-                    "email": new_member["email"],
-                    "membership_type": new_member["membership_type"],
-                    "join_date": new_member["join_date"].strftime("%Y-%m-%d") if new_member["join_date"] else None,
-                    "coach": {
-                        "name": new_member["coach_name"],
-                        "specialization": new_member["coach_specialization"],
-                        "email": new_member["coach_email"]
-                    } if new_member["coach_name"] else None,
-                    "payment": {
-                        "id": new_member["payment_id"],
-                        "status": new_member["payment_status"]
-                    } if new_member["payment_id"] else None
-                }
-            }
-            
-        except HTTPException as he:
-            conn.rollback()
-            raise he
-        except Exception as e:
-            conn.rollback()
-            print(f"Error adding member: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))
-        finally:
-            cursor.close()
-            conn.close()
-            
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/gym/sessions")
-async def create_session(request: Request):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "gym":
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    try:
-        # Get session data from request
-        data = await request.json()
-        required_fields = ["member_id", "coach_id", "session_date", "session_time", "duration"]
-        for field in required_fields:
-            if field not in data:
-                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        try:
-            # Verify member and coach belong to the gym
-            cursor.execute("""
-                SELECT m.id, m.membership_type, c.id as coach_id
-                FROM members m
-                JOIN coaches c ON c.id = %s
-                WHERE m.id = %s AND m.gym_id = %s AND c.gym_id = %s
-            """, (data["coach_id"], data["member_id"], user["id"], user["id"]))
-            
-            result = cursor.fetchone()
-            if not result:
-                raise HTTPException(status_code=400, detail="Invalid member or coach ID")
-            
-            # Check for session conflicts
-            cursor.execute("""
-                SELECT 1 FROM sessions 
-                WHERE coach_id = %s 
-                AND session_date = %s 
-                AND session_time = %s
-                AND status != 'Cancelled'
-            """, (data["coach_id"], data["session_date"], data["session_time"]))
-            
-            if cursor.fetchone():
-                raise HTTPException(status_code=400, detail="Coach already has a session at this time")
-            
-            # Create session
-            cursor.execute("""
-                INSERT INTO sessions (
-                    gym_id,
-                    coach_id,
-                    member_id,
-                    session_date,
-                    session_time,
-                    duration,
-                    status,
-                    notes,
-                    created_at
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, 'Scheduled', %s, NOW())
-            """, (
-                user["id"],
-                data["coach_id"],
-                data["member_id"],
-                data["session_date"],
-                data["session_time"],
-                data["duration"],
-                data.get("notes", "")
-            ))
-            
-            session_id = cursor.lastrowid
-            
-            # Create payment record for the session
-            session_price = 25.00  # Base price for a session
-            if result["membership_type"] == "Premium":
-                session_price = 20.00  # 20% discount for Premium members
-            elif result["membership_type"] == "VIP":
-                session_price = 15.00  # 40% discount for VIP members
-            
-            cursor.execute("""
-                INSERT INTO payments (
-                    member_id,
-                    gym_id,
-                    amount,
-                    payment_type,
-                    status,
-                    notes
-                )
-                VALUES (%s, %s, %s, 'Session', 'Pending', %s)
-            """, (
-                data["member_id"],
-                user["id"],
-                session_price,
-                f"Payment for session on {data['session_date']} at {data['session_time']}"
-            ))
-            
-            conn.commit()
-            
-            # Get the created session with details
-            cursor.execute("""
-                SELECT 
-                    s.*,
-                    m.name as member_name,
-                    m.membership_type,
-                    c.name as coach_name,
-                    p.id as payment_id,
-                    p.amount as session_price,
-                    p.status as payment_status
-                FROM sessions s
-                JOIN members m ON s.member_id = m.id
-                JOIN coaches c ON s.coach_id = c.id
-                LEFT JOIN payments p ON p.member_id = m.id AND p.payment_type = 'Session'
-                WHERE s.id = %s
-            """, (session_id,))
-            
-            new_session = cursor.fetchone()
-            
-            return {
-                "message": "Session created successfully",
-                "session": {
-                    "id": new_session["id"],
-                    "member": {
-                        "id": new_session["member_id"],
-                        "name": new_session["member_name"],
-                        "membership_type": new_session["membership_type"]
-                    },
-                    "coach": {
-                        "id": new_session["coach_id"],
-                        "name": new_session["coach_name"]
-                    },
-                    "date": new_session["session_date"].strftime("%Y-%m-%d"),
-                    "time": new_session["session_time"].strftime("%H:%M"),
-                    "duration": new_session["duration"],
-                    "status": new_session["status"],
-                    "payment": {
-                        "id": new_session["payment_id"],
-                        "amount": float(new_session["session_price"]),
-                        "status": new_session["payment_status"]
-                    }
-                }
-            }
-            
-        except HTTPException as he:
-            conn.rollback()
-            raise he
-        except Exception as e:
-            conn.rollback()
-            print(f"Error creating session: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))
-        finally:
-            cursor.close()
-            conn.close()
-            
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/gym/members/{member_id}/renew-membership")
-async def renew_membership(member_id: int, request: Request):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "gym":
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get member details
-        cursor.execute("""
-            SELECT membership_type 
-            FROM members 
-            WHERE id = %s AND gym_id = %s
-        """, (member_id, user["id"]))
-        
-        member = cursor.fetchone()
-        if not member:
-            raise HTTPException(status_code=404, detail="Member not found")
-        
-        # Calculate payment amount based on membership type
-        amount = MEMBERSHIP_PRICES.get(member["membership_type"])
-        if not amount:
-            raise HTTPException(status_code=400, detail="Invalid membership type")
-        
-        # Create payment record
-        cursor.execute("""
-            INSERT INTO payments (
-                member_id,
-                gym_id,
-                amount,
-                payment_type,
-                status,
-                notes
-            )
-            VALUES (%s, %s, %s, 'Membership', 'Pending', %s)
-        """, (
-            member_id,
-            user["id"],
-            amount,
-            f"Monthly membership renewal - {member['membership_type']}"
-        ))
-        
-        payment_id = cursor.lastrowid
-        conn.commit()
-        
-        return {
-            "message": "Membership renewal payment created",
-            "payment": {
-                "id": payment_id,
-                "amount": amount,
-                "type": "Membership",
-                "status": "Pending",
-                "membership_type": member["membership_type"]
-            }
-        }
-        
-    except HTTPException as he:
-        conn.rollback()
-        raise he
-    except Exception as e:
-        conn.rollback()
-        print(f"Error renewing membership: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
-@app.get("/coach/dashboard", response_class=HTMLResponse)
-async def get_coach_dashboard_page(request: Request):
-    # Get user from session using our existing session management
-    user = get_current_user(request)
-    if not user or user["user_type"] != "coach":
-        return RedirectResponse(url="/")
-    
-    # Get coach details from database
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get coach details
-        cursor.execute("""
-            SELECT c.*, g.name as gym_name
-            FROM coaches c
-            JOIN gyms g ON c.gym_id = g.id
-            WHERE c.id = %s
-        """, (user["id"],))
-        coach_details = cursor.fetchone()
-        
-        # Return the dashboard page template with coach details
-        return templates.TemplateResponse(
-            "coach/dashboard.html",
-            {
-                "request": request,
-                "coach": coach_details,
-                "user": user
-            }
-        )
-    except Exception as e:
-        print(f"Error getting coach dashboard: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
-@app.get("/api/coach/dashboard")
-async def get_coach_dashboard(request: Request):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "coach":
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get coach info
-        cursor.execute("""
-            SELECT c.*, g.name as gym_name
-            FROM coaches c
-            JOIN gyms g ON c.gym_id = g.id
-            WHERE c.id = %s
-        """, (user["id"],))
-        coach = cursor.fetchone()
-        
-        # Get stats
-        cursor.execute("""
-            SELECT 
-                COUNT(DISTINCT mc.member_id) as total_members,
-                COUNT(DISTINCT s.id) as total_sessions,
-                COUNT(DISTINCT CASE WHEN s.status = 'Completed' THEN s.id END) as completed_sessions,
-                COUNT(DISTINCT CASE WHEN s.session_date >= CURDATE() THEN s.id END) as upcoming_sessions
-            FROM coaches c
-            LEFT JOIN member_coach mc ON c.id = mc.coach_id
-            LEFT JOIN sessions s ON c.id = s.coach_id
-            WHERE c.id = %s
-        """, (user["id"],))
-        stats = cursor.fetchone()
-        
-        # Get recent sessions
-        cursor.execute("""
-            SELECT 
-                s.*,
-                m.name as member_name,
-                m.membership_type,
-                DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-            FROM sessions s
-            JOIN members m ON s.member_id = m.id
-            WHERE s.coach_id = %s
-            ORDER BY s.session_date DESC, s.session_time DESC
-            LIMIT 5
-        """, (user["id"],))
-        recent_sessions = cursor.fetchall()
-        
-        # Format recent sessions
-        formatted_sessions = []
-        for session in recent_sessions:
-            # Parse the workout notes to get exercise list
-            exercises = []
-            workout_type = "Custom"
-            if session["notes"]:
-                try:
-                    lines = session["notes"].split("\n")
-                    if lines and "Workout Type:" in lines[0]:
-                        workout_type = lines[0].split("Workout Type:")[1].strip()
-                    exercises = [line.strip() for line in lines[1:] if line.strip() and line.strip()[0].isdigit()]
-                except Exception as e:
-                    print(f"Error parsing notes: {str(e)}")
-            
-            formatted_session = {
-                "id": session["id"],
-                "member": {
-                    "name": session["member_name"],
-                    "membership_type": session["membership_type"]
-                },
-                "date": session["formatted_date"],
-                "time": session["formatted_time"],
-                "duration": session["duration"],
-                "status": session["status"],
-                "workout": {
-                    "type": workout_type,
-                    "exercises": exercises
-                },
-                "notes": session["notes"]
-            }
-            formatted_sessions.append(formatted_session)
-        
-        return {
-            "coach": {
-                "id": coach["id"],
-                "name": coach["name"],
-                "email": coach["email"],
-                "specialization": coach["specialization"],
-                "gym_name": coach["gym_name"]
-            },
-            "stats": {
-                "total_members": stats["total_members"] or 0,
-                "total_sessions": stats["total_sessions"] or 0,
-                "completed_sessions": stats["completed_sessions"] or 0,
-                "upcoming_sessions": stats["upcoming_sessions"] or 0
-            },
-            "recent_sessions": formatted_sessions
-        }
-    except Exception as e:
-        print(f"Error getting coach dashboard: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
-@app.get("/coach/schedule", response_class=HTMLResponse)
-async def get_coach_schedule_page(request: Request):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "coach":
-        return RedirectResponse(url="/")
-    
-    # Get coach details from database
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get coach details
-        cursor.execute("""
-            SELECT c.*, g.name as gym_name
-            FROM coaches c
-            JOIN gyms g ON c.gym_id = g.id
-            WHERE c.id = %s
-        """, (user["id"],))
-        coach_details = cursor.fetchone()
-        
-        # Return the schedule page template with coach details
-        return templates.TemplateResponse(
-            "coach/schedule.html",
-            {
-                "request": request,
-                "coach": coach_details,
-                "user": user
-            }
-        )
-    except Exception as e:
-        print(f"Error getting coach schedule page: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
-@app.get("/coach/members", response_class=HTMLResponse)
-async def get_coach_members_page(request: Request):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "coach":
-        return RedirectResponse(url="/")
-    
-    # Get coach details from database
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get coach details
-        cursor.execute("""
-            SELECT c.*, g.name as gym_name
-            FROM coaches c
-            JOIN gyms g ON c.gym_id = g.id
-            WHERE c.id = %s
-        """, (user["id"],))
-        coach_details = cursor.fetchone()
-        
-        # Return the members page template with coach details
-        return templates.TemplateResponse(
-            "coach/members.html",
-            {
-                "request": request,
-                "coach": coach_details,
-                "user": user
-            }
-        )
-    except Exception as e:
-        print(f"Error getting coach members page: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
-@app.get("/coach/sessions", response_class=HTMLResponse)
-async def get_coach_sessions_page(request: Request):
-    # Get user from session
-    user = get_current_user(request)
-    if not user or user["user_type"] != "coach":
-        return RedirectResponse(url="/")
-    
-    # Get coach details from database
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        # Get coach details
-        cursor.execute("""
-            SELECT c.*, g.name as gym_name
-            FROM coaches c
-            JOIN gyms g ON c.gym_id = g.id
-            WHERE c.id = %s
-        """, (user["id"],))
-        coach_details = cursor.fetchone()
-        
-        # Return the sessions page template with coach details
-        return templates.TemplateResponse(
-            "coach/sessions.html",
-            {
-                "request": request,
-                "coach": coach_details,
-                "user": user
-            }
-        )
-    except Exception as e:
-        print(f"Error getting coach sessions page: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
 
 @app.get("/coach/progress", response_class=HTMLResponse)
 async def get_coach_progress_page(request: Request):
@@ -2410,93 +1026,6 @@ async def get_coach_member_details_page(request: Request, member_id: int):
         cursor.close()
         conn.close()
 
-@app.get("/api/coach/members/{member_id}")
-async def get_coach_member_details(member_id: int, current_user: dict = Depends(get_current_user)):
-    if current_user["user_type"] != "coach":
-        raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Get member details with verification that they belong to the coach
-        cursor.execute("""
-            SELECT 
-                m.*,
-                mc.assigned_date,
-                COUNT(s.id) as total_sessions,
-                SUM(CASE WHEN s.status = 'completed' THEN 1 ELSE 0 END) as completed_sessions,
-                MAX(CASE WHEN s.status = 'completed' THEN s.session_date ELSE NULL END) as last_session
-            FROM members m
-            JOIN member_coach mc ON m.id = mc.member_id
-            LEFT JOIN sessions s ON m.id = s.member_id
-            WHERE m.id = %s AND mc.coach_id = %s
-            GROUP BY m.id
-        """, (member_id, current_user["id"]))
-        
-        member = cursor.fetchone()
-        if not member:
-            raise HTTPException(status_code=404, detail="Member not found")
-        
-        # Get recent sessions
-        cursor.execute("""
-            SELECT 
-                s.*,
-                DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-            FROM sessions s
-            WHERE s.member_id = %s AND s.coach_id = %s
-            ORDER BY s.session_date DESC, s.session_time DESC
-        """, (member_id, current_user["id"]))
-        recent_sessions = cursor.fetchall()
-        
-        # Format recent sessions
-        formatted_sessions = []
-        for session in recent_sessions:
-            workout_type = "Custom"
-            exercises = []
-            if session["notes"]:
-                try:
-                    lines = session["notes"].split("\n")
-                    if lines and "Workout Type:" in lines[0]:
-                        workout_type = lines[0].split("Workout Type:")[1].strip()
-                    exercises = [line.strip() for line in lines[1:] if line.strip() and line.strip()[0].isdigit()]
-                except:
-                    pass
-            
-            formatted_sessions.append({
-                "id": session["id"],
-                "date": session["formatted_date"],
-                "time": session["formatted_time"],
-                "duration": session["duration"],
-                "status": session["status"],
-                "workout": {
-                    "type": workout_type,
-                    "exercises": exercises
-                },
-                "notes": session["notes"]
-            })
-        
-        cursor.close()
-        conn.close()
-        
-        return {
-            "member": {
-                "id": member["id"],
-                "name": member["name"],
-                "email": member["email"],
-                "membership_type": member["membership_type"],
-                "join_date": member["join_date"].strftime("%Y-%m-%d") if member["join_date"] else None,
-                "assigned_date": member["assigned_date"].strftime("%Y-%m-%d") if member["assigned_date"] else None,
-                "total_sessions": member["total_sessions"] or 0,
-                "completed_sessions": member["completed_sessions"] or 0,
-                "last_session": member["last_session"].strftime("%Y-%m-%d") if member["last_session"] else None
-            },
-            "recent_sessions": formatted_sessions
-        }
-    except Exception as e:
-        print(f"Error in get_coach_member_details: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving member details")
 
 @app.get("/api/user")
 async def get_current_user_info(current_user: dict = Depends(get_current_user)):
@@ -2510,229 +1039,6 @@ async def logout():
     response.delete_cookie("session_id")
     return response
 
-@app.get("/api/coach/members/")
-async def get_coach_members_root(current_user: dict = Depends(get_current_user)):
-    # Redirect to the main members endpoint
-    return RedirectResponse(url="/api/coach/members")
-
-@app.post("/api/coach/sessions")
-async def create_coach_session(
-    request: Request,
-    current_user: dict = Depends(get_current_user)
-):
-    if current_user["user_type"] != "coach":
-        raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
-    
-    try:
-        # Get session data from request
-        data = await request.json()
-        required_fields = ["member_id", "session_date", "session_time", "duration"]
-        for field in required_fields:
-            if field not in data:
-                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        try:
-            # Verify member belongs to coach
-            cursor.execute("""
-                SELECT m.id, m.membership_type
-                FROM members m
-                JOIN member_coach mc ON m.id = mc.member_id
-                WHERE m.id = %s AND mc.coach_id = %s
-            """, (data["member_id"], current_user["id"]))
-            
-            result = cursor.fetchone()
-            if not result:
-                raise HTTPException(status_code=400, detail="Member not assigned to this coach")
-            
-            # Check for session conflicts
-            cursor.execute("""
-                SELECT 1 FROM sessions 
-                WHERE coach_id = %s 
-                AND session_date = %s 
-                AND session_time = %s
-                AND status != 'Cancelled'
-            """, (current_user["id"], data["session_date"], data["session_time"]))
-            
-            if cursor.fetchone():
-                raise HTTPException(status_code=400, detail="Coach already has a session at this time")
-            
-            # Create session
-            cursor.execute("""
-                INSERT INTO sessions (
-                    gym_id,
-                    coach_id,
-                    member_id,
-                    session_date,
-                    session_time,
-                    duration,
-                    status,
-                    notes,
-                    created_at
-                )
-                VALUES (
-                    (SELECT gym_id FROM coaches WHERE id = %s),
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    'Scheduled',
-                    %s,
-                    NOW()
-                )
-            """, (
-                current_user["id"],
-                current_user["id"],
-                data["member_id"],
-                data["session_date"],
-                data["session_time"],
-                data["duration"],
-                data.get("notes", "")
-            ))
-            
-            session_id = cursor.lastrowid
-            
-            # Get the created session with details
-            cursor.execute("""
-                SELECT 
-                    s.*,
-                    m.name as member_name,
-                    m.membership_type,
-                    DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                    TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-                FROM sessions s
-                JOIN members m ON s.member_id = m.id
-                WHERE s.id = %s
-            """, (session_id,))
-            
-            new_session = cursor.fetchone()
-            
-            conn.commit()
-            
-            return {
-                "message": "Session created successfully",
-                "session": {
-                    "id": new_session["id"],
-                    "member": {
-                        "id": new_session["member_id"],
-                        "name": new_session["member_name"],
-                        "membership_type": new_session["membership_type"]
-                    },
-                    "date": new_session["formatted_date"],
-                    "time": new_session["formatted_time"],
-                    "duration": new_session["duration"],
-                    "status": new_session["status"],
-                    "notes": new_session["notes"]
-                }
-            }
-            
-        except HTTPException as he:
-            conn.rollback()
-            raise he
-        except Exception as e:
-            conn.rollback()
-            print(f"Error creating session: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))
-        finally:
-            cursor.close()
-            conn.close()
-            
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/coach/schedule")
-async def get_coach_schedule(
-    request: Request,
-    start_date: str = None,
-    end_date: str = None,
-    member: str = None,
-    current_user: dict = Depends(get_current_user)
-):
-    if current_user["user_type"] != "coach":
-        raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Base query
-        query = """
-            SELECT 
-                s.*,
-                m.name as member_name,
-                m.email as member_email,
-                m.membership_type,
-                DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-            FROM sessions s
-            JOIN members m ON s.member_id = m.id
-            WHERE s.coach_id = %s
-        """
-        params = [current_user["id"]]
-        
-        # Add date range filter
-        if start_date and end_date:
-            query += " AND s.session_date BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        
-        # Add member filter
-        if member:
-            query += " AND s.member_id = %s"
-            params.append(member)
-        
-        # Add order by
-        query += " ORDER BY s.session_date ASC, s.session_time ASC"
-        
-        cursor.execute(query, params)
-        sessions = cursor.fetchall()
-        
-        # Format sessions
-        formatted_sessions = []
-        for session in sessions:
-            # Parse workout notes
-            workout_type = "Custom"
-            exercises = []
-            if session["notes"]:
-                try:
-                    lines = session["notes"].split("\n")
-                    if lines and "Workout Type:" in lines[0]:
-                        workout_type = lines[0].split("Workout Type:")[1].strip()
-                    exercises = [line.strip() for line in lines[1:] if line.strip() and line.strip()[0].isdigit()]
-                except:
-                    pass
-            
-            formatted_sessions.append({
-                "id": session["id"],
-                "member": {
-                    "id": session["member_id"],
-                    "name": session["member_name"],
-                    "email": session["member_email"],
-                    "membership_type": session["membership_type"]
-                },
-                "date": session["formatted_date"],
-                "time": session["formatted_time"],
-                "duration": session["duration"],
-                "status": session["status"],
-                "workout": {
-                    "type": workout_type,
-                    "exercises": exercises
-                },
-                "notes": session["notes"]
-            })
-        
-        cursor.close()
-        conn.close()
-        
-        return JSONResponse(content=formatted_sessions)
-    except Exception as e:
-        print(f"Error in get_coach_schedule: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving schedule")
 
 @app.get("/coach/members/{member_id}/add-session", response_class=HTMLResponse)
 async def get_add_session_page(request: Request, member_id: int):
@@ -2822,84 +1128,6 @@ async def get_member_schedule_page(request: Request):
         cursor.close()
         conn.close()
 
-@app.get("/api/member/schedule")
-async def get_member_schedule(
-    request: Request,
-    start_date: str = None,
-    end_date: str = None,
-    current_user: dict = Depends(get_current_user)
-):
-    if current_user["user_type"] != "member":
-        raise HTTPException(status_code=403, detail="Only members can access this endpoint")
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Base query
-        query = """
-            SELECT 
-                s.*,
-                c.name as coach_name,
-                c.specialization as coach_specialization,
-                DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-            FROM sessions s
-            JOIN coaches c ON s.coach_id = c.id
-            WHERE s.member_id = %s
-        """
-        params = [current_user["id"]]
-        
-        # Add date range filter
-        if start_date and end_date:
-            query += " AND s.session_date BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        
-        # Add order by
-        query += " ORDER BY s.session_date ASC, s.session_time ASC"
-        
-        cursor.execute(query, params)
-        sessions = cursor.fetchall()
-        
-        # Format sessions
-        formatted_sessions = []
-        for session in sessions:
-            # Parse workout notes
-            workout_type = "Custom"
-            exercises = []
-            if session["notes"]:
-                try:
-                    lines = session["notes"].split("\n")
-                    if lines and "Workout Type:" in lines[0]:
-                        workout_type = lines[0].split("Workout Type:")[1].strip()
-                    exercises = [line.strip() for line in lines[1:] if line.strip() and line.strip()[0].isdigit()]
-                except:
-                    pass
-            
-            formatted_sessions.append({
-                "id": session["id"],
-                "coach": {
-                    "name": session["coach_name"],
-                    "specialization": session["coach_specialization"]
-                },
-                "date": session["formatted_date"],
-                "time": session["formatted_time"],
-                "duration": session["duration"],
-                "status": session["status"],
-                "workout": {
-                    "type": workout_type,
-                    "exercises": exercises
-                },
-                "notes": session["notes"]
-            })
-        
-        cursor.close()
-        conn.close()
-        
-        return formatted_sessions
-    except Exception as e:
-        print(f"Error in get_member_schedule: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving schedule")
 
 @app.get("/member/progress", response_class=HTMLResponse)
 async def get_member_progress_page(request: Request):
@@ -2939,131 +1167,6 @@ async def get_member_progress_page(request: Request):
         cursor.close()
         conn.close()
 
-@app.get("/api/member/progress")
-async def get_member_progress_data(current_user: dict = Depends(get_current_user)):
-    if current_user["user_type"] != "member":
-        raise HTTPException(status_code=403, detail="Only members can access this endpoint")
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Get session statistics
-        cursor.execute("""
-            SELECT 
-                COUNT(*) as total_sessions,
-                SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_sessions,
-                SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_sessions
-            FROM sessions
-            WHERE member_id = %s
-        """, (current_user["id"],))
-        stats = cursor.fetchone()
-        
-        # Calculate attendance rate
-        total_sessions = stats["total_sessions"] or 0
-        completed_sessions = stats["completed_sessions"] or 0
-        attendance_rate = round((completed_sessions / total_sessions * 100) if total_sessions > 0 else 0)
-        
-        # Get most common workout type
-        cursor.execute("""
-            SELECT 
-                TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, 'Workout Type:', -1), CHAR(10), 1)) as workout_type,
-                COUNT(*) as count
-            FROM sessions
-            WHERE member_id = %s AND notes LIKE '%%Workout Type:%%'
-            GROUP BY workout_type
-            ORDER BY count DESC
-            LIMIT 1
-        """, (current_user["id"],))
-        common_workout = cursor.fetchone()
-        
-        # Get session history (last 30 days)
-        cursor.execute("""
-            SELECT 
-                DATE_FORMAT(session_date, '%%Y-%%m-%%d') as date,
-                COUNT(*) as count
-            FROM sessions
-            WHERE member_id = %s 
-            AND session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-            GROUP BY session_date
-            ORDER BY session_date
-        """, (current_user["id"],))
-        session_history = cursor.fetchall()
-        
-        # Get workout distribution
-        cursor.execute("""
-            SELECT 
-                TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, 'Workout Type:', -1), CHAR(10), 1)) as workout_type,
-                COUNT(*) as count
-            FROM sessions
-            WHERE member_id = %s AND notes LIKE '%%Workout Type:%%'
-            GROUP BY workout_type
-            ORDER BY count DESC
-        """, (current_user["id"],))
-        workout_distribution = cursor.fetchall()
-        
-        # Get recent sessions
-        cursor.execute("""
-            SELECT 
-                s.*,
-                c.name as coach_name,
-                DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
-                TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
-            FROM sessions s
-            JOIN coaches c ON s.coach_id = c.id
-            WHERE s.member_id = %s
-            ORDER BY s.session_date DESC, s.session_time DESC
-            LIMIT 5
-        """, (current_user["id"],))
-        recent_sessions = cursor.fetchall()
-        
-        # Format recent sessions
-        formatted_recent_sessions = []
-        for session in recent_sessions:
-            workout_type = "Custom"
-            exercises = []
-            if session["notes"]:
-                try:
-                    lines = session["notes"].split("\n")
-                    if lines and "Workout Type:" in lines[0]:
-                        workout_type = lines[0].split("Workout Type:")[1].strip()
-                    exercises = [line.strip() for line in lines[1:] if line.strip() and line.strip()[0].isdigit()]
-                except:
-                    pass
-            
-            formatted_recent_sessions.append({
-                "date": session["formatted_date"],
-                "coach": {
-                    "name": session["coach_name"]
-                },
-                "workout": {
-                    "type": workout_type,
-                    "exercises": exercises
-                },
-                "status": session["status"]
-            })
-        
-        cursor.close()
-        conn.close()
-        
-        return {
-            "sessions_completed": completed_sessions,
-            "attendance_rate": attendance_rate,
-            "common_workout": common_workout["workout_type"] if common_workout else "No workouts",
-            "session_history": {
-                "labels": [entry["date"] for entry in session_history],
-                "values": [entry["count"] for entry in session_history]
-            },
-            "workout_distribution": {
-                "labels": [entry["workout_type"] for entry in workout_distribution],
-                "values": [entry["count"] for entry in workout_distribution]
-            },
-            "recent_sessions": formatted_recent_sessions
-        }
-        
-    except Exception as e:
-        print(f"Error in get_member_progress_data: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving progress data")
 
 @app.get("/gym/reports", response_class=HTMLResponse)
 async def get_gym_reports_page(request: Request):
@@ -3097,81 +1200,790 @@ async def get_gym_reports_page(request: Request):
         cursor.close()
         conn.close()
 
-@app.get("/api/gym/reports")
-async def get_gym_reports(request: Request):
+
+# Notification endpoints
+@app.post("/api/notifications/send")
+async def send_notification(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        # Get notification data from request
+        data = await request.json()
+        required_fields = ["receiver_id", "receiver_type", "title", "message"]
+        for field in required_fields:
+            if field not in data:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Validate receiver type
+        if data["receiver_type"] not in ["gym", "coach", "member"]:
+            raise HTTPException(status_code=400, detail="Invalid receiver type")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check permissions based on user type
+            if user["user_type"] == "gym":
+                # Gym can send to anyone
+                pass
+            elif user["user_type"] == "coach":
+                # Coach can only send to their gym or their members
+                if data["receiver_type"] == "gym":
+                    # Verify it's their gym
+                    cursor.execute("SELECT gym_id FROM coaches WHERE id = %s", (user["id"],))
+                    coach = cursor.fetchone()
+                    if not coach or coach["gym_id"] != data["receiver_id"]:
+                        raise HTTPException(status_code=403, detail="Can only send to your gym")
+                elif data["receiver_type"] == "member":
+                    # Verify member is assigned to this coach
+                    cursor.execute("""
+                        SELECT 1 FROM member_coach 
+                        WHERE coach_id = %s AND member_id = %s
+                    """, (user["id"], data["receiver_id"]))
+                    if not cursor.fetchone():
+                        raise HTTPException(status_code=403, detail="Can only send to your members")
+                else:
+                    raise HTTPException(status_code=403, detail="Invalid receiver type for coach")
+            elif user["user_type"] == "member":
+                # Member can only send to their gym or their coach
+                if data["receiver_type"] == "gym":
+                    # Verify it's their gym
+                    cursor.execute("SELECT gym_id FROM members WHERE id = %s", (user["id"],))
+                    member = cursor.fetchone()
+                    if not member or member["gym_id"] != data["receiver_id"]:
+                        raise HTTPException(status_code=403, detail="Can only send to your gym")
+                elif data["receiver_type"] == "coach":
+                    # Verify coach is assigned to this member
+                    cursor.execute("""
+                        SELECT 1 FROM member_coach 
+                        WHERE member_id = %s AND coach_id = %s
+                    """, (user["id"], data["receiver_id"]))
+                    if not cursor.fetchone():
+                        raise HTTPException(status_code=403, detail="Can only send to your coach")
+                else:
+                    raise HTTPException(status_code=403, detail="Invalid receiver type for member")
+            
+            # Create notification
+            cursor.execute("""
+                INSERT INTO notifications (
+                    sender_id,
+                    sender_type,
+                    receiver_id,
+                    receiver_type,
+                    title,
+                    message
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                user["id"],
+                user["user_type"],
+                data["receiver_id"],
+                data["receiver_type"],
+                data["title"],
+                data["message"]
+            ))
+            
+            notification_id = cursor.lastrowid
+            conn.commit()
+            
+            return {
+                "message": "Notification sent successfully",
+                "notification_id": notification_id
+            }
+            
+        except HTTPException as he:
+            conn.rollback()
+            raise he
+        except Exception as e:
+            conn.rollback()
+            print(f"Error sending notification: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/notifications")
+async def get_notifications(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get notifications for the user
+        cursor.execute("""
+            SELECT 
+                n.*,
+                CASE 
+                    WHEN n.sender_type = 'gym' THEN g.name
+                    WHEN n.sender_type = 'coach' THEN c.name
+                    WHEN n.sender_type = 'member' THEN m.name
+                END as sender_name
+            FROM notifications n
+            LEFT JOIN gyms g ON n.sender_type = 'gym' AND n.sender_id = g.id
+            LEFT JOIN coaches c ON n.sender_type = 'coach' AND n.sender_id = c.id
+            LEFT JOIN members m ON n.sender_type = 'member' AND n.sender_id = m.id
+            WHERE n.receiver_id = %s AND n.receiver_type = %s
+            ORDER BY n.created_at DESC
+        """, (user["id"], user["user_type"]))
+        
+        notifications = cursor.fetchall()
+        
+        # Format notifications
+        formatted_notifications = []
+        for notification in notifications:
+            formatted_notifications.append({
+                "id": notification["id"],
+                "sender": {
+                    "id": notification["sender_id"],
+                    "type": notification["sender_type"],
+                    "name": notification["sender_name"]
+                },
+                "title": notification["title"],
+                "message": notification["message"],
+                "is_read": bool(notification["is_read"]),
+                "created_at": notification["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+            })
+        
+        return formatted_notifications
+        
+    except Exception as e:
+        print(f"Error getting notifications: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.put("/api/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: int, request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verify notification belongs to user
+        cursor.execute("""
+            SELECT 1 FROM notifications 
+            WHERE id = %s AND receiver_id = %s AND receiver_type = %s
+        """, (notification_id, user["id"], user["user_type"]))
+        
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Notification not found")
+        
+        # Mark as read
+        cursor.execute("""
+            UPDATE notifications 
+            SET is_read = TRUE 
+            WHERE id = %s
+        """, (notification_id,))
+        
+        conn.commit()
+        return {"message": "Notification marked as read"}
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"Error marking notification as read: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/api/notifications/recipients")
+async def get_notification_recipients(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        recipients = []
+        
+        if user["user_type"] == "gym":
+            # Gym can send to all coaches and members
+            cursor.execute("""
+                SELECT id, name, 'coach' as type 
+                FROM coaches 
+                WHERE gym_id = %s
+            """, (user["id"],))
+            coaches = cursor.fetchall()
+            recipients.extend(coaches)
+            
+            cursor.execute("""
+                SELECT id, name, 'member' as type 
+                FROM members 
+                WHERE gym_id = %s
+            """, (user["id"],))
+            members = cursor.fetchall()
+            recipients.extend(members)
+            
+        elif user["user_type"] == "coach":
+            # Coach can send to their gym and their members
+            cursor.execute("""
+                SELECT g.id, g.name, 'gym' as type 
+                FROM gyms g
+                JOIN coaches c ON c.gym_id = g.id
+                WHERE c.id = %s
+            """, (user["id"],))
+            gym = cursor.fetchone()
+            if gym:
+                recipients.append(gym)
+            
+            cursor.execute("""
+                SELECT m.id, m.name, 'member' as type 
+                FROM members m
+                JOIN member_coach mc ON mc.member_id = m.id
+                WHERE mc.coach_id = %s
+            """, (user["id"],))
+            members = cursor.fetchall()
+            recipients.extend(members)
+            
+        elif user["user_type"] == "member":
+            # Member can send to their gym and their coach
+            cursor.execute("""
+                SELECT g.id, g.name, 'gym' as type 
+                FROM gyms g
+                JOIN members m ON m.gym_id = g.id
+                WHERE m.id = %s
+            """, (user["id"],))
+            gym = cursor.fetchone()
+            if gym:
+                recipients.append(gym)
+            
+            cursor.execute("""
+                SELECT c.id, c.name, 'coach' as type 
+                FROM coaches c
+                JOIN member_coach mc ON mc.coach_id = c.id
+                WHERE mc.member_id = %s
+            """, (user["id"],))
+            coach = cursor.fetchone()
+            if coach:
+                recipients.append(coach)
+        
+        return recipients
+        
+    except Exception as e:
+        print(f"Error getting notification recipients: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+# Messaging endpoints
+@app.post("/api/messages/send")
+async def send_message(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        # Get message data from request
+        data = await request.json()
+        required_fields = ["receiver_id", "receiver_type", "message"]
+        for field in required_fields:
+            if field not in data:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Validate receiver type
+        if data["receiver_type"] not in ["gym", "coach", "member"]:
+            raise HTTPException(status_code=400, detail="Invalid receiver type")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check permissions based on user type
+            if user["user_type"] == "gym":
+                # Gym can send to anyone in their gym
+                if data["receiver_type"] == "coach":
+                    cursor.execute("SELECT 1 FROM coaches WHERE id = %s AND gym_id = %s", 
+                                 (data["receiver_id"], user["id"]))
+                elif data["receiver_type"] == "member":
+                    cursor.execute("SELECT 1 FROM members WHERE id = %s AND gym_id = %s", 
+                                 (data["receiver_id"], user["id"]))
+                if not cursor.fetchone():
+                    raise HTTPException(status_code=403, detail="Can only send to users in your gym")
+            elif user["user_type"] == "coach":
+                # Coach can only send to their gym or their members
+                if data["receiver_type"] == "gym":
+                    cursor.execute("SELECT gym_id FROM coaches WHERE id = %s", (user["id"],))
+                    coach = cursor.fetchone()
+                    if not coach or coach["gym_id"] != data["receiver_id"]:
+                        raise HTTPException(status_code=403, detail="Can only send to your gym")
+                elif data["receiver_type"] == "member":
+                    cursor.execute("""
+                        SELECT 1 FROM member_coach 
+                        WHERE coach_id = %s AND member_id = %s
+                    """, (user["id"], data["receiver_id"]))
+                    if not cursor.fetchone():
+                        raise HTTPException(status_code=403, detail="Can only send to your members")
+                else:
+                    raise HTTPException(status_code=403, detail="Invalid receiver type for coach")
+            elif user["user_type"] == "member":
+                # Member can only send to their gym or their coach
+                if data["receiver_type"] == "gym":
+                    cursor.execute("SELECT gym_id FROM members WHERE id = %s", (user["id"],))
+                    member = cursor.fetchone()
+                    if not member or member["gym_id"] != data["receiver_id"]:
+                        raise HTTPException(status_code=403, detail="Can only send to your gym")
+                elif data["receiver_type"] == "coach":
+                    cursor.execute("""
+                        SELECT 1 FROM member_coach 
+                        WHERE member_id = %s AND coach_id = %s
+                    """, (user["id"], data["receiver_id"]))
+                    if not cursor.fetchone():
+                        raise HTTPException(status_code=403, detail="Can only send to your coach")
+                else:
+                    raise HTTPException(status_code=403, detail="Invalid receiver type for member")
+            
+            # Create message
+            cursor.execute("""
+                INSERT INTO messages (
+                    sender_id,
+                    sender_type,
+                    receiver_id,
+                    receiver_type,
+                    message
+                )
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                user["id"],
+                user["user_type"],
+                data["receiver_id"],
+                data["receiver_type"],
+                data["message"]
+            ))
+            
+            message_id = cursor.lastrowid
+            conn.commit()
+            
+            return {
+                "message": "Message sent successfully",
+                "message_id": message_id
+            }
+            
+        except HTTPException as he:
+            conn.rollback()
+            raise he
+        except Exception as e:
+            conn.rollback()
+            print(f"Error sending message: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/messages")
+async def get_messages(request: Request, conversation_id: str = None):
+    # Get user from session
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        if conversation_id:
+            # Get messages for a specific conversation
+            sender_id, sender_type = conversation_id.split('_')
+            
+            cursor.execute("""
+                SELECT 
+                    m.*,
+                    CASE 
+                        WHEN m.sender_type = 'gym' THEN g.name
+                        WHEN m.sender_type = 'coach' THEN c.name
+                        WHEN m.sender_type = 'member' THEN mem.name
+                    END as sender_name
+                FROM messages m
+                LEFT JOIN gyms g ON m.sender_type = 'gym' AND m.sender_id = g.id
+                LEFT JOIN coaches c ON m.sender_type = 'coach' AND m.sender_id = c.id
+                LEFT JOIN members mem ON m.sender_type = 'member' AND m.sender_id = mem.id
+                WHERE (
+                    (m.sender_id = %s AND m.sender_type = %s AND m.receiver_id = %s AND m.receiver_type = %s)
+                    OR 
+                    (m.sender_id = %s AND m.sender_type = %s AND m.receiver_id = %s AND m.receiver_type = %s)
+                )
+                ORDER BY m.created_at ASC
+            """, (
+                user["id"], user["user_type"], sender_id, sender_type,
+                sender_id, sender_type, user["id"], user["user_type"]
+            ))
+        else:
+            # Get all conversations
+            cursor.execute("""
+                SELECT DISTINCT
+                    CASE 
+                        WHEN m.sender_id = %s THEN m.receiver_id
+                        ELSE m.sender_id
+                    END as conversation_id,
+                    CASE 
+                        WHEN m.sender_id = %s THEN m.receiver_type
+                        ELSE m.sender_type
+                    END as conversation_type,
+                    CASE 
+                        WHEN m.sender_id = %s THEN 
+                            CASE 
+                                WHEN m.receiver_type = 'gym' THEN g.name
+                                WHEN m.receiver_type = 'coach' THEN c.name
+                                WHEN m.receiver_type = 'member' THEN mem.name
+                            END
+                        ELSE 
+                            CASE 
+                                WHEN m.sender_type = 'gym' THEN g.name
+                                WHEN m.sender_type = 'coach' THEN c.name
+                                WHEN m.sender_type = 'member' THEN mem.name
+                            END
+                    END as conversation_name,
+                    MAX(m.created_at) as last_message_time,
+                    COUNT(CASE WHEN m.is_read = FALSE AND m.receiver_id = %s THEN 1 END) as unread_count
+                FROM messages m
+                LEFT JOIN gyms g ON (
+                    (m.sender_type = 'gym' AND m.sender_id = g.id) OR 
+                    (m.receiver_type = 'gym' AND m.receiver_id = g.id)
+                )
+                LEFT JOIN coaches c ON (
+                    (m.sender_type = 'coach' AND m.sender_id = c.id) OR 
+                    (m.receiver_type = 'coach' AND m.receiver_id = c.id)
+                )
+                LEFT JOIN members mem ON (
+                    (m.sender_type = 'member' AND m.sender_id = mem.id) OR 
+                    (m.receiver_type = 'member' AND m.receiver_id = mem.id)
+                )
+                WHERE m.sender_id = %s OR m.receiver_id = %s
+                GROUP BY conversation_id, conversation_type, conversation_name
+                ORDER BY last_message_time DESC
+            """, (user["id"], user["id"], user["id"], user["id"], user["id"], user["id"]))
+        
+        results = cursor.fetchall()
+        
+        if conversation_id:
+            # Format individual messages
+            formatted_messages = []
+            for message in results:
+                formatted_messages.append({
+                    "id": message["id"],
+                    "sender": {
+                        "id": message["sender_id"],
+                        "type": message["sender_type"],
+                        "name": message["sender_name"]
+                    },
+                    "message": message["message"],
+                    "is_read": bool(message["is_read"]),
+                    "created_at": message["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+                })
+            return formatted_messages
+        else:
+            # Format conversations
+            formatted_conversations = []
+            for conv in results:
+                formatted_conversations.append({
+                    "id": f"{conv['conversation_id']}_{conv['conversation_type']}",
+                    "name": conv["conversation_name"],
+                    "type": conv["conversation_type"],
+                    "last_message_time": conv["last_message_time"].strftime("%Y-%m-%d %H:%M:%S"),
+                    "unread_count": conv["unread_count"]
+                })
+            return formatted_conversations
+        
+    except Exception as e:
+        print(f"Error getting messages: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.put("/api/messages/{message_id}/read")
+async def mark_message_read(message_id: int, request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verify message belongs to user
+        cursor.execute("""
+            SELECT 1 FROM messages 
+            WHERE id = %s AND receiver_id = %s AND receiver_type = %s
+        """, (message_id, user["id"], user["user_type"]))
+        
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Message not found")
+        
+        # Mark as read
+        cursor.execute("""
+            UPDATE messages 
+            SET is_read = TRUE 
+            WHERE id = %s
+        """, (message_id,))
+        
+        conn.commit()
+        return {"message": "Message marked as read"}
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"Error marking message as read: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/api/messages/contacts")
+async def get_message_contacts(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        contacts = []
+        
+        if user["user_type"] == "gym":
+            # Gym can message all coaches and members
+            cursor.execute("""
+                SELECT id, name, 'coach' as type 
+                FROM coaches 
+                WHERE gym_id = %s
+            """, (user["id"],))
+            coaches = cursor.fetchall()
+            contacts.extend(coaches)
+            
+            cursor.execute("""
+                SELECT id, name, 'member' as type 
+                FROM members 
+                WHERE gym_id = %s
+            """, (user["id"],))
+            members = cursor.fetchall()
+            contacts.extend(members)
+            
+        elif user["user_type"] == "coach":
+            # Coach can message their gym and their members
+            cursor.execute("""
+                SELECT g.id, g.name, 'gym' as type 
+                FROM gyms g
+                JOIN coaches c ON c.gym_id = g.id
+                WHERE c.id = %s
+            """, (user["id"],))
+            gym = cursor.fetchone()
+            if gym:
+                contacts.append(gym)
+            
+            cursor.execute("""
+                SELECT m.id, m.name, 'member' as type 
+                FROM members m
+                JOIN member_coach mc ON mc.member_id = m.id
+                WHERE mc.coach_id = %s
+            """, (user["id"],))
+            members = cursor.fetchall()
+            contacts.extend(members)
+            
+        elif user["user_type"] == "member":
+            # Member can message their gym and their coach
+            cursor.execute("""
+                SELECT g.id, g.name, 'gym' as type 
+                FROM gyms g
+                JOIN members m ON m.gym_id = g.id
+                WHERE m.id = %s
+            """, (user["id"],))
+            gym = cursor.fetchone()
+            if gym:
+                contacts.append(gym)
+            
+            cursor.execute("""
+                SELECT c.id, c.name, 'coach' as type 
+                FROM coaches c
+                JOIN member_coach mc ON mc.coach_id = c.id
+                WHERE mc.member_id = %s
+            """, (user["id"],))
+            coach = cursor.fetchone()
+            if coach:
+                contacts.append(coach)
+        
+        return contacts
+        
+    except Exception as e:
+        print(f"Error getting message contacts: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/gym/messages", response_class=HTMLResponse)
+async def get_gym_messages_page(request: Request):
     # Get user from session
     user = get_current_user(request)
     if not user or user["user_type"] != "gym":
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        return RedirectResponse(url="/")
     
+    # Get gym details from database
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        # Get membership statistics
-        cursor.execute("""
-            SELECT 
-                membership_type,
-                COUNT(*) as count,
-                SUM(CASE WHEN join_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as new_members
-            FROM members 
-            WHERE gym_id = %s
-            GROUP BY membership_type
-        """, (user["id"],))
-        membership_stats = cursor.fetchall()
+        # Get gym details
+        cursor.execute("SELECT * FROM gyms WHERE id = %s", (user["id"],))
+        gym_details = cursor.fetchone()
         
-        # Get session statistics
-        cursor.execute("""
-            SELECT 
-                COUNT(*) as total_sessions,
-                SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_sessions,
-                SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_sessions,
-                COUNT(DISTINCT member_id) as active_members,
-                COUNT(DISTINCT coach_id) as active_coaches
-            FROM sessions 
-            WHERE gym_id = %s
-            AND session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-        """, (user["id"],))
-        session_stats = cursor.fetchone()
-        
-        # Get revenue statistics
-        cursor.execute("""
-            SELECT 
-                SUM(CASE 
-                    WHEN membership_type = 'Basic' THEN 50.00
-                    WHEN membership_type = 'Premium' THEN 100.00
-                    WHEN membership_type = 'VIP' THEN 200.00
-                END) as monthly_revenue
-            FROM members 
-            WHERE gym_id = %s
-            AND join_date >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01')
-            AND join_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL 1 MONTH)
-        """, (user["id"],))
-        revenue_stats = cursor.fetchone()
-        
-        # Get coach performance
-        cursor.execute("""
-            SELECT 
-                c.name as coach_name,
-                COUNT(s.id) as total_sessions,
-                SUM(CASE WHEN s.status = 'Completed' THEN 1 ELSE 0 END) as completed_sessions,
-                COUNT(DISTINCT s.member_id) as unique_members
-            FROM coaches c
-            LEFT JOIN sessions s ON c.id = s.coach_id
-            WHERE c.gym_id = %s
-            AND (s.session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) OR s.session_date IS NULL)
-            GROUP BY c.id, c.name
-        """, (user["id"],))
-        coach_stats = cursor.fetchall()
-        
-        return {
-            "membership_stats": membership_stats,
-            "session_stats": session_stats,
-            "revenue_stats": revenue_stats,
-            "coach_stats": coach_stats
-        }
+        # Return the messages page template with gym details
+        return templates.TemplateResponse(
+            "messaging.html",
+            {
+                "request": request,
+                "user": user,
+                "user_type": "gym",
+                "user_details": gym_details
+            }
+        )
     except Exception as e:
-        print(f"Error getting gym reports: {str(e)}")
+        print(f"Error getting gym messages page: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/coach/messages", response_class=HTMLResponse)
+async def get_coach_messages_page(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "coach":
+        return RedirectResponse(url="/")
+    
+    # Get coach details from database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get coach details
+        cursor.execute("""
+            SELECT c.*, g.name as gym_name
+            FROM coaches c
+            JOIN gyms g ON c.gym_id = g.id
+            WHERE c.id = %s
+        """, (user["id"],))
+        coach_details = cursor.fetchone()
+        
+        # Return the messages page template with coach details
+        return templates.TemplateResponse(
+            "messaging.html",
+            {
+                "request": request,
+                "user": user,
+                "user_type": "coach",
+                "user_details": coach_details
+            }
+        )
+    except Exception as e:
+        print(f"Error getting coach messages page: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/member/messages", response_class=HTMLResponse)
+async def get_member_messages_page(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "member":
+        return RedirectResponse(url="/")
+    
+    # Get member details from database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get member details with coach info
+        cursor.execute("""
+            SELECT m.*, c.name as coach_name, c.specialization, c.email as coach_email
+            FROM members m
+            LEFT JOIN member_coach mc ON m.id = mc.member_id
+            LEFT JOIN coaches c ON mc.coach_id = c.id
+            WHERE m.id = %s
+        """, (user["id"],))
+        member_details = cursor.fetchone()
+        
+        # Return the messages page template with member details
+        return templates.TemplateResponse(
+            "messaging.html",
+            {
+                "request": request,
+                "user": user,
+                "user_type": "member",
+                "user_details": member_details
+            }
+        )
+    except Exception as e:
+        print(f"Error getting member messages page: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/coach/dashboard", response_class=HTMLResponse)
+async def get_coach_dashboard_page(request: Request):
+    # Get user from session using our existing session management
+    user = get_current_user(request)
+    if not user or user["user_type"] != "coach":
+        return RedirectResponse(url="/")
+    
+    # Get coach details from database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get coach details with gym info
+        cursor.execute("""
+            SELECT c.*, g.name as gym_name
+            FROM coaches c
+            JOIN gyms g ON c.gym_id = g.id
+            WHERE c.id = %s
+        """, (user["id"],))
+        coach_details = cursor.fetchone()
+        
+        # Return the dashboard page template with coach details
+        return templates.TemplateResponse(
+            "coach/dashboard.html",
+            {
+                "request": request,
+                "coach": coach_details,
+                "user": user
+            }
+        )
+    except Exception as e:
+        print(f"Error getting coach dashboard: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()

@@ -42,18 +42,15 @@
             <!-- Sidebar -->
             <div class="w-64 bg-indigo-800 text-white rounded-lg shadow-lg p-4 mr-8">
                 {% block sidebar %}
-                <a href="/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
-                    <i class="fas fa-home mr-2"></i> Dashboard
-                </a>
-                <a href="/coach/members" class="block py-2 px-4 hover:bg-indigo-700">
-                    <i class="fas fa-users mr-2"></i> My Members
-                </a>
-                <a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">
-                    <i class="fas fa-calendar mr-2"></i> Schedule
-                </a>
-                <a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">
-                    <i class="fas fa-chart-line mr-2"></i> Progress
-                </a>
+                    {% if user %}
+                        {% if user.user_type == "gym" %}
+                            {% include "gym/sidebar.html" %}
+                        {% elif user.user_type == "coach" %}
+                            {% include "coach/sidebar.html" %}
+                        {% elif user.user_type == "member" %}
+                            {% include "member/sidebar.html" %}
+                        {% endif %}
+                    {% endif %}
                 {% endblock %}
             </div>
 

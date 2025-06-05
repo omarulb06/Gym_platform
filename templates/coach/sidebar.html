@@ -1,0 +1,24 @@
+{% block sidebar %}
+<a href="/coach/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-home mr-2"></i> Dashboard
+</a>
+<a href="/coach/members" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-users mr-2"></i> My Members
+</a>
+<a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-calendar mr-2"></i> Schedule
+</a>
+<a href="/coach/sessions" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-clipboard-list mr-2"></i> Sessions
+</a>
+<a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-chart-line mr-2"></i> Progress
+</a>
+<div class="border-t border-indigo-700 my-2"></div>
+<a href="/coach/messages" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-envelope mr-2"></i> Messages
+</a>
+<button onclick="showNewMessageModal('coach')" class="w-full text-left py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-pen-to-square mr-2"></i> New Message
+</button>
+{% endblock %} 
