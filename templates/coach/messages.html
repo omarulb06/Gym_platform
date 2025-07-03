@@ -28,9 +28,9 @@
         <div class="w-2/3 pl-4">
             {% if selected_contact %}
                 <h4 class="font-semibold mb-2">Conversation with {{ selected_contact.name }} ({{ selected_contact.type|capitalize }})</h4>
-                <div class="h-96 overflow-y-auto border rounded p-4 mb-4 bg-white">
+                <div class="h-96 overflow-y-auto border rounded p-4 mb-4 bg-white" id="chat-messages">
                     {% if messages %}
-                        <ul class="space-y-2">
+                        <ul class="space-y-2" id="messages-list">
                         {% for msg in messages %}
                             <li class="{{ 'text-right' if msg.sender_id==user.id and msg.sender_type==user.user_type else 'text-left' }}">
                                 <span class="inline-block px-2 py-1 rounded {{ 'bg-indigo-200' if msg.sender_id==user.id and msg.sender_type==user.user_type else 'bg-gray-200' }}">
@@ -52,7 +52,7 @@
                         <p class="text-gray-500">No messages yet.</p>
                     {% endif %}
                 </div>
-                <form method="post" action="/coach/messages" class="flex items-center space-x-2">
+                <form method="post" action="/coach/messages" class="flex items-center space-x-2" id="send-message-form">
                     <input type="hidden" name="contact_id" value="{{ contact_id }}">
                     <input type="hidden" name="contact_type" value="{{ contact_type }}">
                     <textarea name="message" class="flex-1 border rounded px-3 py-2" placeholder="Type your message..." required></textarea>
@@ -64,4 +64,7 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
 {% endblock %} 
