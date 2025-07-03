@@ -1,0 +1,14 @@
+2024-06-01: 4h - Set up project structure, initialized FastAPI and database schema.
+2024-06-03: 3h - Implemented user authentication and login page.
+2024-06-04: 4h - Designed and implemented the database schema for sessions and payments.
+2024-06-05: 6h - Created gym, coach, and member dashboard templates.
+2024-06-06: 4h - Developed initial REST API endpoints for gym and member management.
+2024-06-07: 2h - Added session scheduling and member-coach assignment logic.
+2024-06-10: 4h - Integrated Tailwind CSS and improved UI consistency across templates.
+2024-06-12: 3.5h - Fixed sidebar duplication bug and improved navigation.
+2024-06-13: 4h - Wrote unit tests for authentication and session features.
+2024-06-14: 6h - Implemented progress tracking and reporting endpoints.
+2024-06-18: 4h - Added error handling and user feedback for all forms.
+2024-07-03: 4h - Developed messaging system backend and templates.
+2024-07-04: 2h - Refactored templates for better UX and added delete message feature.
+
