@@ -1,10 +1,10 @@
-from fastapi import FastAPI, HTTPException, Request, Depends, Form
+from fastapi import FastAPI, HTTPException, Request, Depends, Form, status, WebSocket, WebSocketDisconnect
 import pymysql
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from datetime import datetime, timedelta
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from typing import Optional
+from typing import Optional, Dict, Tuple, List
 import secrets
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -3176,6 +3176,311 @@ async def get_gym_reports(request: Request):
     finally:
         cursor.close()
         conn.close()
+
+# Helper to get contacts for messaging
+
+def get_message_contacts(user):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    contacts = []
+    try:
+        if user["user_type"] == "coach":
+            # Coach can message their gym and their members
+            cursor.execute("""
+                SELECT g.id, g.name, 'gym' as type FROM gyms g
+                JOIN coaches c ON c.gym_id = g.id WHERE c.id = %s
+            """, (user["id"],))
+            gym = cursor.fetchone()
+            if gym:
+                contacts.append(gym)
+            cursor.execute("""
+                SELECT m.id, m.name, 'member' as type FROM members m
+                JOIN member_coach mc ON mc.member_id = m.id WHERE mc.coach_id = %s
+            """, (user["id"],))
+            contacts.extend(cursor.fetchall())
+        elif user["user_type"] == "gym":
+            # Gym can message all coaches and members
+            cursor.execute("SELECT id, name, 'coach' as type FROM coaches WHERE gym_id = %s", (user["id"],))
+            contacts.extend(cursor.fetchall())
+            cursor.execute("SELECT id, name, 'member' as type FROM members WHERE gym_id = %s", (user["id"],))
+            contacts.extend(cursor.fetchall())
+        elif user["user_type"] == "member":
+            # Member can message their gym and their coach
+            cursor.execute("""
+                SELECT g.id, g.name, 'gym' as type FROM gyms g
+                JOIN members m ON m.gym_id = g.id WHERE m.id = %s
+            """, (user["id"],))
+            gym = cursor.fetchone()
+            if gym:
+                contacts.append(gym)
+            cursor.execute("""
+                SELECT c.id, c.name, 'coach' as type FROM coaches c
+                JOIN member_coach mc ON mc.coach_id = c.id WHERE mc.member_id = %s
+            """, (user["id"],))
+            coach = cursor.fetchone()
+            if coach:
+                contacts.append(coach)
+    finally:
+        cursor.close()
+        conn.close()
+    return contacts
+
+# Helper to get messages between two users
+
+def get_conversation(user, contact_id, contact_type):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT * FROM messages
+            WHERE ((sender_id = %s AND sender_type = %s AND receiver_id = %s AND receiver_type = %s)
+                OR (sender_id = %s AND sender_type = %s AND receiver_id = %s AND receiver_type = %s))
+            ORDER BY created_at ASC
+        """, (
+            user["id"], user["user_type"], contact_id, contact_type,
+            contact_id, contact_type, user["id"], user["user_type"]
+        ))
+        return cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
+
+# COACH MESSAGES
+@app.get("/coach/messages", response_class=HTMLResponse)
+async def coach_messages_page(request: Request, contact_id: int = None, contact_type: str = None, search: str = None):
+    user = get_current_user(request)
+    if not user or user["user_type"] != "coach":
+        return RedirectResponse(url="/")
+    contacts = get_message_contacts(user)
+    # Filter contacts by search if present
+    if search:
+        search_lower = search.lower()
+        contacts = [c for c in contacts if search_lower in c["name"].lower()]
+    messages = []
+    selected_contact = None
+    if contact_id and contact_type:
+        messages = get_conversation(user, contact_id, contact_type)
+        selected_contact = next((c for c in contacts if c["id"] == contact_id and c["type"] == contact_type), None)
+    return templates.TemplateResponse("coach/messages.html", {"request": request, "user": user, "contacts": contacts, "messages": messages, "selected_contact": selected_contact, "contact_id": contact_id, "contact_type": contact_type})
+
+@app.post("/coach/messages", response_class=HTMLResponse)
+async def coach_send_message(request: Request, contact_id: int = Form(...), contact_type: str = Form(...), message: str = Form(...)):
+    user = get_current_user(request)
+    if not user or user["user_type"] != "coach":
+        return RedirectResponse(url="/")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, message)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (user["id"], user["user_type"], contact_id, contact_type, message))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+    return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=303)
+
+# GYM MESSAGES
+@app.get("/gym/messages", response_class=HTMLResponse)
+async def gym_messages_page(request: Request, contact_id: int = None, contact_type: str = None, search: str = None):
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        return RedirectResponse(url="/")
+    contacts = get_message_contacts(user)
+    if search:
+        search_lower = search.lower()
+        contacts = [c for c in contacts if search_lower in c["name"].lower()]
+    messages = []
+    selected_contact = None
+    if contact_id and contact_type:
+        messages = get_conversation(user, contact_id, contact_type)
+        selected_contact = next((c for c in contacts if c["id"] == contact_id and c["type"] == contact_type), None)
+    return templates.TemplateResponse("gym/messages.html", {"request": request, "user": user, "contacts": contacts, "messages": messages, "selected_contact": selected_contact, "contact_id": contact_id, "contact_type": contact_type})
+
+@app.post("/gym/messages", response_class=HTMLResponse)
+async def gym_send_message(request: Request, contact_id: int = Form(...), contact_type: str = Form(...), message: str = Form(...)):
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        return RedirectResponse(url="/")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, message)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (user["id"], user["user_type"], contact_id, contact_type, message))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+    return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=303)
+
+# MEMBER MESSAGES
+@app.get("/member/messages", response_class=HTMLResponse)
+async def member_messages_page(request: Request, contact_id: int = None, contact_type: str = None, search: str = None):
+    user = get_current_user(request)
+    if not user or user["user_type"] != "member":
+        return RedirectResponse(url="/")
+    contacts = get_message_contacts(user)
+    if search:
+        search_lower = search.lower()
+        contacts = [c for c in contacts if search_lower in c["name"].lower()]
+    messages = []
+    selected_contact = None
+    if contact_id and contact_type:
+        messages = get_conversation(user, contact_id, contact_type)
+        selected_contact = next((c for c in contacts if c["id"] == contact_id and c["type"] == contact_type), None)
+    return templates.TemplateResponse("member/messages.html", {"request": request, "user": user, "contacts": contacts, "messages": messages, "selected_contact": selected_contact, "contact_id": contact_id, "contact_type": contact_type})
+
+@app.post("/member/messages", response_class=HTMLResponse)
+async def member_send_message(request: Request, contact_id: int = Form(...), contact_type: str = Form(...), message: str = Form(...)):
+    user = get_current_user(request)
+    if not user or user["user_type"] != "member":
+        return RedirectResponse(url="/")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, message)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (user["id"], user["user_type"], contact_id, contact_type, message))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+    return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=303)
+
+# DELETE MESSAGE ENDPOINTS
+@app.post("/coach/messages/delete/{message_id}", response_class=HTMLResponse)
+async def coach_delete_message(request: Request, message_id: int, contact_id: int = Form(...), contact_type: str = Form(...)):
+    user = get_current_user(request)
+    if not user or user["user_type"] != "coach":
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Only allow sender to delete their own message
+        cursor.execute("SELECT * FROM messages WHERE id = %s", (message_id,))
+        msg = cursor.fetchone()
+        if not msg or msg["sender_id"] != user["id"] or msg["sender_type"] != user["user_type"]:
+            cursor.close()
+            conn.close()
+            return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+        cursor.execute("DELETE FROM messages WHERE id = %s", (message_id,))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+    return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/gym/messages/delete/{message_id}", response_class=HTMLResponse)
+async def gym_delete_message(request: Request, message_id: int, contact_id: int = Form(...), contact_type: str = Form(...)):
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM messages WHERE id = %s", (message_id,))
+        msg = cursor.fetchone()
+        if not msg or msg["sender_id"] != user["id"] or msg["sender_type"] != user["user_type"]:
+            cursor.close()
+            conn.close()
+            return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+        cursor.execute("DELETE FROM messages WHERE id = %s", (message_id,))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+    return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/member/messages/delete/{message_id}", response_class=HTMLResponse)
+async def member_delete_message(request: Request, message_id: int, contact_id: int = Form(...), contact_type: str = Form(...)):
+    user = get_current_user(request)
+    if not user or user["user_type"] != "member":
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM messages WHERE id = %s", (message_id,))
+        msg = cursor.fetchone()
+        if not msg or msg["sender_id"] != user["id"] or msg["sender_type"] != user["user_type"]:
+            cursor.close()
+            conn.close()
+            return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+        cursor.execute("DELETE FROM messages WHERE id = %s", (message_id,))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+    return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+
+# WebSocket connection manager for real-time chat
+class ConnectionManager:
+    def __init__(self):
+        # key: (user_type, user_id), value: list of WebSocket connections
+        self.active_connections: Dict[Tuple[str, int], List[WebSocket]] = {}
+
+    async def connect(self, user_type: str, user_id: int, websocket: WebSocket):
+        await websocket.accept()
+        key = (user_type, user_id)
+        if key not in self.active_connections:
+            self.active_connections[key] = []
+        self.active_connections[key].append(websocket)
+
+    def disconnect(self, user_type: str, user_id: int, websocket: WebSocket):
+        key = (user_type, user_id)
+        if key in self.active_connections:
+            if websocket in self.active_connections[key]:
+                self.active_connections[key].remove(websocket)
+            if not self.active_connections[key]:
+                del self.active_connections[key]
+
+    async def send_personal_message(self, user_type: str, user_id: int, message: dict):
+        key = (user_type, user_id)
+        if key in self.active_connections:
+            for connection in self.active_connections[key]:
+                await connection.send_json(message)
+
+    async def broadcast(self, message: dict):
+        for connections in self.active_connections.values():
+            for connection in connections:
+                await connection.send_json(message)
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/messages/{user_type}/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_type: str, user_id: int):
+    await manager.connect(user_type, int(user_id), websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            # data should include: sender_id, sender_type, receiver_id, receiver_type, message
+            # Save the message to the DB
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, message)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    (data["sender_id"], data["sender_type"], data["receiver_id"], data["receiver_type"], data["message"])
+                )
+                conn.commit()
+                # Get the inserted message (with id and created_at)
+                cursor.execute("SELECT * FROM messages WHERE id = %s", (cursor.lastrowid,))
+                msg = cursor.fetchone()
+            finally:
+                cursor.close()
+                conn.close()
+            # Send the message to the receiver (if online)
+            await manager.send_personal_message(data["receiver_type"], int(data["receiver_id"]), msg)
+            # Also send to the sender (to update their chat instantly)
+            await manager.send_personal_message(data["sender_type"], int(data["sender_id"]), msg)
+    except WebSocketDisconnect:
+        manager.disconnect(user_type, int(user_id), websocket)
 
 if __name__ == "__main__":
     import uvicorn
