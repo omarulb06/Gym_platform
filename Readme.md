@@ -39,7 +39,7 @@ A modern web-based gym management system that connects gyms, coaches, and member
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/omarulb06/OmarShwahne_SemesterProject.git
 cd gym-management-platform
 ```
 
