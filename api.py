@@ -1,10 +1,10 @@
-from fastapi import FastAPI, HTTPException, Request, Depends, Form, status, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, Depends, Form, status, WebSocket, WebSocketDisconnect, Query
 import pymysql
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from datetime import datetime, timedelta
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from typing import Optional, Dict, Tuple, List
+from typing import Optional, Dict, Tuple, List, Union
 import secrets
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +12,19 @@ import bcrypt
 import json
 import os
 import random
+
+# Helper function to convert non-serializable objects to JSON-serializable format
+def convert_for_json(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, timedelta):
+        return str(obj)
+    elif isinstance(obj, dict):
+        return {key: convert_for_json(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_for_json(item) for item in obj]
+    else:
+        return obj
 
 app = FastAPI(title="Gym Management Platform")
 
@@ -239,6 +252,53 @@ def init_db():
                 notes TEXT,
                 FOREIGN KEY (member_id) REFERENCES members(id),
                 FOREIGN KEY (gym_id) REFERENCES gyms(id)
+            )
+        """)
+        
+        # Create user_preferences table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_preferences (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                user_type ENUM('coach', 'member') NOT NULL,
+                preferred_workout_types JSON,
+                preferred_duration INT DEFAULT 60,
+                preferred_time_slots JSON,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user_pref (user_id, user_type)
+            )
+        """)
+        
+        # Create availability_slots table for date and hour based availability
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS availability_slots (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                user_type ENUM('coach', 'member') NOT NULL,
+                date DATE NOT NULL,
+                hour INT NOT NULL CHECK (hour >= 0 AND hour <= 23),
+                is_available BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user_date_hour (user_id, user_type, date, hour)
+            )
+        """)
+        
+        # Keep the old free_days table for backward compatibility (will be removed later)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS free_days (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                user_type ENUM('coach', 'member') NOT NULL,
+                day_of_week ENUM('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday') NOT NULL,
+                is_available BOOLEAN DEFAULT TRUE,
+                start_time TIME DEFAULT '08:00:00',
+                end_time TIME DEFAULT '20:00:00',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_user_day (user_id, user_type, day_of_week)
             )
         """)
         
@@ -2661,7 +2721,7 @@ async def get_coach_schedule(
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Base query
+        # Base query for sessions
         query = """
             SELECT 
                 s.*,
@@ -2726,10 +2786,36 @@ async def get_coach_schedule(
                 "notes": session["notes"]
             })
         
+        # Get coach's weekly availability
+        cursor.execute("""
+            SELECT * FROM free_days
+            WHERE user_id = %s AND user_type = 'coach'
+            ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+        """, (current_user["id"],))
+        free_days = cursor.fetchall()
+        
+        # Convert all objects to JSON-serializable format
+        formatted_free_days = convert_for_json(free_days)
+        
+        # If no free days exist, create default ones
+        if not formatted_free_days:
+            formatted_free_days = []
+            days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            for day in days_of_week:
+                formatted_free_days.append({
+                    'day_of_week': day,
+                    'is_available': True,
+                    'start_time': '08:00:00',
+                    'end_time': '20:00:00'
+                })
+        
         cursor.close()
         conn.close()
         
-        return JSONResponse(content=formatted_sessions)
+        return JSONResponse(content={
+            "sessions": formatted_sessions,
+            "weekly_availability": formatted_free_days
+        })
     except Exception as e:
         print(f"Error in get_coach_schedule: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving schedule")
@@ -2836,7 +2922,7 @@ async def get_member_schedule(
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Base query
+        # Base query for sessions
         query = """
             SELECT 
                 s.*,
@@ -2893,10 +2979,70 @@ async def get_member_schedule(
                 "notes": session["notes"]
             })
         
+        # Get member's weekly availability
+        cursor.execute("""
+            SELECT * FROM free_days
+            WHERE user_id = %s AND user_type = 'member'
+            ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+        """, (current_user["id"],))
+        member_free_days = cursor.fetchall()
+        
+        # Convert all objects to JSON-serializable format
+        formatted_member_free_days = convert_for_json(member_free_days)
+        
+        # If no free days exist, create default ones
+        if not formatted_member_free_days:
+            formatted_member_free_days = []
+            days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            for day in days_of_week:
+                formatted_member_free_days.append({
+                    'day_of_week': day,
+                    'is_available': True,
+                    'start_time': '08:00:00',
+                    'end_time': '20:00:00'
+                })
+        
+        # Get member's coach and coach's availability
+        cursor.execute("""
+            SELECT c.id, c.name, c.specialization
+            FROM coaches c
+            JOIN member_coach mc ON c.id = mc.coach_id
+            WHERE mc.member_id = %s
+        """, (current_user["id"],))
+        coach_data = cursor.fetchone()
+        
+        coach_availability = []
+        if coach_data:
+            cursor.execute("""
+                SELECT * FROM free_days
+                WHERE user_id = %s AND user_type = 'coach'
+                ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+            """, (coach_data["id"],))
+            coach_availability = cursor.fetchall()
+            
+            # Convert all objects to JSON-serializable format
+            coach_availability = convert_for_json(coach_availability)
+            
+            # If coach has no free days, create default ones
+            if not coach_availability:
+                days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                for day in days_of_week:
+                    coach_availability.append({
+                        'day_of_week': day,
+                        'is_available': True,
+                        'start_time': '08:00:00',
+                        'end_time': '20:00:00'
+                    })
+        
         cursor.close()
         conn.close()
         
-        return formatted_sessions
+        return JSONResponse(content={
+            "sessions": formatted_sessions,
+            "member_availability": formatted_member_free_days,
+            "coach_availability": coach_availability,
+            "coach": coach_data
+        })
     except Exception as e:
         print(f"Error in get_member_schedule: {str(e)}")
         raise HTTPException(status_code=500, detail="Error retrieving schedule")
@@ -2938,6 +3084,24 @@ async def get_member_progress_page(request: Request):
     finally:
         cursor.close()
         conn.close()
+
+@app.get("/coach/preferences", response_class=HTMLResponse)
+async def get_coach_preferences_page(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "coach":
+        return RedirectResponse(url="/")
+    
+    return templates.TemplateResponse("coach/preferences.html", {"request": request, "user": user})
+
+@app.get("/member/preferences", response_class=HTMLResponse)
+async def get_member_preferences_page(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "member":
+        return RedirectResponse(url="/")
+    
+    return templates.TemplateResponse("member/preferences.html", {"request": request, "user": user})
 
 @app.get("/api/member/progress")
 async def get_member_progress_data(current_user: dict = Depends(get_current_user)):
@@ -3415,6 +3579,733 @@ async def member_delete_message(request: Request, message_id: int, contact_id: i
         cursor.close()
         conn.close()
     return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+
+# Preferences and Free Days API Endpoints
+
+@app.get("/api/preferences")
+async def get_user_preferences(current_user: dict = Depends(get_current_user)):
+    """Get user preferences and free days"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        user_type = 'coach' if current_user.get('user_type') == 'coach' else 'member'
+        user_id = current_user.get('id')
+        
+        # Get preferences
+        cursor.execute("""
+            SELECT * FROM user_preferences 
+            WHERE user_id = %s AND user_type = %s
+        """, (user_id, user_type))
+        preferences = cursor.fetchone()
+        
+        # Get free days
+        cursor.execute("""
+            SELECT * FROM free_days 
+            WHERE user_id = %s AND user_type = %s
+            ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+        """, (user_id, user_type))
+        free_days = cursor.fetchall()
+        
+        # Initialize default preferences if none exist
+        if not preferences:
+            preferences = {
+                'preferred_workout_types': [],
+                'preferred_duration': 60,
+                'preferred_time_slots': ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'],
+                'notes': ''
+            }
+        else:
+            # Parse JSON fields
+            if preferences.get('preferred_workout_types'):
+                preferences['preferred_workout_types'] = json.loads(preferences['preferred_workout_types'])
+            else:
+                preferences['preferred_workout_types'] = []
+            
+            if preferences.get('preferred_time_slots'):
+                preferences['preferred_time_slots'] = json.loads(preferences['preferred_time_slots'])
+            else:
+                preferences['preferred_time_slots'] = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00']
+        
+        # Initialize default free days if none exist
+        if not free_days:
+            days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            free_days = []
+            for day in days_of_week:
+                free_days.append({
+                    'day_of_week': day,
+                    'is_available': True,
+                    'start_time': '08:00:00',
+                    'end_time': '20:00:00'
+                })
+        
+        return {
+            'preferences': preferences,
+            'free_days': free_days
+        }
+        
+    except Exception as e:
+        print(f"Error getting preferences: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get preferences")
+    finally:
+        if connection:
+            connection.close()
+
+@app.post("/api/preferences")
+async def update_user_preferences(request: Request, current_user: dict = Depends(get_current_user)):
+    """Update user preferences and free days"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        data = await request.json()
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        user_type = 'coach' if current_user.get('user_type') == 'coach' else 'member'
+        user_id = current_user.get('id')
+        
+        # Update preferences
+        preferences = data.get('preferences', {})
+        cursor.execute("""
+            INSERT INTO user_preferences (user_id, user_type, preferred_workout_types, preferred_duration, preferred_time_slots, notes)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            preferred_workout_types = VALUES(preferred_workout_types),
+            preferred_duration = VALUES(preferred_duration),
+            preferred_time_slots = VALUES(preferred_time_slots),
+            notes = VALUES(notes),
+            updated_at = CURRENT_TIMESTAMP
+        """, (
+            user_id, 
+            user_type,
+            json.dumps(preferences.get('preferred_workout_types', [])),
+            preferences.get('preferred_duration', 60),
+            json.dumps(preferences.get('preferred_time_slots', [])),
+            preferences.get('notes', '')
+        ))
+        
+        # Update free days
+        free_days = data.get('free_days', [])
+        for day_data in free_days:
+            cursor.execute("""
+                INSERT INTO free_days (user_id, user_type, day_of_week, is_available, start_time, end_time)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                is_available = VALUES(is_available),
+                start_time = VALUES(start_time),
+                end_time = VALUES(end_time),
+                updated_at = CURRENT_TIMESTAMP
+            """, (
+                user_id,
+                user_type,
+                day_data['day_of_week'],
+                day_data['is_available'],
+                day_data['start_time'],
+                day_data['end_time']
+            ))
+        
+        connection.commit()
+        return {"message": "Preferences updated successfully"}
+        
+    except Exception as e:
+        print(f"Error updating preferences: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update preferences")
+    finally:
+        if connection:
+            connection.close()
+
+@app.get("/api/coach/members/{member_id}/preferences")
+async def get_member_preferences(member_id: int, current_user: dict = Depends(get_current_user)):
+    """Get member preferences for coach view"""
+    if not current_user or current_user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Verify coach has access to this member
+        cursor.execute("""
+            SELECT * FROM member_coach 
+            WHERE coach_id = %s AND member_id = %s
+        """, (current_user.get('id'), member_id))
+        
+        if not cursor.fetchone():
+            raise HTTPException(status_code=403, detail="Not authorized to view this member")
+        
+        # Get member preferences
+        cursor.execute("""
+            SELECT * FROM user_preferences 
+            WHERE user_id = %s AND user_type = 'member'
+        """, (member_id,))
+        preferences = cursor.fetchone()
+        
+        # Get member free days
+        cursor.execute("""
+            SELECT * FROM free_days 
+            WHERE user_id = %s AND user_type = 'member'
+            ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+        """, (member_id,))
+        free_days = cursor.fetchall()
+        
+        # Parse JSON fields
+        if preferences and preferences.get('preferred_workout_types'):
+            preferences['preferred_workout_types'] = json.loads(preferences['preferred_workout_types'])
+        if preferences and preferences.get('preferred_time_slots'):
+            preferences['preferred_time_slots'] = json.loads(preferences['preferred_time_slots'])
+        
+        return {
+            'preferences': preferences,
+            'free_days': free_days
+        }
+        
+    except Exception as e:
+        print(f"Error getting member preferences: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get member preferences")
+    finally:
+        if connection:
+            connection.close()
+
+@app.get("/api/member/coach")
+async def get_member_coach_info(current_user: dict = Depends(get_current_user)):
+    """Get current member's coach information"""
+    if not current_user or current_user.get('user_type') != 'member':
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Get member's coach
+        cursor.execute("""
+            SELECT c.id, c.name, c.email, c.specialization
+            FROM coaches c
+            JOIN member_coach mc ON c.id = mc.coach_id
+            WHERE mc.member_id = %s
+        """, (current_user.get('id'),))
+        
+        coach = cursor.fetchone()
+        
+        return {
+            'coach': coach
+        }
+        
+    except Exception as e:
+        print(f"Error getting member coach: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get coach information")
+    finally:
+        if connection:
+            connection.close()
+
+@app.get("/api/member/coach/{coach_id}/preferences")
+async def get_coach_preferences(coach_id: int, current_user: dict = Depends(get_current_user)):
+    """Get coach preferences for member view"""
+    if not current_user or current_user.get('user_type') != 'member':
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Verify member has access to this coach
+        cursor.execute("""
+            SELECT * FROM member_coach 
+            WHERE member_id = %s AND coach_id = %s
+        """, (current_user.get('id'), coach_id))
+        
+        if not cursor.fetchone():
+            raise HTTPException(status_code=403, detail="Not authorized to view this coach")
+        
+        # Get coach preferences
+        cursor.execute("""
+            SELECT * FROM user_preferences 
+            WHERE user_id = %s AND user_type = 'coach'
+        """, (coach_id,))
+        preferences = cursor.fetchone()
+        
+        # Get coach free days
+        cursor.execute("""
+            SELECT * FROM free_days 
+            WHERE user_id = %s AND user_type = 'coach'
+            ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+        """, (coach_id,))
+        free_days = cursor.fetchall()
+        
+        # Parse JSON fields
+        if preferences and preferences.get('preferred_workout_types'):
+            preferences['preferred_workout_types'] = json.loads(preferences['preferred_workout_types'])
+        if preferences and preferences.get('preferred_time_slots'):
+            preferences['preferred_time_slots'] = json.loads(preferences['preferred_time_slots'])
+        
+        return {
+            'preferences': preferences,
+            'free_days': free_days
+        }
+        
+    except Exception as e:
+        print(f"Error getting coach preferences: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get coach preferences")
+    finally:
+        if connection:
+            connection.close()
+
+# New API endpoints for preferences page
+
+@app.get("/api/coach/all-members")
+async def get_all_members_for_coach(
+    search: str = "",
+    current_user: dict = Depends(get_current_user)
+):
+    """Get assigned members with their preferences for coach view"""
+    if not current_user or current_user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Get only assigned members with search filter
+        query = """
+            SELECT DISTINCT m.id, m.name, m.email, m.membership_type,
+                   up.preferred_workout_types, up.preferred_duration, up.preferred_time_slots, up.notes
+            FROM members m
+            JOIN member_coach mc ON m.id = mc.member_id
+            LEFT JOIN user_preferences up ON m.id = up.user_id AND up.user_type = 'member'
+            WHERE mc.coach_id = %s AND (m.name LIKE %s OR m.email LIKE %s)
+            ORDER BY m.name
+        """
+        search_term = f"%{search}%"
+        cursor.execute(query, (current_user.get('id'), search_term, search_term))
+        members = cursor.fetchall()
+        
+        # Get free days for each member
+        for member in members:
+            cursor.execute("""
+                SELECT * FROM free_days 
+                WHERE user_id = %s AND user_type = 'member'
+                ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+            """, (member['id'],))
+            member['free_days'] = cursor.fetchall()
+            
+            # Parse JSON fields
+            if member.get('preferred_workout_types'):
+                member['preferred_workout_types'] = json.loads(member['preferred_workout_types'])
+            else:
+                member['preferred_workout_types'] = []
+                
+            if member.get('preferred_time_slots'):
+                member['preferred_time_slots'] = json.loads(member['preferred_time_slots'])
+            else:
+                member['preferred_time_slots'] = []
+        
+        return {
+            'members': members
+        }
+        
+    except Exception as e:
+        print(f"Error getting all members: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get members")
+    finally:
+        if connection:
+            connection.close()
+
+@app.get("/api/member/all-coaches")
+async def get_all_coaches_for_member(
+    search: str = "",
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all coaches with their preferences for member view"""
+    if not current_user or current_user.get('user_type') != 'member':
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Get all coaches with search filter
+        query = """
+            SELECT DISTINCT c.id, c.name, c.email, c.specialization, c.status,
+                   up.preferred_workout_types, up.preferred_duration, up.preferred_time_slots, up.notes
+            FROM coaches c
+            LEFT JOIN user_preferences up ON c.id = up.user_id AND up.user_type = 'coach'
+            WHERE c.name LIKE %s OR c.email LIKE %s OR c.specialization LIKE %s
+            ORDER BY c.name
+        """
+        search_term = f"%{search}%"
+        cursor.execute(query, (search_term, search_term, search_term))
+        coaches = cursor.fetchall()
+        
+        # Get free days for each coach
+        for coach in coaches:
+            cursor.execute("""
+                SELECT * FROM free_days 
+                WHERE user_id = %s AND user_type = 'coach'
+                ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+            """, (coach['id'],))
+            coach['free_days'] = cursor.fetchall()
+            
+            # Parse JSON fields
+            if coach.get('preferred_workout_types'):
+                coach['preferred_workout_types'] = json.loads(coach['preferred_workout_types'])
+            else:
+                coach['preferred_workout_types'] = []
+                
+            if coach.get('preferred_time_slots'):
+                coach['preferred_time_slots'] = json.loads(coach['preferred_time_slots'])
+            else:
+                coach['preferred_time_slots'] = []
+        
+        return {
+            'coaches': coaches
+        }
+        
+    except Exception as e:
+        print(f"Error getting all coaches: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get coaches")
+    finally:
+        if connection:
+            connection.close()
+
+# New API endpoints for date-based availability system
+
+@app.get("/api/availability/bulk")
+async def get_bulk_availability(
+    user_ids: str = Query(None, description="Comma-separated list of user IDs"),
+    start_date: str = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: str = Query(None, description="End date (YYYY-MM-DD)"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get availability for multiple users"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        if not user_ids:
+            return {"availability": {}}
+        
+        user_id_list = [int(uid.strip()) for uid in user_ids.split(",") if uid.strip().isdigit()]
+        if not user_id_list:
+            return {"availability": {}}
+
+        user_ids_str = ','.join(['%s'] * len(user_id_list))
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        if not start_date:
+            start_date = datetime.now().strftime('%Y-%m-%d')
+        if not end_date:
+            end_date = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
+
+        query = f"""
+            SELECT user_id, date, hour, is_available
+            FROM availability_slots
+            WHERE user_id IN ({user_ids_str}) AND user_type = %s AND date BETWEEN %s AND %s
+            ORDER BY user_id, date, hour
+        """
+        params = user_id_list + [current_user.get('user_type'), start_date, end_date]
+        cursor.execute(query, params)
+        slots = cursor.fetchall()
+
+        availability = {}
+        for slot in slots:
+            user_id = slot['user_id']
+            date_str = slot['date'].strftime('%Y-%m-%d') if hasattr(slot['date'], 'strftime') else str(slot['date'])
+            if user_id not in availability:
+                availability[user_id] = {}
+            if date_str not in availability[user_id]:
+                availability[user_id][date_str] = {}
+            availability[user_id][date_str][slot['hour']] = slot['is_available']
+
+        for user_id in user_id_list:
+            if user_id not in availability:
+                availability[user_id] = {}
+
+        return {
+            'availability': availability,
+            'start_date': start_date,
+            'end_date': end_date
+        }
+
+    except Exception as e:
+        print(f"Error getting bulk availability: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to get bulk availability")
+    finally:
+        if connection:
+            connection.close()
+
+@app.get("/api/availability/{user_id}")
+async def get_user_availability(
+    user_id: int,
+    start_date: str = None,
+    end_date: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get user availability for a date range"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Set default date range if not provided (next 7 days)
+        if not start_date:
+            start_date = datetime.now().strftime('%Y-%m-%d')
+        if not end_date:
+            end_date = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
+        
+        # Get availability slots for the date range
+        cursor.execute("""
+            SELECT date, hour, is_available
+            FROM availability_slots
+            WHERE user_id = %s AND user_type = %s AND date BETWEEN %s AND %s
+            ORDER BY date, hour
+        """, (user_id, current_user.get('user_type'), start_date, end_date))
+        
+        slots = cursor.fetchall()
+        
+        # Convert to a more usable format
+        availability = {}
+        for slot in slots:
+            date_str = slot['date'].strftime('%Y-%m-%d')
+            if date_str not in availability:
+                availability[date_str] = {}
+            availability[date_str][slot['hour']] = slot['is_available']
+        
+        return {
+            'availability': availability,
+            'start_date': start_date,
+            'end_date': end_date
+        }
+        
+    except Exception as e:
+        print(f"Error getting user availability: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get availability")
+    finally:
+        if connection:
+            connection.close()
+
+@app.post("/api/availability")
+async def update_user_availability(
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update user availability for specific dates and hours"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        data = await request.json()
+        date = data.get('date')
+        hour = data.get('hour')
+        is_available = data.get('is_available', True)
+        
+        if not date or hour is None:
+            raise HTTPException(status_code=400, detail="Date and hour are required")
+        
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Insert or update availability slot
+        cursor.execute("""
+            INSERT INTO availability_slots (user_id, user_type, date, hour, is_available)
+            VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE is_available = VALUES(is_available)
+        """, (current_user.get('id'), current_user.get('user_type'), date, hour, is_available))
+        
+        connection.commit()
+        
+        return {"status": "success", "message": "Availability updated successfully"}
+        
+    except Exception as e:
+        print(f"Error updating user availability: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update availability")
+    finally:
+        if connection:
+            connection.close()
+
+@app.delete("/api/availability/{date}/{hour}")
+async def delete_user_availability(
+    date: str,
+    hour: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete user availability for a specific date and hour (mark as available)"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Delete the availability slot (will default to available)
+        cursor.execute("""
+            DELETE FROM availability_slots
+            WHERE user_id = %s AND user_type = %s AND date = %s AND hour = %s
+        """, (current_user.get('id'), current_user.get('user_type'), date, hour))
+        
+        connection.commit()
+        
+        return {"status": "success", "message": "Availability slot deleted successfully"}
+        
+    except Exception as e:
+        print(f"Error deleting user availability: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete availability")
+    finally:
+        if connection:
+            connection.close()
+
+@app.get("/api/availability/calendar/{user_id}")
+async def get_user_availability_calendar(
+    user_id: int,
+    year: int = Query(None, description="Year (YYYY)"),
+    month: int = Query(None, description="Month (1-12)"),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get user availability for calendar view"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        print(f"Calendar request - user_id: {user_id}, current_user: {current_user}")
+        
+        if year is None:
+            year = datetime.now().year
+        if month is None:
+            month = datetime.now().month
+            
+        # Get the first and last day of the month
+        first_day = datetime(year, month, 1)
+        if month == 12:
+            last_day = datetime(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            last_day = datetime(year, month + 1, 1) - timedelta(days=1)
+            
+        start_date = first_day.date()
+        end_date = last_day.date()
+        
+        print(f"Date range: {start_date} to {end_date}")
+        
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Get availability slots for the month
+        query = """
+            SELECT date, hour, is_available
+            FROM availability_slots
+            WHERE user_id = %s AND user_type = %s AND date BETWEEN %s AND %s
+            ORDER BY date, hour
+        """
+        params = (user_id, current_user.get('user_type'), start_date, end_date)
+        print(f"Executing query: {query} with params: {params}")
+        
+        cursor.execute(query, params)
+        slots = cursor.fetchall()
+        print(f"Found {len(slots)} availability slots")
+        
+        # Organize data by date
+        calendar_data = {}
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime('%Y-%m-%d')
+            calendar_data[date_str] = {
+                'date': date_str,
+                'day_of_week': current_date.strftime('%A'),
+                'day_number': current_date.day,
+                'is_current_month': True,
+                'slots': {}
+            }
+            current_date += timedelta(days=1)
+        
+        # Fill in availability data
+        for slot in slots:
+            date_str = slot['date'].strftime('%Y-%m-%d') if hasattr(slot['date'], 'strftime') else str(slot['date'])
+            hour = slot['hour']
+            if date_str in calendar_data:
+                calendar_data[date_str]['slots'][hour] = slot['is_available']
+        
+        # Convert to list and sort by date
+        calendar_list = list(calendar_data.values())
+        calendar_list.sort(key=lambda x: x['date'])
+        
+        result = {
+            'year': year,
+            'month': month,
+            'month_name': first_day.strftime('%B'),
+            'calendar': calendar_list
+        }
+        
+        print(f"Returning calendar data: {result}")
+        return result
+        
+    except Exception as e:
+        print(f"Error getting user availability calendar: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to get availability calendar")
+    finally:
+        if connection:
+            connection.close()
+
+@app.post("/api/availability/bulk")
+async def update_user_availability_bulk(
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update user availability for a date range and time range"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    try:
+        data = await request.json()
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        start_hour = data.get('start_hour')
+        end_hour = data.get('end_hour')
+        is_available = data.get('is_available', False)  # Default to unavailable for bulk updates
+        
+        if not all([start_date, end_date, start_hour, end_hour]):
+            raise HTTPException(status_code=400, detail="Missing required parameters")
+        
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Convert dates to datetime objects for iteration
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Generate all date-hour combinations
+        current_dt = start_dt
+        while current_dt <= end_dt:
+            current_date = current_dt.strftime('%Y-%m-%d')
+            
+            # Generate all hours in the range
+            for hour in range(start_hour, end_hour + 1):
+                cursor.execute("""
+                    INSERT INTO availability_slots (user_id, user_type, date, hour, is_available)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE is_available = VALUES(is_available)
+                """, (current_user.get('id'), current_user.get('user_type'), current_date, hour, is_available))
+            
+            current_dt += timedelta(days=1)
+        
+        connection.commit()
+        
+        return {"status": "success", "message": "Bulk availability updated successfully"}
+        
+    except Exception as e:
+        print(f"Error updating bulk user availability: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update bulk availability")
+    finally:
+        if connection:
+            connection.close()
 
 if __name__ == "__main__":
     import uvicorn

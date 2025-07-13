@@ -73,6 +73,14 @@
                     </div>
                 </div>
 
+                <!-- Member Preferences -->
+                <div class="mt-8">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Member Preferences & Availability</h2>
+                    <div id="memberPreferences" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="text-center text-gray-500">Loading preferences...</div>
+                    </div>
+                </div>
+
                 <!-- Recent Sessions -->
                 <div class="mt-8">
                     <div class="flex justify-between items-center mb-4">
@@ -108,10 +116,101 @@
                 }
                 const data = await response.json();
                 updateMemberDetails(data);
+                
+                // Also fetch member preferences
+                fetchMemberPreferences();
             } catch (error) {
                 console.error('Error:', error);
                 alert('Failed to load member details');
             }
+        }
+
+        // Fetch member preferences
+        async function fetchMemberPreferences() {
+            try {
+                const response = await fetch(`/api/coach/members/${memberId}/preferences`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch member preferences');
+                }
+                const data = await response.json();
+                displayMemberPreferences(data);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('memberPreferences').innerHTML = '<div class="text-center text-gray-500">Failed to load preferences</div>';
+            }
+        }
+
+        // Display member preferences
+        function displayMemberPreferences(data) {
+            const { preferences, free_days } = data;
+            const container = document.getElementById('memberPreferences');
+            
+            if (!preferences && (!free_days || free_days.length === 0)) {
+                container.innerHTML = '<div class="text-center text-gray-500">No preferences set</div>';
+                return;
+            }
+            
+            const workoutTypes = preferences?.preferred_workout_types || [];
+            const duration = preferences?.preferred_duration || 60;
+            const timeSlots = preferences?.preferred_time_slots || [];
+            const notes = preferences?.notes || '';
+            
+            container.innerHTML = `
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">Workout Preferences</h3>
+                    <div class="space-y-2">
+                        <div>
+                            <span class="text-sm text-gray-600">Preferred Types:</span>
+                            <div class="mt-1">
+                                ${workoutTypes.length > 0 ? 
+                                    workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
+                                    '<span class="text-gray-500 text-sm">None specified</span>'
+                                }
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-sm text-gray-600">Duration:</span>
+                            <span class="text-sm font-medium">${duration} minutes</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">Time Preferences</h3>
+                    <div class="space-y-2">
+                        <div>
+                            <span class="text-sm text-gray-600">Preferred Times:</span>
+                            <div class="mt-1">
+                                ${timeSlots.length > 0 ? 
+                                    timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
+                                    '<span class="text-gray-500 text-sm">None specified</span>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">Weekly Availability</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        ${free_days.map(day => `
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">${day.day_of_week}</span>
+                                <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
+                                    ${day.is_available ? 'Available' : 'Unavailable'}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                ${notes ? `
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="text-sm font-medium text-gray-900 mb-3">Notes</h3>
+                        <p class="text-sm text-gray-600">${notes}</p>
+                    </div>
+                ` : ''}
+            `;
         }
 
         // Update member details in the UI

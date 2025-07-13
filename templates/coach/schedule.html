@@ -11,6 +11,156 @@
         </div>
     </div>
 
+    <!-- Preferences and Free Days Section -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-lg font-medium text-gray-900">My Preferences & Availability</h2>
+            <button onclick="togglePreferencesForm()" 
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                <i class="fas fa-edit mr-2"></i>Edit Preferences
+            </button>
+        </div>
+        
+        <!-- Preferences Display -->
+        <div id="preferencesDisplay" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Preferences will be populated here -->
+        </div>
+        
+        <!-- Preferences Form (Hidden by default) -->
+        <div id="preferencesForm" class="hidden mt-6">
+            <form id="preferencesFormElement" class="space-y-6">
+                <!-- Workout Preferences -->
+                <div>
+                    <h3 class="text-md font-medium text-gray-900 mb-3">Workout Preferences</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Workout Types</label>
+                            <div class="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+                                <div class="grid grid-cols-1 gap-2">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="workout_types" value="Upper Body" class="mr-2">
+                                        Upper Body
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="workout_types" value="Lower Body" class="mr-2">
+                                        Lower Body
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="workout_types" value="Full Body" class="mr-2">
+                                        Full Body
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="workout_types" value="Core" class="mr-2">
+                                        Core
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="workout_types" value="Push" class="mr-2">
+                                        Push
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" name="workout_types" value="Pull" class="mr-2">
+                                        Pull
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Session Duration (minutes)</label>
+                            <select name="duration" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="30">30 minutes</option>
+                                <option value="45">45 minutes</option>
+                                <option value="60" selected>60 minutes</option>
+                                <option value="90">90 minutes</option>
+                                <option value="120">120 minutes</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Time Preferences -->
+                <div>
+                    <h3 class="text-md font-medium text-gray-900 mb-3">Preferred Time Slots</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="08:00" class="mr-2">
+                            8:00 AM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="09:00" class="mr-2">
+                            9:00 AM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="10:00" class="mr-2">
+                            10:00 AM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="11:00" class="mr-2">
+                            11:00 AM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="12:00" class="mr-2">
+                            12:00 PM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="13:00" class="mr-2">
+                            1:00 PM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="14:00" class="mr-2">
+                            2:00 PM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="15:00" class="mr-2">
+                            3:00 PM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="16:00" class="mr-2">
+                            4:00 PM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="17:00" class="mr-2">
+                            5:00 PM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="18:00" class="mr-2">
+                            6:00 PM
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="time_slots" value="19:00" class="mr-2">
+                            7:00 PM
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Free Days -->
+                <div>
+                    <h3 class="text-md font-medium text-gray-900 mb-3">Weekly Availability</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="freeDaysContainer">
+                        <!-- Free days will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Notes -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+                    <textarea name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Any additional preferences or notes..."></textarea>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="togglePreferencesForm()" 
+                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        Save Preferences
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Weekly Schedule -->
     <div class="bg-white shadow rounded-lg p-6 mb-6">
         <div class="flex justify-between items-center mb-6">
@@ -31,6 +181,9 @@
                 </div>
             </div>
         </div>
+        
+
+        
         <div class="grid grid-cols-7 gap-4" id="weeklySchedule">
             <!-- Days will be populated here -->
         </div>
@@ -119,11 +272,15 @@
     <i class="fas fa-calendar mr-2"></i> Schedule
 </a>
 <a href="/coach/sessions" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-list mr-2"></i> All Sessions
+    <i class="fas fa-clipboard-list mr-2"></i> Sessions
 </a>
 <a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">
     <i class="fas fa-chart-line mr-2"></i> Progress
 </a>
+<a href="/coach/preferences" class="block py-2 px-4 hover:bg-indigo-700">
+    <i class="fas fa-cog mr-2"></i> Preferences
+</a>
+<div class="border-t border-indigo-700 my-2"></div>
 <a href="/coach/messages" class="block py-2 px-4 hover:bg-indigo-700">
     <i class="fas fa-envelope mr-2"></i> Messages
 </a>
@@ -134,6 +291,8 @@
     let currentDate = new Date();
     let sessions = [];
     let allSessions = []; // Store all sessions for filtering
+    let userPreferences = null;
+    let userFreeDays = [];
 
     // Format date as YYYY-MM-DD
     function formatDate(date) {
@@ -255,8 +414,8 @@
             if (!response.ok) {
                 throw new Error('Failed to fetch schedule');
             }
-            const sessions = await response.json();
-            displaySchedule(sessions);
+            const data = await response.json();
+            displaySchedule(data.sessions, data.weekly_availability);
         } catch (error) {
             console.error('Error:', error);
             alert('Failed to load schedule');
@@ -264,7 +423,7 @@
     }
 
     // Display schedule
-    function displaySchedule(sessions) {
+    function displaySchedule(sessions, weeklyAvailability) {
         const scheduleContainer = document.getElementById('weeklySchedule');
         const startDate = new Date(document.getElementById('startDate').value);
         const endDate = new Date(document.getElementById('endDate').value);
@@ -279,24 +438,34 @@
                 session.date === currentDate.toISOString().split('T')[0]
             );
             
+            // Get day name for availability check
+            const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
+            const dayAvailability = weeklyAvailability.find(day => day.day_of_week === dayName);
+            const isAvailable = dayAvailability ? dayAvailability.is_available : true;
+            
             const dayColumn = document.createElement('div');
             dayColumn.className = 'space-y-2';
             
-            // Day header
+            // Day header with availability indicator
             const dayHeader = document.createElement('div');
-            dayHeader.className = 'text-center font-medium text-gray-900 mb-2';
-            dayHeader.textContent = currentDate.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric' 
-            });
+            dayHeader.className = `text-center font-medium mb-2 ${isAvailable ? 'text-green-900' : 'text-red-900'}`;
+            dayHeader.innerHTML = `
+                ${currentDate.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                })}
+                <div class="text-xs ${isAvailable ? 'text-green-600' : 'text-red-600'}">
+                    ${isAvailable ? 'Available' : 'Unavailable'}
+                </div>
+            `;
             dayColumn.appendChild(dayHeader);
             
             // Sessions for this day
             if (daySessions.length === 0) {
                 const noSessions = document.createElement('div');
-                noSessions.className = 'text-center text-gray-500 text-sm';
-                noSessions.textContent = 'No sessions';
+                noSessions.className = `text-center text-sm ${isAvailable ? 'text-gray-500' : 'text-red-400'}`;
+                noSessions.textContent = isAvailable ? 'No sessions' : 'Not available';
                 dayColumn.appendChild(noSessions);
             } else {
                 daySessions.forEach(session => {
@@ -323,12 +492,342 @@
             scheduleContainer.appendChild(dayColumn);
             currentDate.setDate(currentDate.getDate() + 1);
         }
+        
+        // Update sessions table
+        displaySessionsTable(sessions);
+    }
+
+    // Display sessions table
+    function displaySessionsTable(sessions) {
+        const tableBody = document.getElementById('sessions-table');
+        tableBody.innerHTML = '';
+        
+        if (sessions.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                        No sessions found for the selected date range
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        sessions.forEach(session => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50 cursor-pointer';
+            row.onclick = () => showSessionDetails(session);
+            
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">${session.member.name}</div>
+                    <div class="text-sm text-gray-500">${session.member.email}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${session.date}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${session.time}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${session.workout.type}</div>
+                    <div class="text-sm text-gray-500">${session.duration} min</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                        session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                        'bg-blue-100 text-blue-800'
+                    }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <button class="text-indigo-600 hover:text-indigo-900">View Details</button>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
     }
 
     // Initialize date range and load schedule when page loads
     document.addEventListener('DOMContentLoaded', () => {
         setDefaultDateRange();
         loadSchedule();
+        loadPreferences();
+    });
+
+
+
+    // Preferences Functions
+    async function loadPreferences() {
+        try {
+            const response = await fetch('/api/preferences');
+            if (!response.ok) {
+                throw new Error('Failed to fetch preferences');
+            }
+            const data = await response.json();
+            userPreferences = data.preferences;
+            userFreeDays = data.free_days;
+            displayPreferences();
+            populatePreferencesForm();
+        } catch (error) {
+            console.error('Error loading preferences:', error);
+        }
+    }
+
+    function displayPreferences() {
+        const displayDiv = document.getElementById('preferencesDisplay');
+        
+        // Workout preferences
+        const workoutTypes = userPreferences?.preferred_workout_types || [];
+        const duration = userPreferences?.preferred_duration || 60;
+        const timeSlots = userPreferences?.preferred_time_slots || [];
+        const notes = userPreferences?.notes || '';
+        
+        displayDiv.innerHTML = `
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-gray-900 mb-3">Workout Preferences</h3>
+                <div class="space-y-2">
+                    <div>
+                        <span class="text-sm text-gray-600">Preferred Types:</span>
+                        <div class="mt-1">
+                            ${workoutTypes.length > 0 ? 
+                                workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
+                                '<span class="text-gray-500 text-sm">None specified</span>'
+                            }
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-sm text-gray-600">Duration:</span>
+                        <span class="text-sm font-medium">${duration} minutes</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-gray-900 mb-3">Time Preferences</h3>
+                <div class="space-y-2">
+                    <div>
+                        <span class="text-sm text-gray-600">Preferred Times:</span>
+                        <div class="mt-1">
+                            ${timeSlots.length > 0 ? 
+                                timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
+                                '<span class="text-gray-500 text-sm">None specified</span>'
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-gray-900 mb-3">Weekly Availability</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    ${userFreeDays.map(day => `
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">${day.day_of_week}</span>
+                            <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
+                                ${day.is_available ? 'Available' : 'Unavailable'}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            ${notes ? `
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">Notes</h3>
+                    <p class="text-sm text-gray-600">${notes}</p>
+                </div>
+            ` : ''}
+        `;
+    }
+
+    function populatePreferencesForm() {
+        // Populate workout types
+        const workoutCheckboxes = document.querySelectorAll('input[name="workout_types"]');
+        workoutCheckboxes.forEach(checkbox => {
+            checkbox.checked = userPreferences?.preferred_workout_types?.includes(checkbox.value) || false;
+        });
+        
+        // Populate duration
+        const durationSelect = document.querySelector('select[name="duration"]');
+        if (durationSelect) {
+            durationSelect.value = userPreferences?.preferred_duration || 60;
+        }
+        
+        // Populate time slots
+        const timeCheckboxes = document.querySelectorAll('input[name="time_slots"]');
+        timeCheckboxes.forEach(checkbox => {
+            checkbox.checked = userPreferences?.preferred_time_slots?.includes(checkbox.value) || false;
+        });
+        
+        // Populate notes
+        const notesTextarea = document.querySelector('textarea[name="notes"]');
+        if (notesTextarea) {
+            notesTextarea.value = userPreferences?.notes || '';
+        }
+        
+        // Populate free days
+        populateFreeDaysForm();
+    }
+
+    function populateFreeDaysForm() {
+        const container = document.getElementById('freeDaysContainer');
+        container.innerHTML = '';
+        
+        // Ensure userFreeDays exists and has data
+        if (!userFreeDays || userFreeDays.length === 0) {
+            // Create default availability if none exists
+            userFreeDays = [];
+            const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            for (const day of daysOfWeek) {
+                userFreeDays.push({
+                    day_of_week: day,
+                    is_available: true,
+                    start_time: '08:00:00',
+                    end_time: '20:00:00'
+                });
+            }
+        }
+        
+        userFreeDays.forEach(day => {
+            // Ensure start_time and end_time are strings and handle different formats
+            let startTime = '08:00';
+            let endTime = '20:00';
+            
+            if (day.start_time) {
+                if (typeof day.start_time === 'string') {
+                    startTime = day.start_time.substring(0, 5);
+                } else if (day.start_time.total_seconds) {
+                    // Handle timedelta objects
+                    const hours = Math.floor(day.start_time.total_seconds() / 3600);
+                    const minutes = Math.floor((day.start_time.total_seconds() % 3600) / 60);
+                    startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                }
+            }
+            
+            if (day.end_time) {
+                if (typeof day.end_time === 'string') {
+                    endTime = day.end_time.substring(0, 5);
+                } else if (day.end_time.total_seconds) {
+                    // Handle timedelta objects
+                    const hours = Math.floor(day.end_time.total_seconds() / 3600);
+                    const minutes = Math.floor((day.end_time.total_seconds() % 3600) / 60);
+                    endTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                }
+            }
+            
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'border border-gray-300 rounded-lg p-4';
+            dayDiv.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-sm font-medium text-gray-900">${day.day_of_week}</h4>
+                    <label class="flex items-center">
+                        <input type="checkbox" 
+                               name="available_${day.day_of_week}" 
+                               ${day.is_available ? 'checked' : ''} 
+                               class="mr-2"
+                               onchange="toggleDayAvailability('${day.day_of_week}', this.checked)">
+                        Available
+                    </label>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">Start Time</label>
+                        <input type="time" 
+                               name="start_${day.day_of_week}" 
+                               value="${startTime}" 
+                               class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">End Time</label>
+                        <input type="time" 
+                               name="end_${day.day_of_week}" 
+                               value="${endTime}" 
+                               class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                    </div>
+                </div>
+            `;
+            container.appendChild(dayDiv);
+        });
+    }
+
+    function toggleDayAvailability(dayName, isAvailable) {
+        const day = userFreeDays.find(d => d.day_of_week === dayName);
+        if (day) {
+            day.is_available = isAvailable;
+        }
+    }
+
+    function togglePreferencesForm() {
+        const form = document.getElementById('preferencesForm');
+        const display = document.getElementById('preferencesDisplay');
+        
+        if (form.classList.contains('hidden')) {
+            form.classList.remove('hidden');
+            display.classList.add('hidden');
+        } else {
+            form.classList.add('hidden');
+            display.classList.remove('hidden');
+        }
+    }
+
+    // Handle form submission
+    document.getElementById('preferencesFormElement').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Collect form data
+        const workoutTypes = Array.from(document.querySelectorAll('input[name="workout_types"]:checked')).map(cb => cb.value);
+        const duration = parseInt(document.querySelector('select[name="duration"]').value);
+        const timeSlots = Array.from(document.querySelectorAll('input[name="time_slots"]:checked')).map(cb => cb.value);
+        const notes = document.querySelector('textarea[name="notes"]').value;
+        
+        // Update free days data
+        userFreeDays.forEach(day => {
+            const availableCheckbox = document.querySelector(`input[name="available_${day.day_of_week}"]`);
+            const startTime = document.querySelector(`input[name="start_${day.day_of_week}"]`).value;
+            const endTime = document.querySelector(`input[name="end_${day.day_of_week}"]`).value;
+            
+            day.is_available = availableCheckbox.checked;
+            // Fix time format - ensure it's HH:MM:SS format
+            day.start_time = startTime + (startTime.length === 5 ? ':00' : '');
+            day.end_time = endTime + (endTime.length === 5 ? ':00' : '');
+        });
+        
+        // Prepare data for API
+        const data = {
+            preferences: {
+                preferred_workout_types: workoutTypes,
+                preferred_duration: duration,
+                preferred_time_slots: timeSlots,
+                notes: notes
+            },
+            free_days: userFreeDays
+        };
+        
+        try {
+            const response = await fetch('/api/preferences', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to update preferences');
+            }
+            
+            // Update local data
+            userPreferences = data.preferences;
+            
+            // Hide form and show display
+            togglePreferencesForm();
+            
+            // Refresh display
+            displayPreferences();
+            
+            alert('Preferences updated successfully!');
+        } catch (error) {
+            console.error('Error updating preferences:', error);
+            alert('Failed to update preferences. Please try again.');
+        }
     });
 </script>
 {% endblock %} 
