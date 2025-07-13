@@ -1,0 +1,1058 @@
+{% extends "base.html" %}
+
+{% block title %}Coach Preferences - PowerFit{% endblock %}
+
+{% block content_title %}Coach Preferences{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Search and Selection Section -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Search and Select Coaches</h2>
+        
+        <!-- Search and Filter Bar -->
+        <div class="mb-4 space-y-3">
+            <div class="relative">
+                <input type="text" id="coachSearch" placeholder="Search coaches by name, email, or specialization..." 
+                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                       autocomplete="off">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+                <!-- Search Suggestions Dropdown -->
+                <div id="searchSuggestions" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+                    <!-- Suggestions will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Coach Filter -->
+            <div class="flex items-center space-x-4">
+                <label class="flex items-center">
+                    <input type="checkbox" id="showMyCoachOnly" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    <span class="ml-2 text-sm text-gray-700">Show only my assigned coach</span>
+                </label>
+                <button id="clearCoachFilter" class="text-sm text-indigo-600 hover:text-indigo-800">
+                    Clear filter
+                </button>
+            </div>
+        </div>
+        
+        <!-- Selected Coaches -->
+        <div class="mb-4">
+            <h3 class="text-sm font-medium text-gray-700 mb-2">Selected Coaches:</h3>
+            <div id="selectedCoaches" class="flex flex-wrap gap-2">
+                <!-- Selected coaches will be displayed here -->
+            </div>
+        </div>
+        
+        <!-- Coaches List -->
+        <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+            <div id="coachesList" class="divide-y divide-gray-200">
+                <!-- Coaches will be loaded here -->
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="mt-6 flex space-x-4">
+            <button id="showPreferences" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-eye mr-2"></i>Show Preferences
+            </button>
+            <button id="editMyPreferences" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <i class="fas fa-edit mr-2"></i>Edit My Preferences
+            </button>
+            <button id="clearSelection" class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+                <i class="fas fa-times mr-2"></i>Clear Selection
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Preferences Popup Modal -->
+<div id="preferencesPopup" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-900">Selected Coaches' Preferences</h2>
+                <button onclick="closePreferencesPopup()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Content -->
+            <div class="p-6 overflow-auto max-h-[calc(90vh-120px)]">
+                <div id="preferencesContent">
+                    <!-- Preferences content will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let selectedCoaches = new Set();
+    let allCoaches = [];
+    let myCoach = null;
+    let currentDate = new Date();
+    
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadMyCoach();
+        loadCoaches();
+        
+        // Event listeners
+        document.getElementById('coachSearch').addEventListener('input', filterCoaches);
+        document.getElementById('clearSelection').addEventListener('click', clearSelection);
+        document.getElementById('showPreferences').addEventListener('click', showPreferences);
+        document.getElementById('editMyPreferences').addEventListener('click', editMyPreferences);
+        document.getElementById('showMyCoachOnly').addEventListener('change', filterCoaches);
+        document.getElementById('clearCoachFilter').addEventListener('click', clearCoachFilter);
+        
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(event) {
+            const searchContainer = document.getElementById('coachSearch').parentElement;
+            const suggestionsContainer = document.getElementById('searchSuggestions');
+            
+            if (!searchContainer.contains(event.target)) {
+                suggestionsContainer.classList.add('hidden');
+            }
+        });
+        
+        // Handle keyboard navigation
+        document.getElementById('coachSearch').addEventListener('keydown', function(event) {
+            const suggestionsContainer = document.getElementById('searchSuggestions');
+            const suggestions = suggestionsContainer.querySelectorAll('div[onclick]');
+            
+            if (event.key === 'Escape') {
+                suggestionsContainer.classList.add('hidden');
+            } else if (event.key === 'Enter' && suggestions.length > 0) {
+                event.preventDefault();
+                const firstSuggestion = suggestions[0];
+                const coachName = firstSuggestion.querySelector('.font-medium').textContent;
+                selectSuggestion(coachName);
+            }
+        });
+    });
+    
+    // Load member's assigned coach
+    async function loadMyCoach() {
+        try {
+            const response = await fetch('/api/member/coach');
+            if (response.ok) {
+                const data = await response.json();
+                myCoach = data.coach;
+            }
+        } catch (error) {
+            console.error('Error loading my coach:', error);
+        }
+    }
+    
+    // Load all coaches
+    async function loadCoaches() {
+        try {
+            const response = await fetch('/api/member/all-coaches');
+            if (!response.ok) {
+                throw new Error('Failed to fetch coaches');
+            }
+            const data = await response.json();
+            allCoaches = data.coaches;
+            console.log('Loaded coaches:', allCoaches);
+            displayCoaches(allCoaches);
+        } catch (error) {
+            console.error('Error loading coaches:', error);
+        }
+    }
+    
+    // Display coaches in the list
+    function displayCoaches(coaches) {
+        const container = document.getElementById('coachesList');
+        container.innerHTML = '';
+        
+        coaches.forEach(coach => {
+            const isMyCoach = myCoach && coach.id === myCoach.id;
+            const coachDiv = document.createElement('div');
+            coachDiv.className = `p-3 hover:bg-gray-50 cursor-pointer ${isMyCoach ? 'bg-indigo-50 border-l-4 border-indigo-500' : ''}`;
+            coachDiv.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <input type="checkbox" id="coach_${coach.id}" 
+                               class="coach-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                               data-coach-id="${coach.id}">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <div class="font-medium text-gray-900">${coach.name}</div>
+                                ${isMyCoach ? '<span class="px-2 py-1 text-xs bg-indigo-100 text-indigo-800 rounded-full">My Coach</span>' : ''}
+                            </div>
+                            <div class="text-sm text-gray-500">${coach.email}</div>
+                            <div class="text-xs text-gray-400">${coach.specialization} • ${coach.status}</div>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        ${coach.preferred_workout_types?.length > 0 ? 
+                            coach.preferred_workout_types.slice(0, 2).join(', ') + 
+                            (coach.preferred_workout_types.length > 2 ? '...' : '') : 
+                            'No preferences'}
+                    </div>
+                </div>
+            `;
+            
+            // Add event listener to checkbox
+            const checkbox = coachDiv.querySelector('.coach-checkbox');
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    selectedCoaches.add(coach.id);
+                } else {
+                    selectedCoaches.delete(coach.id);
+                }
+                updateSelectedCoachesDisplay();
+                updateShowPreferencesButton();
+            });
+            
+            container.appendChild(coachDiv);
+        });
+    }
+    
+    // Filter coaches based on search and filter
+    function filterCoaches() {
+        const searchTerm = document.getElementById('coachSearch').value.toLowerCase();
+        const showMyCoachOnly = document.getElementById('showMyCoachOnly').checked;
+        
+        let filtered = allCoaches;
+        
+        // Apply search filter
+        if (searchTerm) {
+            filtered = filtered.filter(coach => 
+                coach.name.toLowerCase().includes(searchTerm) ||
+                coach.email.toLowerCase().includes(searchTerm) ||
+                coach.specialization.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        // Apply my coach filter
+        if (showMyCoachOnly && myCoach) {
+            filtered = filtered.filter(coach => coach.id === myCoach.id);
+        }
+        
+        displayCoaches(filtered);
+        
+        // Show search suggestions
+        showSearchSuggestions(searchTerm);
+    }
+    
+    // Clear coach filter
+    function clearCoachFilter() {
+        document.getElementById('showMyCoachOnly').checked = false;
+        document.getElementById('coachSearch').value = '';
+        displayCoaches(allCoaches);
+        document.getElementById('searchSuggestions').classList.add('hidden');
+    }
+    
+    // Show search suggestions
+    function showSearchSuggestions(searchTerm) {
+        const suggestionsContainer = document.getElementById('searchSuggestions');
+        
+        if (!searchTerm || searchTerm.length < 2) {
+            suggestionsContainer.classList.add('hidden');
+            return;
+        }
+        
+        const suggestions = allCoaches.filter(coach => 
+            coach.name.toLowerCase().includes(searchTerm) ||
+            coach.email.toLowerCase().includes(searchTerm) ||
+            coach.specialization.toLowerCase().includes(searchTerm)
+        ).slice(0, 5); // Limit to 5 suggestions
+        
+        if (suggestions.length === 0) {
+            suggestionsContainer.classList.add('hidden');
+            return;
+        }
+        
+        suggestionsContainer.innerHTML = suggestions.map(coach => `
+            <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
+                 onclick="selectSuggestion('${coach.name}')">
+                <div class="font-medium text-gray-900">${coach.name}</div>
+                <div class="text-sm text-gray-500">${coach.email} • ${coach.specialization}</div>
+            </div>
+        `).join('');
+        
+        suggestionsContainer.classList.remove('hidden');
+    }
+    
+    // Select a search suggestion
+    function selectSuggestion(coachName) {
+        document.getElementById('coachSearch').value = coachName;
+        document.getElementById('searchSuggestions').classList.add('hidden');
+        filterCoaches();
+    }
+    
+    // Update selected coaches display
+    function updateSelectedCoachesDisplay() {
+        const container = document.getElementById('selectedCoaches');
+        container.innerHTML = '';
+        
+        selectedCoaches.forEach(coachId => {
+            const coach = allCoaches.find(c => c.id === coachId);
+            if (coach) {
+                const tag = document.createElement('span');
+                tag.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-800';
+                tag.innerHTML = `
+                    ${coach.name}
+                    <button onclick="removeCoach(${coachId})" class="ml-2 text-indigo-600 hover:text-indigo-800">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                container.appendChild(tag);
+            }
+        });
+    }
+    
+    // Update show preferences button state
+    function updateShowPreferencesButton() {
+        const button = document.getElementById('showPreferences');
+        if (selectedCoaches.size === 0) {
+            button.disabled = true;
+        } else {
+            button.disabled = false;
+        }
+    }
+    
+    // Remove coach from selection
+    function removeCoach(coachId) {
+        selectedCoaches.delete(coachId);
+        const checkbox = document.getElementById(`coach_${coachId}`);
+        if (checkbox) checkbox.checked = false;
+        updateSelectedCoachesDisplay();
+        updateShowPreferencesButton();
+    }
+    
+    // Clear all selections
+    function clearSelection() {
+        selectedCoaches.clear();
+        document.querySelectorAll('.coach-checkbox').forEach(cb => cb.checked = false);
+        updateSelectedCoachesDisplay();
+        updateShowPreferencesButton();
+    }
+    
+    // Show preferences popup
+    async function showPreferences() {
+        if (selectedCoaches.size === 0) {
+            alert('Please select at least one coach to view their preferences.');
+            return;
+        }
+        
+        const popup = document.getElementById('preferencesPopup');
+        const content = document.getElementById('preferencesContent');
+        
+        const selectedCoachesData = allCoaches.filter(c => selectedCoaches.has(c.id));
+        
+        // Get availability data for selected coaches
+        const coachIds = Array.from(selectedCoaches);
+        const availabilityResponse = await fetch(`/api/availability/bulk?user_ids=${coachIds.join(',')}`);
+        const availabilityData = await availabilityResponse.json();
+        
+        // Generate schedule HTML
+        const scheduleHtml = generateDateBasedScheduleHtml(selectedCoachesData, availabilityData.availability);
+        
+        // Generate coach buttons HTML
+        const coachButtonsHtml = generateCoachButtonsHtml(selectedCoachesData);
+        
+        let html = `
+            <div class="space-y-6">
+                <!-- Schedule Section -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Date-Based Schedule - All Selected Coaches</h3>
+                    ${scheduleHtml}
+                </div>
+                
+                <!-- Coach Buttons Section -->
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">View Individual Coach Preferences</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${coachButtonsHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        content.innerHTML = html;
+        popup.classList.remove('hidden');
+    }
+    
+    // Generate date-based schedule HTML
+    function generateDateBasedScheduleHtml(coaches, availabilityData) {
+        const hours = Array.from({length: 14}, (_, i) => i + 8); // 8 AM to 9 PM
+        const days = 7; // Next 7 days
+        
+        let html = `
+            <div class="overflow-x-auto">
+                <table class="min-w-full border border-gray-200">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="border border-gray-200 p-2 text-sm font-medium text-gray-700">Time</th>
+        `;
+        
+        // Generate date headers
+        for (let i = 0; i < days; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            html += `<th class="border border-gray-200 p-2 text-sm font-medium text-gray-700">${dateStr}</th>`;
+        }
+        
+        html += '</tr></thead><tbody>';
+        
+        // Generate time rows
+        hours.forEach(hour => {
+            html += '<tr>';
+            html += `<td class="border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50">${hour}:00</td>`;
+            
+            // Generate cells for each day
+            for (let i = 0; i < days; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                
+                const availableCoaches = getAvailableCoachesAtDateTime(coaches, availabilityData, dateStr, hour);
+                const cellClass = availableCoaches.length > 0 ? 'bg-blue-50' : 'bg-gray-50';
+                const cellContent = availableCoaches.length > 0 ? 
+                    `<div class="text-xs bg-blue-100 text-blue-800 p-1 rounded">${availableCoaches.length} coach${availableCoaches.length > 1 ? 'es' : ''}</div>` : 
+                    '';
+                
+                html += `<td class="border border-gray-200 p-2 text-xs min-h-[60px] ${cellClass}" title="${availableCoaches.map(c => c.name).join(', ')}">${cellContent}</td>`;
+            }
+            
+            html += '</tr>';
+        }
+        
+        html += '</tbody></table>';
+        
+        // Add legend
+        html += `
+            <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Legend:</h4>
+                <div class="flex items-center space-x-4 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-4 h-4 bg-blue-100 border border-blue-200 rounded"></div>
+                        <span class="text-gray-600">Coaches Available</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
+                        <span class="text-gray-600">No Availability</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    // Get coaches available at a specific date and time
+    function getAvailableCoachesAtDateTime(coaches, availabilityData, dateStr, hour) {
+        return coaches.filter(coach => {
+            const coachAvailability = availabilityData[coach.id];
+            if (!coachAvailability) return true; // Default to available if no data
+            
+            const dateAvailability = coachAvailability[dateStr];
+            if (!dateAvailability) return true; // Default to available if no data for this date
+            
+            return dateAvailability[hour] !== false; // Available unless explicitly marked as unavailable
+        });
+    }
+    
+    // Generate coach buttons HTML
+    function generateCoachButtonsHtml(coaches) {
+        return coaches.map(coach => `
+            <button onclick="showCoachPreferences(${coach.id})" 
+                    class="p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                <div class="font-medium text-gray-900 mb-1">${coach.name}</div>
+                <div class="text-sm text-gray-500 mb-2">${coach.email}</div>
+                <div class="text-xs text-gray-400 mb-3">${coach.specialization}</div>
+                <div class="flex items-center text-indigo-600 text-sm">
+                    <i class="fas fa-eye mr-2"></i>
+                    View Full Preferences
+                </div>
+            </button>
+        `).join('');
+    }
+    
+    // Close preferences popup
+    function closePreferencesPopup() {
+        const popup = document.getElementById('preferencesPopup');
+        popup.classList.add('hidden');
+    }
+    
+    // Show individual coach preferences
+    function showCoachPreferences(coachId) {
+        const coach = allCoaches.find(c => c.id === coachId);
+        if (!coach) {
+            alert('Coach not found');
+            return;
+        }
+        
+        // Create a new modal for coach preferences
+        const modalHtml = `
+            <div id="coachPreferencesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                        <!-- Modal Header -->
+                        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold text-gray-900">${coach.name}'s Preferences</h2>
+                            <button onclick="closeCoachPreferencesModal()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Modal Content -->
+                        <div class="p-6 overflow-auto max-h-[calc(90vh-120px)]">
+                            <div class="space-y-6">
+                                <!-- Coach Info -->
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h3 class="text-lg font-medium text-gray-900 mb-2">${coach.name}</h3>
+                                    <div class="text-sm text-gray-600">
+                                        <p><strong>Email:</strong> ${coach.email}</p>
+                                        <p><strong>Specialization:</strong> ${coach.specialization}</p>
+                                        <p><strong>Status:</strong> ${coach.status}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <!-- Workout Preferences -->
+                                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                        <h4 class="text-lg font-medium text-gray-900 mb-3">Workout Preferences</h4>
+                                        <div class="space-y-3">
+                                            <div>
+                                                <span class="text-sm font-medium text-gray-700">Preferred Types:</span>
+                                                <div class="mt-2">
+                                                    ${coach.preferred_workout_types?.length > 0 ? 
+                                                        coach.preferred_workout_types.map(type => 
+                                                            `<span class="inline-block bg-indigo-100 text-indigo-800 text-sm px-3 py-1 rounded mr-2 mb-2">${type}</span>`
+                                                        ).join('') :
+                                                        '<span class="text-gray-500 text-sm">None specified</span>'
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span class="text-sm font-medium text-gray-700">Duration:</span>
+                                                <span class="text-sm text-gray-900 ml-2">${coach.preferred_duration || 60} minutes</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-sm font-medium text-gray-700">Preferred Times:</span>
+                                                <div class="mt-2">
+                                                    ${coach.preferred_time_slots?.length > 0 ? 
+                                                        coach.preferred_time_slots.map(time => 
+                                                            `<span class="inline-block bg-green-100 text-green-800 text-sm px-3 py-1 rounded mr-2 mb-2">${time}</span>`
+                                                        ).join('') :
+                                                        '<span class="text-gray-500 text-sm">None specified</span>'
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Availability Info -->
+                                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                        <h4 class="text-lg font-medium text-gray-900 mb-3">Availability System</h4>
+                                        <div class="space-y-2">
+                                            <p class="text-sm text-gray-600">
+                                                This coach uses a date and hour-based availability system. 
+                                                They can mark specific dates and hours as unavailable.
+                                            </p>
+                                            <p class="text-sm text-gray-600">
+                                                All times are available by default unless marked as unavailable.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                ${coach.notes ? `
+                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <h4 class="text-lg font-medium text-gray-900 mb-2">Notes</h4>
+                                        <p class="text-sm text-gray-700">${coach.notes}</p>
+                                    </div>
+                                ` : ''}
+                                
+                                <!-- Edit Preferences Button -->
+                                <div class="border-t border-gray-200 pt-6">
+                                    <button onclick="editCoachPreferences(${coach.id})" 
+                                            class="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                                        <i class="fas fa-edit mr-2"></i>Edit Preferences
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('coachPreferencesModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add new modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+    
+    // Edit coach preferences with calendar interface
+    function editCoachPreferences(coachId) {
+        const coach = allCoaches.find(c => c.id === coachId);
+        if (!coach) {
+            alert('Coach not found');
+            return;
+        }
+        
+        // Create calendar modal
+        const coachName = coach.name.replace(/'/g, "\\'");
+        const timeOptions = Array.from({length: 14}, (_, i) => i + 8).map(hour => 
+            `<option value="${hour}">${hour}:00</option>`
+        ).join('');
+        
+        const calendarModalHtml = `
+            <div id="calendarModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+                        <!-- Modal Header -->
+                        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold text-gray-900">Edit ${coachName} Availability</h2>
+                            <button onclick="closeCalendarModal()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Modal Content -->
+                        <div class="p-6 overflow-auto max-h-[calc(90vh-120px)]">
+                            <div class="space-y-6">
+                                <!-- Calendar Navigation -->
+                                <div class="flex items-center justify-between">
+                                    <button onclick="previousMonth()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                                        <i class="fas fa-chevron-left mr-2"></i>Previous
+                                    </button>
+                                    <h3 id="calendarTitle" class="text-lg font-semibold text-gray-900">December 2024</h3>
+                                    <button onclick="nextMonth()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                                        Next<i class="fas fa-chevron-right ml-2"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Calendar Grid -->
+                                <div id="calendarGrid" class="grid grid-cols-7 gap-1">
+                                    <!-- Calendar will be generated here -->
+                                </div>
+                                
+                                <!-- Time Range Selection -->
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h4 class="text-lg font-medium text-gray-900 mb-3">Time Range Selection</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                                            <select id="startHour" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                ${timeOptions}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">End Time</label>
+                                            <select id="endHour" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                ${timeOptions}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 flex space-x-4">
+                                        <button onclick="markSelectedAsUnavailable()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                            <i class="fas fa-times mr-2"></i>Mark as Unavailable
+                                        </button>
+                                        <button onclick="markSelectedAsAvailable()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                            <i class="fas fa-check mr-2"></i>Mark as Available
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Legend -->
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h4 class="text-sm font-medium text-gray-700 mb-2">Legend:</h4>
+                                    <div class="flex items-center space-x-4 text-xs">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+                                            <span class="text-gray-600">Available</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+                                            <span class="text-gray-600">Unavailable</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
+                                            <span class="text-gray-600">No Data</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('calendarModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add new modal to body
+        document.body.insertAdjacentHTML('beforeend', calendarModalHtml);
+        
+        // Initialize calendar
+        currentCalendarDate = new Date();
+        loadCalendarData(coachId);
+    }
+    
+    // Calendar variables
+    let currentCalendarDate = new Date();
+    let selectedDates = new Set();
+    let calendarCoachId = null;
+    
+    // Load calendar data
+    async function loadCalendarData(coachId) {
+        calendarCoachId = coachId;
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth() + 1;
+        
+        try {
+            const response = await fetch(`/api/availability/calendar/${coachId}?year=${year}&month=${month}`);
+            if (!response.ok) {
+                throw new Error('Failed to load calendar data');
+            }
+            const data = await response.json();
+            renderCalendar(data);
+        } catch (error) {
+            console.error('Error loading calendar data:', error);
+        }
+    }
+    
+    // Render calendar
+    function renderCalendar(data) {
+        const title = document.getElementById('calendarTitle');
+        title.textContent = `${data.month_name} ${data.year}`;
+        
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+        
+        // Add day headers
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        days.forEach(day => {
+            const dayHeader = document.createElement('div');
+            dayHeader.className = 'p-2 text-center text-sm font-medium text-gray-700 bg-gray-50';
+            dayHeader.textContent = day;
+            grid.appendChild(dayHeader);
+        });
+        
+        // Get first day of month and number of days
+        const firstDay = new Date(data.year, data.month - 1, 1);
+        const lastDay = new Date(data.year, data.month, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - firstDay.getDay());
+        
+        // Generate calendar cells
+        for (let i = 0; i < 42; i++) { // 6 weeks * 7 days
+            const currentDate = new Date(startDate);
+            currentDate.setDate(startDate.getDate() + i);
+            
+            const cell = document.createElement('div');
+            cell.className = 'p-2 min-h-[80px] border border-gray-200 cursor-pointer hover:bg-gray-50';
+            
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const isCurrentMonth = currentDate.getMonth() === data.month - 1;
+            const isToday = currentDate.toDateString() === new Date().toDateString();
+            
+            // Get availability data for this date
+            const dayData = data.calendar.find(day => day.date === dateStr);
+            const unavailableHours = dayData ? Object.keys(dayData.slots).filter(hour => dayData.slots[hour] === false) : [];
+            
+            let cellContent = `
+                <div class="text-sm ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'} ${isToday ? 'font-bold' : ''}">
+                    ${currentDate.getDate()}
+                </div>
+            `;
+            
+            if (isCurrentMonth && unavailableHours.length > 0) {
+                cellContent += `<div class="text-xs text-red-600 mt-1">${unavailableHours.length} unavailable</div>`;
+                cell.className += ' bg-red-50';
+            }
+            
+            cell.innerHTML = cellContent;
+            
+            if (isCurrentMonth) {
+                cell.onclick = () => toggleDateSelection(dateStr, cell);
+            }
+            
+            grid.appendChild(cell);
+        }
+    }
+    
+    // Toggle date selection
+    function toggleDateSelection(dateStr, cell) {
+        if (selectedDates.has(dateStr)) {
+            selectedDates.delete(dateStr);
+            cell.classList.remove('ring-2', 'ring-indigo-500');
+        } else {
+            selectedDates.add(dateStr);
+            cell.classList.add('ring-2', 'ring-indigo-500');
+        }
+    }
+    
+    // Navigation functions
+    function previousMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+        loadCalendarData(calendarCoachId);
+    }
+    
+    function nextMonth() {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+        loadCalendarData(calendarCoachId);
+    }
+    
+    // Mark selected dates as unavailable
+    async function markSelectedAsUnavailable() {
+        if (selectedDates.size === 0) {
+            alert('Please select at least one date');
+            return;
+        }
+        
+        const startHour = parseInt(document.getElementById('startHour').value);
+        const endHour = parseInt(document.getElementById('endHour').value);
+        
+        if (startHour >= endHour) {
+            alert('End time must be after start time');
+            return;
+        }
+        
+        const dates = Array.from(selectedDates).sort();
+        const startDate = dates[0];
+        const endDate = dates[dates.length - 1];
+        
+        try {
+            const response = await fetch('/api/availability/bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    start_date: startDate,
+                    end_date: endDate,
+                    start_hour: startHour,
+                    end_hour: endHour,
+                    is_available: false
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to update availability');
+            }
+            
+            alert('Availability updated successfully');
+            selectedDates.clear();
+            loadCalendarData(calendarCoachId);
+            
+        } catch (error) {
+            console.error('Error updating availability:', error);
+            alert('Failed to update availability');
+        }
+    }
+    
+    // Mark selected dates as available
+    async function markSelectedAsAvailable() {
+        if (selectedDates.size === 0) {
+            alert('Please select at least one date');
+            return;
+        }
+        
+        const startHour = parseInt(document.getElementById('startHour').value);
+        const endHour = parseInt(document.getElementById('endHour').value);
+        
+        if (startHour >= endHour) {
+            alert('End time must be after start time');
+            return;
+        }
+        
+        const dates = Array.from(selectedDates).sort();
+        const startDate = dates[0];
+        const endDate = dates[dates.length - 1];
+        
+        try {
+            const response = await fetch('/api/availability/bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    start_date: startDate,
+                    end_date: endDate,
+                    start_hour: startHour,
+                    end_hour: endHour,
+                    is_available: true
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to update availability');
+            }
+            
+            alert('Availability updated successfully');
+            selectedDates.clear();
+            loadCalendarData(calendarCoachId);
+            
+        } catch (error) {
+            console.error('Error updating availability:', error);
+            alert('Failed to update availability');
+        }
+    }
+    
+    // Close calendar modal
+    function closeCalendarModal() {
+        const modal = document.getElementById('calendarModal');
+        if (modal) {
+            modal.remove();
+        }
+        selectedDates.clear();
+    }
+    
+    // Edit my own preferences
+    function editMyPreferences() {
+        // Create calendar modal for editing own preferences
+        const timeOptions = Array.from({length: 14}, (_, i) => i + 8).map(hour => 
+            `<option value="${hour}">${hour}:00</option>`
+        ).join('');
+        
+        const calendarModalHtml = `
+            <div id="calendarModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+                        <!-- Modal Header -->
+                        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold text-gray-900">Edit My Availability</h2>
+                            <button onclick="closeCalendarModal()" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Modal Content -->
+                        <div class="p-6 overflow-auto max-h-[calc(90vh-120px)]">
+                            <div class="space-y-6">
+                                <!-- Calendar Navigation -->
+                                <div class="flex items-center justify-between">
+                                    <button onclick="previousMonth()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                                        <i class="fas fa-chevron-left mr-2"></i>Previous
+                                    </button>
+                                    <h3 id="calendarTitle" class="text-lg font-semibold text-gray-900">December 2024</h3>
+                                    <button onclick="nextMonth()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                                        Next<i class="fas fa-chevron-right ml-2"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Calendar Grid -->
+                                <div id="calendarGrid" class="grid grid-cols-7 gap-1">
+                                    <!-- Calendar will be generated here -->
+                                </div>
+                                
+                                <!-- Time Range Selection -->
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h4 class="text-lg font-medium text-gray-900 mb-3">Time Range Selection</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                                            <select id="startHour" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                ${timeOptions}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">End Time</label>
+                                            <select id="endHour" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                ${timeOptions}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 flex space-x-4">
+                                        <button onclick="markSelectedAsUnavailable()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                            <i class="fas fa-times mr-2"></i>Mark as Unavailable
+                                        </button>
+                                        <button onclick="markSelectedAsAvailable()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                            <i class="fas fa-check mr-2"></i>Mark as Available
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Legend -->
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h4 class="text-sm font-medium text-gray-700 mb-2">Legend:</h4>
+                                    <div class="flex items-center space-x-4 text-xs">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+                                            <span class="text-gray-600">Available</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+                                            <span class="text-gray-600">Unavailable</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
+                                            <span class="text-gray-600">No Data</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('calendarModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add new modal to body
+        document.body.insertAdjacentHTML('beforeend', calendarModalHtml);
+        
+        // Initialize calendar for current user
+        currentCalendarDate = new Date();
+        loadMyCalendarData();
+    }
+    
+    // Load my own calendar data
+    async function loadMyCalendarData() {
+        const year = currentCalendarDate.getFullYear();
+        const month = currentCalendarDate.getMonth() + 1;
+        
+        try {
+            // Get current user ID from session or API
+            const userResponse = await fetch('/api/user');
+            if (!userResponse.ok) {
+                throw new Error('Failed to get user info');
+            }
+            const userData = await userResponse.json();
+            const userId = userData.id;
+            
+            const response = await fetch(`/api/availability/calendar/${userId}?year=${year}&month=${month}`);
+            if (!response.ok) {
+                throw new Error('Failed to load calendar data');
+            }
+            const data = await response.json();
+            renderCalendar(data);
+        } catch (error) {
+            console.error('Error loading calendar data:', error);
+        }
+    }
+    
+    // Close coach preferences modal
+    function closeCoachPreferencesModal() {
+        const modal = document.getElementById('coachPreferencesModal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+</script>
+{% endblock %} 
