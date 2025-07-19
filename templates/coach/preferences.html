@@ -46,9 +46,6 @@
             <button id="showPreferences" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 <i class="fas fa-eye mr-2"></i>Show Preferences
             </button>
-            <button id="editMyPreferences" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                <i class="fas fa-edit mr-2"></i>Edit My Preferences
-            </button>
             <button id="clearSelection" class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
                 <i class="fas fa-times mr-2"></i>Clear Selection
             </button>
@@ -107,6 +104,9 @@
     let allMembers = [];
     let currentDate = new Date();
     
+    // Add global for group schedule range
+    let groupScheduleDays = 7;
+
     // Initialize the page
     document.addEventListener('DOMContentLoaded', function() {
         loadMembers();
@@ -330,7 +330,8 @@
             console.log('Availability response status:', availabilityResponse.status);
             
             if (!availabilityResponse.ok) {
-                throw new Error(`HTTP ${availabilityResponse.status}: ${availabilityResponse.statusText}`);
+                const errorText = await availabilityResponse.text();
+                throw new Error(`HTTP ${availabilityResponse.status}: ${availabilityResponse.statusText}\n${errorText}`);
             }
             
             const availabilityData = await availabilityResponse.json();
@@ -362,17 +363,18 @@
             
             content.innerHTML = html;
             popup.classList.remove('hidden');
+            setupGroupScheduleRangeListener(selectedMembersData, availabilityData);
             
         } catch (error) {
             console.error('Error fetching availability data:', error);
-            alert('Error loading availability data. Please try again.');
+            alert('Error loading availability data. ' + error.message);
         }
     }
     
     // Generate date-based schedule HTML
     function generateDateBasedScheduleHtml(members, availabilityData) {
         const hours = Array.from({length: 14}, (_, i) => i + 8); // 8 AM to 9 PM
-        const days = 7; // Next 7 days
+        const days = groupScheduleDays; // Use global
         
         let html = `
             <div class="overflow-x-auto">
@@ -404,12 +406,16 @@
                 const dateStr = date.toISOString().split('T')[0];
                 
                 const availableMembers = getAvailableMembersAtDateTime(members, availabilityData, dateStr, hour);
-                const cellClass = availableMembers.length > 0 ? 'bg-green-50' : 'bg-gray-50';
-                const cellContent = availableMembers.length > 0 ? 
-                    `<div class="text-xs bg-green-100 text-green-800 p-1 rounded">${availableMembers.length} member${availableMembers.length > 1 ? 's' : ''}</div>` : 
-                    '';
-                
-                html += `<td class="border border-gray-200 p-2 text-xs min-h-[60px] ${cellClass}" title="${availableMembers.map(m => m.name).join(', ')}">${cellContent}</td>`;
+                let cellClass = '';
+                let cellContent = '';
+                if (availableMembers.length > 0) {
+                    cellClass = 'bg-green-50';
+                    cellContent = `<div class="text-xs bg-green-100 text-green-800 p-1 rounded">${availableMembers.length} member${availableMembers.length > 1 ? 's' : ''}</div>`;
+                } else {
+                    cellClass = 'bg-red-50';
+                    cellContent = `<div class="text-xs bg-red-100 text-red-800 p-1 rounded">Unavailable</div>`;
+                }
+                html += `<td class="border border-gray-200 p-2 text-xs min-h-[60px] ${cellClass}" title="${availableMembers.length > 0 ? availableMembers.map(m => m.name).join(', ') : 'No members available'}">${cellContent}</td>`;
             }
             
             html += '</tr>';
@@ -427,8 +433,12 @@
                         <span class="text-gray-600">Members Available</span>
                     </div>
                     <div class="flex items-center space-x-2">
+                        <div class="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+                        <span class="text-gray-600">Unavailable</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
                         <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
-                        <span class="text-gray-600">No Availability</span>
+                        <span class="text-gray-600">No Data</span>
                     </div>
                 </div>
             </div>
@@ -437,26 +447,66 @@
         return html;
     }
     
+    // Listen for range change
+    function setupGroupScheduleRangeListener(selectedMembersData, availabilityData) {
+        setTimeout(() => {
+            const rangeSelect = document.getElementById('groupScheduleRange');
+            if (rangeSelect) {
+                rangeSelect.value = groupScheduleDays;
+                rangeSelect.onchange = function() {
+                    groupScheduleDays = parseInt(this.value, 10);
+                    const content = document.getElementById('preferencesContent');
+                    content.innerHTML = generateDateBasedScheduleHtml(selectedMembersData, availabilityData) + content.innerHTML.split('</div>')[1];
+                    setupGroupScheduleRangeListener(selectedMembersData, availabilityData);
+                };
+            }
+        }, 0);
+    }
+    
     // Get members available at a specific date and time
     function getAvailableMembersAtDateTime(members, availabilityData, dateStr, hour) {
         if (!availabilityData || typeof availabilityData !== 'object') {
-            console.warn('Invalid availabilityData:', availabilityData);
-            return members; // Return all members if no availability data
+            return members;
         }
-        
         return members.filter(member => {
-            if (!member || !member.id) {
-                console.warn('Invalid member:', member);
+            if (!member || !member.id) return false;
+            const weekday = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' });
+            const freeDay = member.free_days ? member.free_days.find(fd => fd.day_of_week === weekday) : null;
+            const memberAvailability = availabilityData[member.id];
+
+            // If the weekly availability says unavailable, default to unavailable unless overridden
+            if (freeDay && !freeDay.is_available) {
+                if (memberAvailability && memberAvailability[dateStr] && memberAvailability[dateStr][hour] === true) {
+                    return true;
+                }
                 return false;
             }
-            
-            const memberAvailability = availabilityData[member.id];
-            if (!memberAvailability) return true; // Default to available if no data
-            
+
+            // If the weekly availability says available, only allow within start_time and end_time
+            if (freeDay && freeDay.is_available) {
+                // Parse start_time and end_time as integers (hours), fallback to defaults if missing or not a string
+                let startHour = 8; // default gym open hour
+                let endHour = 20;  // default gym close hour
+                if (typeof freeDay.start_time === 'string' && freeDay.start_time.includes(':')) {
+                    startHour = parseInt(freeDay.start_time.split(':')[0], 10);
+                }
+                if (typeof freeDay.end_time === 'string' && freeDay.end_time.includes(':')) {
+                    endHour = parseInt(freeDay.end_time.split(':')[0], 10);
+                }
+                if (hour < startHour || hour >= endHour) {
+                    // Outside available hours, only allow if explicitly marked available in date-based
+                    if (memberAvailability && memberAvailability[dateStr] && memberAvailability[dateStr][hour] === true) {
+                        return true;
+                    }
+                    return false;
+                }
+            }
+
+            // Otherwise, use the date-based availability as before
+            if (!memberAvailability) return true;
             const dateAvailability = memberAvailability[dateStr];
-            if (!dateAvailability) return true; // Default to available if no data for this date
-            
-            return dateAvailability[hour] !== false; // Available unless explicitly marked as unavailable
+            if (!dateAvailability) return true;
+            return dateAvailability[hour] !== false;
         });
     }
     
@@ -556,6 +606,23 @@
                     </div>
                 </div>
                 
+                <!-- Weekly Availability Section -->
+                ${member.free_days && member.free_days.length > 0 ? `
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+                        <h4 class="text-lg font-medium text-gray-900 mb-2">Weekly Availability</h4>
+                        <ul class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            ${member.free_days.map(day => `
+                                <li>
+                                    <span class="font-semibold">${day.day_of_week}:</span>
+                                    ${day.is_available
+                                        ? '<span class="text-green-600 font-medium">Available</span>'
+                                        : '<span class="text-red-600 font-medium">Unavailable</span>'}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
                 ${member.notes ? `
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <h4 class="text-lg font-medium text-gray-900 mb-2">Notes</h4>
@@ -563,18 +630,17 @@
                     </div>
                 ` : ''}
                 
-                <!-- Edit Preferences Button -->
-                <div class="border-t border-gray-200 pt-6">
-                    <button onclick="editMemberPreferences(${member.id})" 
-                            class="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                        <i class="fas fa-edit mr-2"></i>Edit Preferences
-                    </button>
+                <div class="mt-6">
+                    <div id="memberDateBasedSchedule"></div>
                 </div>
             </div>
         `;
         
         content.innerHTML = html;
         modal.classList.remove('hidden');
+        // Render the member's date-based schedule (always 7 days)
+        const scheduleDiv = document.getElementById('memberDateBasedSchedule');
+        renderMemberDateBasedSchedule(member, scheduleDiv, 7);
     }
     
     // Edit member preferences with calendar interface
@@ -673,364 +739,36 @@
                 </div>
             </div>
         `;
-        
-        // Remove existing modal if any
-        const existingModal = document.getElementById('calendarModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        // Add new modal to body
-        document.body.insertAdjacentHTML('beforeend', calendarModalHtml);
-        
-        // Initialize calendar
-        currentCalendarDate = new Date();
-        loadCalendarData(memberId);
     }
-    
-    // Calendar variables
-    let currentCalendarDate = new Date();
-    let selectedDates = new Set();
-    let calendarMemberId = null;
-    
-    // Load calendar data
-    async function loadCalendarData(memberId) {
-        calendarMemberId = memberId;
-        const year = currentCalendarDate.getFullYear();
-        const month = currentCalendarDate.getMonth() + 1;
-        
-        try {
-            const response = await fetch(`/api/availability/calendar/${memberId}?year=${year}&month=${month}`);
-            if (!response.ok) {
-                throw new Error('Failed to load calendar data');
-            }
-            const data = await response.json();
-            renderCalendar(data);
-        } catch (error) {
-            console.error('Error loading calendar data:', error);
-        }
-    }
-    
-    // Render calendar
-    function renderCalendar(data) {
-        const title = document.getElementById('calendarTitle');
-        title.textContent = `${data.month_name} ${data.year}`;
-        
-        const grid = document.getElementById('calendarGrid');
-        grid.innerHTML = '';
-        
-        // Add day headers
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        days.forEach(day => {
-            const dayHeader = document.createElement('div');
-            dayHeader.className = 'p-2 text-center text-sm font-medium text-gray-700 bg-gray-50';
-            dayHeader.textContent = day;
-            grid.appendChild(dayHeader);
-        });
-        
-        // Get first day of month and number of days
-        const firstDay = new Date(data.year, data.month - 1, 1);
-        const lastDay = new Date(data.year, data.month, 0);
-        const startDate = new Date(firstDay);
-        startDate.setDate(startDate.getDate() - firstDay.getDay());
-        
-        // Generate calendar cells
-        for (let i = 0; i < 42; i++) { // 6 weeks * 7 days
-            const currentDate = new Date(startDate);
-            currentDate.setDate(startDate.getDate() + i);
-            
-            const cell = document.createElement('div');
-            cell.className = 'p-2 min-h-[80px] border border-gray-200 cursor-pointer hover:bg-gray-50';
-            
-            const dateStr = currentDate.toISOString().split('T')[0];
-            const isCurrentMonth = currentDate.getMonth() === data.month - 1;
-            const isToday = currentDate.toDateString() === new Date().toDateString();
-            
-            // Get availability data for this date
-            const dayData = data.calendar.find(day => day.date === dateStr);
-            const unavailableHours = dayData ? Object.keys(dayData.slots).filter(hour => dayData.slots[hour] === false) : [];
-            
-            let cellContent = `
-                <div class="text-sm ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'} ${isToday ? 'font-bold' : ''}">
-                    ${currentDate.getDate()}
-                </div>
-            `;
-            
-            if (isCurrentMonth && unavailableHours.length > 0) {
-                cellContent += `<div class="text-xs text-red-600 mt-1">${unavailableHours.length} unavailable</div>`;
-                cell.className += ' bg-red-50';
-            }
-            
-            cell.innerHTML = cellContent;
-            
-            if (isCurrentMonth) {
-                cell.onclick = () => toggleDateSelection(dateStr, cell);
-            }
-            
-            grid.appendChild(cell);
-        }
-    }
-    
-    // Toggle date selection
-    function toggleDateSelection(dateStr, cell) {
-        if (selectedDates.has(dateStr)) {
-            selectedDates.delete(dateStr);
-            cell.classList.remove('ring-2', 'ring-indigo-500');
-        } else {
-            selectedDates.add(dateStr);
-            cell.classList.add('ring-2', 'ring-indigo-500');
-        }
-    }
-    
-    // Navigation functions
-    function previousMonth() {
-        currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-        loadCalendarData(calendarMemberId);
-    }
-    
-    function nextMonth() {
-        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-        loadCalendarData(calendarMemberId);
-    }
-    
-    // Mark selected dates as unavailable
-    async function markSelectedAsUnavailable() {
-        if (selectedDates.size === 0) {
-            alert('Please select at least one date');
-            return;
-        }
-        
-        const startHour = parseInt(document.getElementById('startHour').value);
-        const endHour = parseInt(document.getElementById('endHour').value);
-        
-        if (startHour >= endHour) {
-            alert('End time must be after start time');
-            return;
-        }
-        
-        const dates = Array.from(selectedDates).sort();
-        const startDate = dates[0];
-        const endDate = dates[dates.length - 1];
-        
-        try {
-            const response = await fetch('/api/availability/bulk', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    start_date: startDate,
-                    end_date: endDate,
-                    start_hour: startHour,
-                    end_hour: endHour,
-                    is_available: false
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to update availability');
-            }
-            
-            alert('Availability updated successfully');
-            selectedDates.clear();
-            loadCalendarData(calendarMemberId);
-            
-        } catch (error) {
-            console.error('Error updating availability:', error);
-            alert('Failed to update availability');
-        }
-    }
-    
-    // Mark selected dates as available
-    async function markSelectedAsAvailable() {
-        if (selectedDates.size === 0) {
-            alert('Please select at least one date');
-            return;
-        }
-        
-        const startHour = parseInt(document.getElementById('startHour').value);
-        const endHour = parseInt(document.getElementById('endHour').value);
-        
-        if (startHour >= endHour) {
-            alert('End time must be after start time');
-            return;
-        }
-        
-        const dates = Array.from(selectedDates).sort();
-        const startDate = dates[0];
-        const endDate = dates[dates.length - 1];
-        
-        try {
-            const response = await fetch('/api/availability/bulk', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    start_date: startDate,
-                    end_date: endDate,
-                    start_hour: startHour,
-                    end_hour: endHour,
-                    is_available: true
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to update availability');
-            }
-            
-            alert('Availability updated successfully');
-            selectedDates.clear();
-            loadCalendarData(calendarMemberId);
-            
-        } catch (error) {
-            console.error('Error updating availability:', error);
-            alert('Failed to update availability');
-        }
-    }
-    
-    // Edit my own preferences
-    function editMyPreferences() {
-        // Create calendar modal for editing own preferences
-        const timeOptions = Array.from({length: 14}, (_, i) => i + 8).map(hour => 
-            `<option value="${hour}">${hour}:00</option>`
-        ).join('');
-        
-        const calendarModalHtml = `
-            <div id="calendarModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-                        <!-- Modal Header -->
-                        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                            <h2 class="text-xl font-semibold text-gray-900">Edit My Availability</h2>
-                            <button onclick="closeCalendarModal()" class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
-                        </div>
-                        
-                        <!-- Modal Content -->
-                        <div class="p-6 overflow-auto max-h-[calc(90vh-120px)]">
-                            <div class="space-y-6">
-                                <!-- Calendar Navigation -->
-                                <div class="flex items-center justify-between">
-                                    <button onclick="previousMonth()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                                        <i class="fas fa-chevron-left mr-2"></i>Previous
-                                    </button>
-                                    <h3 id="calendarTitle" class="text-lg font-semibold text-gray-900">December 2024</h3>
-                                    <button onclick="nextMonth()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                                        Next<i class="fas fa-chevron-right ml-2"></i>
-                                    </button>
-                                </div>
-                                
-                                <!-- Calendar Grid -->
-                                <div id="calendarGrid" class="grid grid-cols-7 gap-1">
-                                    <!-- Calendar will be generated here -->
-                                </div>
-                                
-                                <!-- Time Range Selection -->
-                                <div class="bg-gray-50 rounded-lg p-4">
-                                    <h4 class="text-lg font-medium text-gray-900 mb-3">Time Range Selection</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
-                                            <select id="startHour" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                                ${timeOptions}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">End Time</label>
-                                            <select id="endHour" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                                ${timeOptions}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4 flex space-x-4">
-                                        <button onclick="markSelectedAsUnavailable()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                                            <i class="fas fa-times mr-2"></i>Mark as Unavailable
-                                        </button>
-                                        <button onclick="markSelectedAsAvailable()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                            <i class="fas fa-check mr-2"></i>Mark as Available
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <!-- Legend -->
-                                <div class="bg-gray-50 rounded-lg p-4">
-                                    <h4 class="text-sm font-medium text-gray-700 mb-2">Legend:</h4>
-                                    <div class="flex items-center space-x-4 text-xs">
-                                        <div class="flex items-center space-x-2">
-                                            <div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
-                                            <span class="text-gray-600">Available</span>
-                                        </div>
-                                        <div class="flex items-center space-x-2">
-                                            <div class="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
-                                            <span class="text-gray-600">Unavailable</span>
-                                        </div>
-                                        <div class="flex items-center space-x-2">
-                                            <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
-                                            <span class="text-gray-600">No Data</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Remove existing modal if any
-        const existingModal = document.getElementById('calendarModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        // Add new modal to body
-        document.body.insertAdjacentHTML('beforeend', calendarModalHtml);
-        
-        // Initialize calendar for current user
-        currentCalendarDate = new Date();
-        loadMyCalendarData();
-    }
-    
-    // Load my own calendar data
-    async function loadMyCalendarData() {
-        const year = currentCalendarDate.getFullYear();
-        const month = currentCalendarDate.getMonth() + 1;
-        
-        try {
-            // Get current user ID from session or API
-            const userResponse = await fetch('/api/user');
-            if (!userResponse.ok) {
-                throw new Error('Failed to get user info');
-            }
-            const userData = await userResponse.json();
-            const userId = userData.id;
-            
-            const response = await fetch(`/api/availability/calendar/${userId}?year=${year}&month=${month}`);
-            if (!response.ok) {
-                throw new Error('Failed to load calendar data');
-            }
-            const data = await response.json();
-            renderCalendar(data);
-        } catch (error) {
-            console.error('Error loading calendar data:', error);
-        }
-    }
-    
-    // Close calendar modal
-    function closeCalendarModal() {
-        const modal = document.getElementById('calendarModal');
-        if (modal) {
-            modal.remove();
-        }
-        selectedDates.clear();
-    }
-    
-    // Close member preferences modal
+
     function closeMemberPreferencesModal() {
         const modal = document.getElementById('memberPreferencesModal');
-        modal.classList.add('hidden');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    // --- Individual Member Date-Based Schedule ---
+    async function renderMemberDateBasedSchedule(member, container, days = 7) {
+        // Fetch availability for this member
+        try {
+            const today = new Date();
+            const endDate = new Date();
+            endDate.setDate(today.getDate() + days - 1);
+            const startStr = today.toISOString().split('T')[0];
+            const endStr = endDate.toISOString().split('T')[0];
+            const response = await fetch(`/api/availability/bulk?user_ids=${member.id}&start_date=${startStr}&end_date=${endStr}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${response.statusText}\n${errorText}`);
+            }
+            const data = await response.json();
+            const availabilityData = data.availability;
+            // Reuse the group schedule renderer but for one member
+            container.innerHTML = generateDateBasedScheduleHtml([member], availabilityData);
+        } catch (error) {
+            container.innerHTML = `<div class='text-red-600'>Error loading date-based schedule: ${error.message}</div>`;
+        }
     }
 </script>
-{% endblock %} 
+{% endblock %}

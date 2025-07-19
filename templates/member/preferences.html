@@ -57,9 +57,6 @@
             <button id="showPreferences" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 <i class="fas fa-eye mr-2"></i>Show Preferences
             </button>
-            <button id="editMyPreferences" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                <i class="fas fa-edit mr-2"></i>Edit My Preferences
-            </button>
             <button id="clearSelection" class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
                 <i class="fas fa-times mr-2"></i>Clear Selection
             </button>
@@ -103,37 +100,43 @@
         loadCoaches();
         
         // Event listeners
-        document.getElementById('coachSearch').addEventListener('input', filterCoaches);
-        document.getElementById('clearSelection').addEventListener('click', clearSelection);
-        document.getElementById('showPreferences').addEventListener('click', showPreferences);
-        document.getElementById('editMyPreferences').addEventListener('click', editMyPreferences);
-        document.getElementById('showMyCoachOnly').addEventListener('change', filterCoaches);
-        document.getElementById('clearCoachFilter').addEventListener('click', clearCoachFilter);
+        const coachSearch = document.getElementById('coachSearch');
+        if (coachSearch) coachSearch.addEventListener('input', filterCoaches);
+        const clearSelectionBtn = document.getElementById('clearSelection');
+        if (clearSelectionBtn) clearSelectionBtn.addEventListener('click', clearSelection);
+        const showPreferencesBtn = document.getElementById('showPreferences');
+        if (showPreferencesBtn) showPreferencesBtn.addEventListener('click', showPreferences);
+        const editMyPreferencesBtn = document.getElementById('editMyPreferences');
+        if (editMyPreferencesBtn) editMyPreferencesBtn.addEventListener('click', editMyPreferences);
+        const showMyCoachOnly = document.getElementById('showMyCoachOnly');
+        if (showMyCoachOnly) showMyCoachOnly.addEventListener('change', filterCoaches);
+        const clearCoachFilterBtn = document.getElementById('clearCoachFilter');
+        if (clearCoachFilterBtn) clearCoachFilterBtn.addEventListener('click', clearCoachFilter);
         
         // Close suggestions when clicking outside
         document.addEventListener('click', function(event) {
-            const searchContainer = document.getElementById('coachSearch').parentElement;
+            const searchContainer = coachSearch ? coachSearch.parentElement : null;
             const suggestionsContainer = document.getElementById('searchSuggestions');
-            
-            if (!searchContainer.contains(event.target)) {
+            if (searchContainer && suggestionsContainer && !searchContainer.contains(event.target)) {
                 suggestionsContainer.classList.add('hidden');
             }
         });
         
         // Handle keyboard navigation
-        document.getElementById('coachSearch').addEventListener('keydown', function(event) {
-            const suggestionsContainer = document.getElementById('searchSuggestions');
-            const suggestions = suggestionsContainer.querySelectorAll('div[onclick]');
-            
-            if (event.key === 'Escape') {
-                suggestionsContainer.classList.add('hidden');
-            } else if (event.key === 'Enter' && suggestions.length > 0) {
-                event.preventDefault();
-                const firstSuggestion = suggestions[0];
-                const coachName = firstSuggestion.querySelector('.font-medium').textContent;
-                selectSuggestion(coachName);
-            }
-        });
+        if (coachSearch) {
+            coachSearch.addEventListener('keydown', function(event) {
+                const suggestionsContainer = document.getElementById('searchSuggestions');
+                const suggestions = suggestionsContainer ? suggestionsContainer.querySelectorAll('div[onclick]') : [];
+                if (event.key === 'Escape' && suggestionsContainer) {
+                    suggestionsContainer.classList.add('hidden');
+                } else if (event.key === 'Enter' && suggestions.length > 0) {
+                    event.preventDefault();
+                    const firstSuggestion = suggestions[0];
+                    const coachName = firstSuggestion.querySelector('.font-medium').textContent;
+                    selectSuggestion(coachName);
+                }
+            });
+        }
     });
     
     // Load member's assigned coach
@@ -168,6 +171,7 @@
     // Display coaches in the list
     function displayCoaches(coaches) {
         const container = document.getElementById('coachesList');
+        if (!container) return;
         container.innerHTML = '';
         
         coaches.forEach(coach => {
@@ -200,15 +204,17 @@
             
             // Add event listener to checkbox
             const checkbox = coachDiv.querySelector('.coach-checkbox');
-            checkbox.addEventListener('change', function() {
-                if (this.checked) {
-                    selectedCoaches.add(coach.id);
-                } else {
-                    selectedCoaches.delete(coach.id);
-                }
-                updateSelectedCoachesDisplay();
-                updateShowPreferencesButton();
-            });
+            if (checkbox) {
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedCoaches.add(coach.id);
+                    } else {
+                        selectedCoaches.delete(coach.id);
+                    }
+                    updateSelectedCoachesDisplay();
+                    updateShowPreferencesButton();
+                });
+            }
             
             container.appendChild(coachDiv);
         });
@@ -252,6 +258,7 @@
     // Show search suggestions
     function showSearchSuggestions(searchTerm) {
         const suggestionsContainer = document.getElementById('searchSuggestions');
+        if (!suggestionsContainer) return;
         
         if (!searchTerm || searchTerm.length < 2) {
             suggestionsContainer.classList.add('hidden');
@@ -282,7 +289,8 @@
     
     // Select a search suggestion
     function selectSuggestion(coachName) {
-        document.getElementById('coachSearch').value = coachName;
+        const coachSearchInput = document.getElementById('coachSearch');
+        if (coachSearchInput) coachSearchInput.value = coachName;
         document.getElementById('searchSuggestions').classList.add('hidden');
         filterCoaches();
     }
@@ -290,6 +298,7 @@
     // Update selected coaches display
     function updateSelectedCoachesDisplay() {
         const container = document.getElementById('selectedCoaches');
+        if (!container) return;
         container.innerHTML = '';
         
         selectedCoaches.forEach(coachId => {
@@ -311,6 +320,7 @@
     // Update show preferences button state
     function updateShowPreferencesButton() {
         const button = document.getElementById('showPreferences');
+        if (!button) return;
         if (selectedCoaches.size === 0) {
             button.disabled = true;
         } else {
@@ -343,7 +353,9 @@
         }
         
         const popup = document.getElementById('preferencesPopup');
+        if (!popup) return;
         const content = document.getElementById('preferencesContent');
+        if (!content) return;
         
         const selectedCoachesData = allCoaches.filter(c => selectedCoaches.has(c.id));
         
@@ -424,7 +436,7 @@
             }
             
             html += '</tr>';
-        }
+        });
         
         html += '</tbody></table>';
         
@@ -448,16 +460,39 @@
         return html;
     }
     
-    // Get coaches available at a specific date and time
+    // Replace getAvailableCoachesAtDateTime with logic that uses both weekly and date-based availability
     function getAvailableCoachesAtDateTime(coaches, availabilityData, dateStr, hour) {
         return coaches.filter(coach => {
+            if (!coach || !coach.id) return false;
+            const weekday = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' });
+            const freeDay = coach.free_days ? coach.free_days.find(fd => fd.day_of_week === weekday) : null;
             const coachAvailability = availabilityData[coach.id];
-            if (!coachAvailability) return true; // Default to available if no data
-            
+            if (freeDay && !freeDay.is_available) {
+                if (coachAvailability && coachAvailability[dateStr] && coachAvailability[dateStr][hour] === true) {
+                    return true;
+                }
+                return false;
+            }
+            if (freeDay && freeDay.is_available) {
+                let startHour = 8;
+                let endHour = 20;
+                if (typeof freeDay.start_time === 'string' && freeDay.start_time.includes(':')) {
+                    startHour = parseInt(freeDay.start_time.split(':')[0], 10);
+                }
+                if (typeof freeDay.end_time === 'string' && freeDay.end_time.includes(':')) {
+                    endHour = parseInt(freeDay.end_time.split(':')[0], 10);
+                }
+                if (hour < startHour || hour >= endHour) {
+                    if (coachAvailability && coachAvailability[dateStr] && coachAvailability[dateStr][hour] === true) {
+                        return true;
+                    }
+                    return false;
+                }
+            }
+            if (!coachAvailability) return true;
             const dateAvailability = coachAvailability[dateStr];
-            if (!dateAvailability) return true; // Default to available if no data for this date
-            
-            return dateAvailability[hour] !== false; // Available unless explicitly marked as unavailable
+            if (!dateAvailability) return true;
+            return dateAvailability[hour] !== false;
         });
     }
     
@@ -480,7 +515,9 @@
     // Close preferences popup
     function closePreferencesPopup() {
         const popup = document.getElementById('preferencesPopup');
-        popup.classList.add('hidden');
+        if (popup) {
+            popup.classList.add('hidden');
+        }
     }
     
     // Show individual coach preferences
@@ -492,6 +529,33 @@
         }
         
         // Create a new modal for coach preferences
+        let weeklyAvailabilityHtml = '';
+        if (coach.free_days && coach.free_days.length > 0) {
+            weeklyAvailabilityHtml += `<div class='mt-6'><h4 class='text-md font-medium text-gray-900 mb-2'>Weekly Availability</h4>`;
+            weeklyAvailabilityHtml += `<div class='overflow-x-auto'><table class='min-w-full border border-gray-200'><thead><tr class='bg-gray-50'><th class='border border-gray-200 p-2 text-sm font-medium text-gray-700'>Day</th><th class='border border-gray-200 p-2 text-sm font-medium text-gray-700'>Availability</th></tr></thead><tbody>`;
+            const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+            for (const day of daysOfWeek) {
+                const fd = coach.free_days.find(d => d.day_of_week === day);
+                weeklyAvailabilityHtml += `<tr>`;
+                weeklyAvailabilityHtml += `<td class='border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50'>${day}</td>`;
+                weeklyAvailabilityHtml += `<td class='border border-gray-200 p-2 text-sm ${fd && fd.is_available ? 'text-green-700' : 'text-red-700'}'>`;
+                if (fd && fd.is_available) {
+                    weeklyAvailabilityHtml += `Available ${
+                        (typeof fd.start_time === 'string' && fd.start_time.includes(':'))
+                            ? fd.start_time.slice(0,5)
+                            : '08:00'
+                    }-${
+                        (typeof fd.end_time === 'string' && fd.end_time.includes(':'))
+                            ? fd.end_time.slice(0,5)
+                            : '20:00'
+                    }`;
+                } else {
+                    weeklyAvailabilityHtml += 'Unavailable';
+                }
+                weeklyAvailabilityHtml += `</td></tr>`;
+            }
+            weeklyAvailabilityHtml += '</tbody></table></div></div>';
+        }
         const modalHtml = `
             <div id="coachPreferencesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
                 <div class="flex items-center justify-center min-h-screen p-4">
@@ -572,14 +636,7 @@
                                         <p class="text-sm text-gray-700">${coach.notes}</p>
                                     </div>
                                 ` : ''}
-                                
-                                <!-- Edit Preferences Button -->
-                                <div class="border-t border-gray-200 pt-6">
-                                    <button onclick="editCoachPreferences(${coach.id})" 
-                                            class="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                                        <i class="fas fa-edit mr-2"></i>Edit Preferences
-                                    </button>
-                                </div>
+                                ${weeklyAvailabilityHtml}
                             </div>
                         </div>
                     </div>
@@ -734,9 +791,11 @@
     // Render calendar
     function renderCalendar(data) {
         const title = document.getElementById('calendarTitle');
+        if (!title) return;
         title.textContent = `${data.month_name} ${data.year}`;
         
         const grid = document.getElementById('calendarGrid');
+        if (!grid) return;
         grid.innerHTML = '';
         
         // Add day headers
@@ -1054,5 +1113,118 @@
             modal.remove();
         }
     }
+
+    // --- Member's Own Date-Based Schedule ---
+    async function renderMyDateBasedSchedule() {
+        try {
+            // Get current user info
+            const userResponse = await fetch('/api/user');
+            if (!userResponse.ok) throw new Error('Failed to get user info');
+            const userData = await userResponse.json();
+            // Get preferences (for free_days)
+            const prefResponse = await fetch('/api/preferences');
+            if (!prefResponse.ok) throw new Error('Failed to get preferences');
+            const prefData = await prefResponse.json();
+            const member = {
+                id: userData.id,
+                name: userData.name,
+                free_days: prefData.free_days || [],
+                preferred_workout_types: prefData.preferences?.preferred_workout_types || [],
+                preferred_duration: prefData.preferences?.preferred_duration || 60,
+                preferred_time_slots: prefData.preferences?.preferred_time_slots || [],
+                notes: prefData.preferences?.notes || ''
+            };
+            // Get date-based availability for next 7 days
+            const today = new Date();
+            const endDate = new Date();
+            endDate.setDate(today.getDate() + 6);
+            const startStr = today.toISOString().split('T')[0];
+            const endStr = endDate.toISOString().split('T')[0];
+            const availResponse = await fetch(`/api/availability/bulk?user_ids=${member.id}&start_date=${startStr}&end_date=${endStr}`);
+            if (!availResponse.ok) throw new Error('Failed to get availability');
+            const availData = await availResponse.json();
+            // Render schedule
+            const scheduleDiv = document.getElementById('myDateBasedSchedule');
+            if (scheduleDiv) {
+                scheduleDiv.innerHTML = generateMemberDateBasedScheduleHtml(member, availData.availability);
+            }
+        } catch (error) {
+            const scheduleDiv = document.getElementById('myDateBasedSchedule');
+            if (scheduleDiv) {
+                scheduleDiv.innerHTML = `<div class='text-red-600'>Error loading schedule: ${error.message}</div>`;
+            }
+        }
+    }
+    // Generate schedule HTML for a single member (reuse coach logic)
+    function generateMemberDateBasedScheduleHtml(member, availabilityData) {
+        const hours = Array.from({length: 14}, (_, i) => i + 8); // 8 AM to 9 PM
+        const days = 7;
+        let html = `<div class="overflow-x-auto"><table class="min-w-full border border-gray-200"><thead><tr class="bg-gray-50"><th class="border border-gray-200 p-2 text-sm font-medium text-gray-700">Time</th>`;
+        for (let i = 0; i < days; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            html += `<th class="border border-gray-200 p-2 text-sm font-medium text-gray-700">${dateStr}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+        hours.forEach(hour => {
+            html += '<tr>';
+            html += `<td class="border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50">${hour}:00</td>`;
+            for (let i = 0; i < days; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+                const available = getMemberAvailableAtDateTime(member, availabilityData, dateStr, hour);
+                let cellClass = '';
+                let cellContent = '';
+                if (available) {
+                    cellClass = 'bg-green-50';
+                    cellContent = `<div class="text-xs bg-green-100 text-green-800 p-1 rounded">Available</div>`;
+                } else {
+                    cellClass = 'bg-red-50';
+                    cellContent = `<div class="text-xs bg-red-100 text-red-800 p-1 rounded">Unavailable</div>`;
+                }
+                html += `<td class="border border-gray-200 p-2 text-xs min-h-[60px] ${cellClass}">${cellContent}</td>`;
+            }
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        html += `<div class="mt-4 p-3 bg-gray-50 rounded-lg"><h4 class="text-sm font-medium text-gray-700 mb-2">Legend:</h4><div class="flex items-center space-x-4 text-xs"><div class="flex items-center space-x-2"><div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div><span class="text-gray-600">Available</span></div><div class="flex items-center space-x-2"><div class="w-4 h-4 bg-red-100 border border-red-200 rounded"></div><span class="text-gray-600">Unavailable</span></div><div class="flex items-center space-x-2"><div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div><span class="text-gray-600">No Data</span></div></div></div>`;
+        return html;
+    }
+    // Availability logic for a single member (same as coach logic)
+    function getMemberAvailableAtDateTime(member, availabilityData, dateStr, hour) {
+        const weekday = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' });
+        const freeDay = member.free_days ? member.free_days.find(fd => fd.day_of_week === weekday) : null;
+        const memberAvailability = availabilityData[member.id];
+        if (freeDay && !freeDay.is_available) {
+            if (memberAvailability && memberAvailability[dateStr] && memberAvailability[dateStr][hour] === true) {
+                return true;
+            }
+            return false;
+        }
+        if (freeDay && freeDay.is_available) {
+            let startHour = 8;
+            let endHour = 20;
+            if (typeof freeDay.start_time === 'string' && freeDay.start_time.includes(':')) {
+                startHour = parseInt(freeDay.start_time.split(':')[0], 10);
+            }
+            if (typeof freeDay.end_time === 'string' && freeDay.end_time.includes(':')) {
+                endHour = parseInt(freeDay.end_time.split(':')[0], 10);
+            }
+            if (hour < startHour || hour >= endHour) {
+                if (memberAvailability && memberAvailability[dateStr] && memberAvailability[dateStr][hour] === true) {
+                    return true;
+                }
+                return false;
+            }
+        }
+        if (!memberAvailability) return true;
+        const dateAvailability = memberAvailability[dateStr];
+        if (!dateAvailability) return true;
+        return dateAvailability[hour] !== false;
+    }
+    // Render on page load
+    renderMyDateBasedSchedule();
 </script>
 {% endblock %} 
