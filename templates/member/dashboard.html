@@ -138,6 +138,81 @@
             </div>
         </div>
     </div>
+
+    <!-- AI Chatbot Section -->
+    <div class="bg-white shadow rounded-lg mt-6">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">
+                    <i class="fas fa-comments mr-2 text-indigo-600"></i>AI Assistant
+                </h3>
+                <button id="toggleChatbot" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    <i class="fas fa-chevron-down mr-1"></i>Show Chat
+                </button>
+            </div>
+            
+            <!-- Chatbot Interface (Hidden by default) -->
+            <div id="chatbotInterface" class="hidden">
+                <!-- Role Selection -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <div class="flex items-center justify-center space-x-4">
+                        <span class="text-sm font-medium text-gray-700">Select your role:</span>
+                        <div class="flex space-x-2">
+                            <button id="memberBtn" class="px-4 py-2 rounded-lg border-2 border-blue-500 bg-blue-500 text-white font-medium text-sm transition-colors">
+                                Member
+                            </button>
+                            <button id="coachBtn" class="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-green-500 hover:text-green-700 transition-colors">
+                                Coach
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Messages Container -->
+                <div id="chatMessages" class="bg-gray-50 rounded-lg p-4 mb-4 h-64 overflow-y-auto space-y-3">
+                    <!-- Welcome message -->
+                    <div class="flex justify-start">
+                        <div class="max-w-xs bg-blue-500 text-white rounded-lg px-3 py-2">
+                            <p class="text-sm">Hello! I'm your AI assistant. How can I help you today?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Typing Indicator -->
+                <div id="typingIndicator" class="hidden bg-gray-50 rounded-lg p-3 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="bg-gray-300 rounded-full p-2">
+                            <div class="w-2 h-2 bg-gray-600 rounded-full"></div>
+                        </div>
+                        <div class="flex space-x-1">
+                            <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                            <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                            <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                        </div>
+                        <span class="text-sm text-gray-500">AI is typing...</span>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="flex space-x-3">
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        placeholder="Type your message here..."
+                        class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        onkeypress="handleKeyPress(event)"
+                    >
+                    <button 
+                        id="sendButton"
+                        onclick="sendMessage()"
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors text-sm"
+                    >
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
@@ -368,6 +443,111 @@
         `).join('');
     }
 
+    // Chatbot Functions
+    let currentRole = 'member';
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+
+    function addMessage(content, isUser = false) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+        
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = `max-w-xs ${isUser ? 'bg-indigo-500 text-white' : 'bg-blue-500 text-white'} rounded-lg px-3 py-2`;
+        
+        const messageText = document.createElement('p');
+        messageText.className = 'text-sm';
+        messageText.textContent = content;
+        
+        bubbleDiv.appendChild(messageText);
+        messageDiv.appendChild(bubbleDiv);
+        chatMessages.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+        document.getElementById('typingIndicator').classList.remove('hidden');
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+        document.getElementById('typingIndicator').classList.add('hidden');
+    }
+
+    async function sendMessage() {
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const message = messageInput.value.trim();
+        if (!message) return;
+
+        // Disable input and button
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+
+        // Add user message
+        addMessage(message, true);
+        messageInput.value = '';
+
+        // Show typing indicator
+        showTypingIndicator();
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    message: message,
+                    role: currentRole
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            // Hide typing indicator
+            hideTypingIndicator();
+            
+            // Add bot response
+            addMessage(data.reply, false);
+
+        } catch (error) {
+            console.error('Error:', error);
+            hideTypingIndicator();
+            addMessage('Sorry, I encountered an error. Please try again.', false);
+        } finally {
+            // Re-enable input and button
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+        }
+    }
+
+    function updateRoleButtons() {
+        const memberBtn = document.getElementById('memberBtn');
+        const coachBtn = document.getElementById('coachBtn');
+        
+        if (currentRole === 'member') {
+            memberBtn.className = 'px-4 py-2 rounded-lg border-2 border-blue-500 bg-blue-500 text-white font-medium text-sm transition-colors';
+            coachBtn.className = 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-green-500 hover:text-green-700 transition-colors';
+        } else {
+            memberBtn.className = 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-blue-500 hover:text-blue-700 transition-colors';
+            coachBtn.className = 'px-4 py-2 rounded-lg border-2 border-green-500 bg-green-500 text-white font-medium text-sm transition-colors';
+        }
+    }
+
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
         // Load dashboard data
@@ -385,6 +565,36 @@
             if (startBtn) startBtn.addEventListener('click', startClassifier);
             if (stopBtn) stopBtn.addEventListener('click', stopClassifier);
         }
+
+        // Chatbot event listeners
+        const toggleChatbot = document.getElementById('toggleChatbot');
+        const chatbotInterface = document.getElementById('chatbotInterface');
+        const memberBtn = document.getElementById('memberBtn');
+        const coachBtn = document.getElementById('coachBtn');
+
+        toggleChatbot.addEventListener('click', function() {
+            const isHidden = chatbotInterface.classList.contains('hidden');
+            if (isHidden) {
+                chatbotInterface.classList.remove('hidden');
+                toggleChatbot.innerHTML = '<i class="fas fa-chevron-up mr-1"></i>Hide Chat';
+            } else {
+                chatbotInterface.classList.add('hidden');
+                toggleChatbot.innerHTML = '<i class="fas fa-chevron-down mr-1"></i>Show Chat';
+            }
+        });
+
+        memberBtn.addEventListener('click', function() {
+            currentRole = 'member';
+            updateRoleButtons();
+        });
+
+        coachBtn.addEventListener('click', function() {
+            currentRole = 'coach';
+            updateRoleButtons();
+        });
+
+        // Initialize role buttons
+        updateRoleButtons();
     });
 </script>
 {% endblock %}

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request, Depends, Form, status, WebSocket, WebSocketDisconnect, Query, UploadFile, File
+
 import pymysql
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
@@ -15,6 +16,7 @@ import numpy as np
 import cv2
 import torch
 from transformers import AutoImageProcessor, SiglipForImageClassification
+import requests
 
 # Helper function to convert non-serializable objects to JSON-serializable format
 def convert_for_json(obj):
@@ -4350,6 +4352,260 @@ async def classify_frame(
     label = model.config.id2label.get(predicted_class_idx, str(predicted_class_idx))
     score = torch.nn.functional.softmax(logits, dim=-1)[0, predicted_class_idx].item()
     return {"label": label, "score": score}
+
+# Add this constant at the top of your file with your actual API key
+OPENROUTER_API_KEY = "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"  # Replace with your actual OpenRouter API key
+
+@app.post("/api/chat")
+async def chat(request: Request):
+    try:
+        # Get JSON data from request
+        data = await request.json()
+        
+        # Validate request data
+        if not data or 'message' not in data:
+            raise HTTPException(status_code=400, detail="Missing message field")
+        
+        user_message = data['message']
+        
+        # Validate message is not empty
+        if not user_message or not user_message.strip():
+            raise HTTPException(status_code=400, detail="Message cannot be empty")
+        
+        # Prepare request to OpenRouter API
+        headers = {
+            'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+            'Content-Type': 'application/json'
+        }
+        
+        payload = {
+            'model': 'openai/gpt-3.5-turbo',
+            'messages': [
+                {'role': 'system', 'content': 'You are a helpful assistant.'},
+                {'role': 'user', 'content': user_message}
+            ],
+            'max_tokens': 500
+        }
+        
+        # Make request to OpenRouter API
+        response = requests.post(
+            'https://openrouter.ai/api/v1/chat/completions',
+            headers=headers,
+            json=payload,
+            timeout=30  # 30 second timeout
+        )
+        
+        # Check if OpenRouter request was successful
+        if response.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"OpenRouter API error: {response.text}")
+        
+        # Parse OpenRouter response
+        openrouter_data = response.json()
+        
+        # Extract the assistant's reply
+        if 'choices' in openrouter_data and len(openrouter_data['choices']) > 0:
+            assistant_reply = openrouter_data['choices'][0]['message']['content']
+            return {"reply": assistant_reply}
+        else:
+            raise HTTPException(status_code=500, detail="Invalid response from OpenRouter API")
+            
+    except HTTPException:
+        raise
+    except requests.exceptions.RequestException as e:
+        # Handle network/connection errors
+        raise HTTPException(status_code=500, detail=f"Network error: {str(e)}")
+    except json.JSONDecodeError as e:
+        # Handle JSON parsing errors
+        raise HTTPException(status_code=500, detail="Invalid JSON response from OpenRouter")
+    except Exception as e:
+        # Handle any other unexpected errors
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.get("/chatbot", response_class=HTMLResponse)
+async def chatbot_page():
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .chat-container {
+            height: calc(100vh - 140px);
+        }
+        .message-bubble {
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .typing-indicator {
+            display: none;
+        }
+        .typing-indicator.show {
+            display: flex;
+        }
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen">
+    <div class="max-w-4xl mx-auto h-full flex flex-col">
+        <!-- Header -->
+        <div class="bg-white shadow-sm border-b px-6 py-4">
+            <h1 class="text-xl font-semibold text-gray-800">AI Assistant</h1>
+            <p class="text-sm text-gray-600">Ask me anything!</p>
+        </div>
+
+        <!-- Chat Messages Container -->
+        <div id="chatMessages" class="chat-container bg-white overflow-y-auto p-4 space-y-4">
+            <!-- Welcome message -->
+            <div class="flex justify-start">
+                <div class="message-bubble bg-blue-500 text-white rounded-lg px-4 py-2">
+                    <p class="text-sm">Hello! I'm your AI assistant. How can I help you today?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="typingIndicator" class="typing-indicator bg-white px-4 py-2">
+            <div class="flex items-center space-x-2">
+                <div class="bg-gray-300 rounded-full p-2">
+                    <div class="w-2 h-2 bg-gray-600 rounded-full"></div>
+                </div>
+                <div class="flex space-x-1">
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                    <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+                </div>
+                <span class="text-sm text-gray-500">AI is typing...</span>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="bg-white border-t px-4 py-4">
+            <div class="flex space-x-3">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Type your message here..."
+                    class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button 
+                    id="sendButton"
+                    onclick="sendMessage()"
+                    class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                >
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = `message-bubble ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'} rounded-lg px-4 py-2`;
+            
+            const messageText = document.createElement('p');
+            messageText.className = 'text-sm';
+            messageText.textContent = content;
+            
+            bubbleDiv.appendChild(messageText);
+            messageDiv.appendChild(bubbleDiv);
+            chatMessages.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            typingIndicator.classList.add('show');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            typingIndicator.classList.remove('show');
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Disable input and button
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+
+            // Add user message
+            addMessage(message, true);
+            messageInput.value = '';
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Hide typing indicator
+                hideTypingIndicator();
+                
+                // Add bot response
+                addMessage(data.reply, false);
+
+            } catch (error) {
+                console.error('Error:', error);
+                hideTypingIndicator();
+                addMessage('Sorry, I encountered an error. Please try again.', false);
+            } finally {
+                // Re-enable input and button
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        // Focus input on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            messageInput.focus();
+        });
+    </script>
+</body>
+</html>
+"""
 
 if __name__ == "__main__":
     import uvicorn
