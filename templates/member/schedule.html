@@ -161,55 +161,11 @@
         </div>
     </div>
 
-    <!-- Weekly Schedule View -->
+    <!-- Weekly Availability Comparison Section -->
     <div class="bg-white shadow rounded-lg mb-6">
         <div class="px-4 py-5 sm:p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h4 class="text-lg font-medium text-gray-900">Weekly Schedule</h4>
-                <div class="flex space-x-2">
-                    <button id="prevWeek" class="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
-                        <i class="fas fa-chevron-left"></i> Previous Week
-                    </button>
-                    <button id="nextWeek" class="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
-                        Next Week <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
-            
-
-            <div class="mb-4">
-                <div class="flex items-center space-x-4 text-sm">
-                    <div class="flex items-center">
-                        <div class="w-3 h-3 bg-green-50 border border-green-200 rounded mr-2 relative">
-                            <div class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                        </div>
-                        <span class="text-gray-600">Coach Available</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-3 h-3 bg-gray-50 border border-gray-200 rounded mr-2"></div>
-                        <span class="text-gray-600">Coach Unavailable</span>
-                    </div>
-                </div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
-                        <tr>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="monday">Monday</th>
-                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="tuesday">Tuesday</th>
-                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="wednesday">Wednesday</th>
-                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="thursday">Thursday</th>
-                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="friday">Friday</th>
-                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="saturday">Saturday</th>
-                            <th class="px-6 py-3 bg-gray-50 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" id="sunday">Sunday</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200" id="scheduleTable">
-                        <!-- Schedule will be populated here -->
-                    </tbody>
-                </table>
-            </div>
+            <h4 class="text-lg font-medium text-gray-900 mb-4">Weekly Availability: Member vs Coach</h4>
+            <div id="weeklyAvailabilityComparison"></div>
         </div>
     </div>
 
@@ -860,8 +816,9 @@
             // Hide form and show display
             togglePreferencesForm();
             
-            // Refresh display
-            displayPreferences();
+            // Re-fetch preferences and re-render everything
+            await loadPreferences();
+            renderWeeklyAvailabilityComparison();
             
             alert('Preferences updated successfully!');
         } catch (error) {
@@ -869,5 +826,76 @@
             alert('Failed to update preferences. Please try again.');
         }
     });
+
+    async function renderWeeklyAvailabilityComparison() {
+        try {
+            const prefRes = await fetch('/api/preferences');
+            if (!prefRes.ok) throw new Error('Failed to fetch member preferences');
+            const prefData = await prefRes.json();
+            console.log('Member free_days:', prefData.free_days);
+            const coachRes = await fetch('/api/member/coach');
+            if (!coachRes.ok) throw new Error('Failed to fetch coach info');
+            const coachData = await coachRes.json();
+            console.log('Coach info:', coachData);
+            if (!coachData.coach) throw new Error('No coach assigned');
+            const coachId = coachData.coach.id;
+            const coachPrefRes = await fetch(`/api/member/coach/${coachId}/preferences`);
+            if (!coachPrefRes.ok) throw new Error('Failed to fetch coach preferences');
+            const coachPrefData = await coachPrefRes.json();
+            console.log('Coach free_days:', coachPrefData.free_days);
+            const memberFreeDays = prefData.free_days || [];
+            const coachFreeDays = coachPrefData.free_days || [];
+            document.getElementById('weeklyAvailabilityComparison').innerHTML = generateWeeklyAvailabilityTable(memberFreeDays, coachFreeDays);
+        } catch (error) {
+            document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading weekly availability: ${error.message}</div>`;
+            console.error(error);
+        }
+    }
+    // Ensure this is called on page load
+    renderWeeklyAvailabilityComparison();
+
+    function generateWeeklyAvailabilityTable(memberFreeDays, coachFreeDays) {
+        const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+        let html = `<div class='overflow-x-auto'><table class='min-w-full border border-gray-200'><thead><tr class='bg-gray-50'><th class='border border-gray-200 p-2 text-sm font-medium text-gray-700'>Day</th><th class='border border-gray-200 p-2 text-sm font-medium text-gray-700'>Member</th><th class='border border-gray-200 p-2 text-sm font-medium text-gray-700'>Coach</th></tr></thead><tbody>`;
+        for (const day of daysOfWeek) {
+            const memberDay = memberFreeDays.find(fd => fd.day_of_week === day);
+            const coachDay = coachFreeDays.find(fd => fd.day_of_week === day);
+            html += `<tr>`;
+            html += `<td class='border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50'>${day}</td>`;
+            html += `<td class='border border-gray-200 p-2 text-sm ${memberDay && memberDay.is_available ? 'text-green-700' : 'text-red-700'}'>`;
+            if (memberDay && memberDay.is_available) {
+                html += `Available ${
+                    (typeof memberDay.start_time === 'string' && memberDay.start_time.includes(':'))
+                        ? memberDay.start_time.slice(0,5)
+                        : '08:00'
+                }-${
+                    (typeof memberDay.end_time === 'string' && memberDay.end_time.includes(':'))
+                        ? memberDay.end_time.slice(0,5)
+                        : '20:00'
+                }`;
+            } else {
+                html += 'Unavailable';
+            }
+            html += `</td>`;
+            html += `<td class='border border-gray-200 p-2 text-sm ${coachDay && coachDay.is_available ? 'text-green-700' : 'text-red-700'}'>`;
+            if (coachDay && coachDay.is_available) {
+                html += `Available ${
+                    (typeof coachDay.start_time === 'string' && coachDay.start_time.includes(':'))
+                        ? coachDay.start_time.slice(0,5)
+                        : '08:00'
+                }-${
+                    (typeof coachDay.end_time === 'string' && coachDay.end_time.includes(':'))
+                        ? coachDay.end_time.slice(0,5)
+                        : '20:00'
+                }`;
+            } else {
+                html += 'Unavailable';
+            }
+            html += `</td>`;
+            html += `</tr>`;
+        }
+        html += '</tbody></table></div>';
+        return html;
+    }
 </script>
 {% endblock %} 

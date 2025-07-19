@@ -693,23 +693,30 @@
             
             if (day.start_time) {
                 if (typeof day.start_time === 'string') {
-                    startTime = day.start_time.substring(0, 5);
+                    // Ensure always HH:mm (with leading zero)
+                    const parts = day.start_time.split(':');
+                    if (parts.length >= 2) {
+                        startTime = parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+                    }
                 } else if (day.start_time.total_seconds) {
                     // Handle timedelta objects
-                    const hours = Math.floor(day.start_time.total_seconds() / 3600);
-                    const minutes = Math.floor((day.start_time.total_seconds() % 3600) / 60);
-                    startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                    const hours = Math.floor(day.start_time.total_seconds / 3600);
+                    const minutes = Math.floor((day.start_time.total_seconds % 3600) / 60);
+                    startTime = hours.toString().padStart(2, '0') + ':' + minutes.toString().padStart(2, '0');
                 }
             }
             
             if (day.end_time) {
                 if (typeof day.end_time === 'string') {
-                    endTime = day.end_time.substring(0, 5);
+                    const parts = day.end_time.split(':');
+                    if (parts.length >= 2) {
+                        endTime = parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+                    }
                 } else if (day.end_time.total_seconds) {
                     // Handle timedelta objects
-                    const hours = Math.floor(day.end_time.total_seconds() / 3600);
-                    const minutes = Math.floor((day.end_time.total_seconds() % 3600) / 60);
-                    endTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                    const hours = Math.floor(day.end_time.total_seconds / 3600);
+                    const minutes = Math.floor((day.end_time.total_seconds % 3600) / 60);
+                    endTime = hours.toString().padStart(2, '0') + ':' + minutes.toString().padStart(2, '0');
                 }
             }
             
@@ -820,8 +827,8 @@
             // Hide form and show display
             togglePreferencesForm();
             
-            // Refresh display
-            displayPreferences();
+            // Re-fetch preferences and re-render everything
+            await loadPreferences();
             
             alert('Preferences updated successfully!');
         } catch (error) {

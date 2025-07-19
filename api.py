@@ -8,7 +8,6 @@ from typing import Optional, Dict, Tuple, List, Union
 import secrets
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-import bcrypt
 import json
 import os
 import random
@@ -3609,6 +3608,17 @@ async def get_user_preferences(current_user: dict = Depends(get_current_user)):
             ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
         """, (user_id, user_type))
         free_days = cursor.fetchall()
+        
+        # Convert start_time and end_time to strings for frontend compatibility
+        for day in free_days:
+            if day.get('start_time') is not None:
+                day['start_time'] = str(day['start_time'])
+            else:
+                day['start_time'] = '08:00:00'
+            if day.get('end_time') is not None:
+                day['end_time'] = str(day['end_time'])
+            else:
+                day['end_time'] = '20:00:00'
         
         # Initialize default preferences if none exist
         if not preferences:
