@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, Depends, Form, status, WebSocket, WebSocketDisconnect, Query
+from fastapi import FastAPI, HTTPException, Request, Depends, Form, status, WebSocket, WebSocketDisconnect, Query, UploadFile, File
 import pymysql
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
@@ -11,6 +11,10 @@ from fastapi.staticfiles import StaticFiles
 import json
 import os
 import random
+import numpy as np
+import cv2
+import torch
+from transformers import AutoImageProcessor, SiglipForImageClassification
 
 # Helper function to convert non-serializable objects to JSON-serializable format
 def convert_for_json(obj):
@@ -4316,6 +4320,36 @@ async def update_user_availability_bulk(
     finally:
         if connection:
             connection.close()
+
+# Load model once at startup for classifier endpoint
+image_processor = AutoImageProcessor.from_pretrained("prithivMLmods/Gym-Workout-Classifier-SigLIP2")
+model = SiglipForImageClassification.from_pretrained("prithivMLmods/Gym-Workout-Classifier-SigLIP2")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = model.to(device)
+
+@app.post("/api/classify-frame")
+async def classify_frame(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    # Only allow premium members
+    if not current_user or current_user.get("user_type") != "member":
+        raise HTTPException(status_code=403, detail="Members only")
+    if current_user.get("membership_type") != "Premium":
+        raise HTTPException(status_code=403, detail="Only premium members can use this feature")
+    # Read image bytes
+    contents = await file.read()
+    nparr = np.frombuffer(contents, np.uint8)
+    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    inputs = image_processor(images=rgb_frame, return_tensors="pt").to(device)
+    with torch.no_grad():
+        outputs = model(**inputs)
+    logits = outputs.logits
+    predicted_class_idx = logits.argmax(-1).item()
+    label = model.config.id2label.get(predicted_class_idx, str(predicted_class_idx))
+    score = torch.nn.functional.softmax(logits, dim=-1)[0, predicted_class_idx].item()
+    return {"label": label, "score": score}
 
 if __name__ == "__main__":
     import uvicorn
