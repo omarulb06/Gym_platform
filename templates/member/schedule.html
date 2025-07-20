@@ -161,6 +161,20 @@
         </div>
     </div>
 
+    <!-- My Workout Sessions (Custom Interval) -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-6">My Workout Sessions</h2>
+        <div class="flex items-center space-x-2 mb-4">
+            <input type="date" id="memberStartDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <span class="text-gray-500">to</span>
+            <input type="date" id="memberEndDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <button id="memberSearchBtn" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                <i class="fas fa-search mr-2"></i>Search
+            </button>
+        </div>
+        <div id="memberSessionsGrid" class="grid grid-cols-1 md:grid-cols-7 gap-4"></div>
+    </div>
+
     <!-- Weekly Availability Comparison Section -->
     <div class="bg-white shadow rounded-lg mb-6">
         <div class="px-4 py-5 sm:p-6">
@@ -246,7 +260,12 @@
 
     // Format time as HH:MM
     function formatTime(time) {
-        return time.split(':').slice(0, 2).join(':');
+        // Accepts 'HH:mm', 'HH:mm:ss', or 'H:mm', returns 'HH:mm'
+        if (!time) return '00:00';
+        const parts = time.split(':');
+        let h = parts[0] ? parts[0].padStart(2, '0') : '00';
+        let m = parts[1] ? parts[1].padStart(2, '0') : '00';
+        return `${h}:${m}`;
     }
 
     // Generate time slots
@@ -265,7 +284,9 @@
             const date = new Date(startDate);
             date.setDate(startDate.getDate() + index);
             const header = document.getElementById(day);
-            header.textContent = `${day.charAt(0).toUpperCase() + day.slice(1)} (${formatDate(date)})`;
+            if (header) {
+                header.textContent = `${day.charAt(0).toUpperCase() + day.slice(1)} (${formatDate(date)})`;
+            }
         });
     }
 
@@ -276,6 +297,7 @@
         
         const timeSlots = generateTimeSlots();
         const scheduleTable = document.getElementById('scheduleTable');
+        if (!scheduleTable) return;
         scheduleTable.innerHTML = '';
         
         timeSlots.forEach(time => {
@@ -353,6 +375,7 @@
         if (!session) return;
 
         const detailsDiv = document.getElementById('selectedSessionDetails');
+        if (!detailsDiv) return;
         detailsDiv.innerHTML = `
             <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -383,7 +406,8 @@
                 </div>
             </div>
         `;
-        document.getElementById('sessionDetails').style.display = 'block';
+        const sessionDetails = document.getElementById('sessionDetails');
+        if (sessionDetails) sessionDetails.style.display = 'block';
     }
 
     // Load sessions
@@ -407,35 +431,99 @@
             loadCoachPreferencesFromSchedule(data.coach, data.coach_availability);
             
             generateSchedule();
+            renderMemberSessionsGrid();
+            renderMemberWeeklySchedule();
             
         } catch (error) {
             console.error('Error loading sessions:', error);
             const scheduleTable = document.getElementById('scheduleTable');
-            scheduleTable.innerHTML = `
-                <tr>
-                    <td colspan="8" class="px-6 py-4 text-center text-red-500">
-                        Failed to load schedule. Please try again.
-                    </td>
-                </tr>
-            `;
+            if (scheduleTable) {
+                scheduleTable.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-6 py-4 text-center text-red-500">
+                            Failed to load schedule. Please try again.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+    }
+
+    // Add state for member interval
+    let memberStartDate = null;
+    let memberEndDate = null;
+
+    function setDefaultMemberDateRange() {
+        // Set to current week (Monday to Sunday)
+        const today = new Date();
+        const start = new Date(today);
+        const day = start.getDay();
+        const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Monday
+        start.setDate(diff);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        memberStartDate = formatDate(start);
+        memberEndDate = formatDate(end);
+        document.getElementById('memberStartDate').value = memberStartDate;
+        document.getElementById('memberEndDate').value = memberEndDate;
+    }
+
+    // Update loadSessions to accept a date range
+    async function loadMemberSessionsForRange() {
+        try {
+            const start = document.getElementById('memberStartDate').value;
+            const end = document.getElementById('memberEndDate').value;
+            if (!start || !end) return;
+            memberStartDate = start;
+            memberEndDate = end;
+            const response = await fetch(`/api/member/schedule?start_date=${start}&end_date=${end}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            sessions = data.sessions;
+            window.coachFreeDays = data.coach_availability || [];
+            loadCoachPreferencesFromSchedule(data.coach, data.coach_availability);
+            renderMemberSessionsGrid();
+        } catch (error) {
+            console.error('Error loading sessions:', error);
+            const container = document.getElementById('memberSessionsGrid');
+            if (container) {
+                container.innerHTML = `<div class='text-red-600'>Failed to load schedule. Please try again.</div>`;
+            }
         }
     }
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', () => {
+        setDefaultMemberDateRange();
+        loadMemberSessionsForRange();
         loadSessions();
         loadPreferences();
         
-        // Add event listeners for week navigation
-        document.getElementById('prevWeek').addEventListener('click', () => {
-            currentDate.setDate(currentDate.getDate() - 7);
-            loadSessions();
-        });
+        // Add event listeners for week navigation only if elements exist
+        const prevWeekBtn = document.getElementById('prevWeek');
+        if (prevWeekBtn) {
+            prevWeekBtn.addEventListener('click', () => {
+                currentDate.setDate(currentDate.getDate() - 7);
+                loadSessions();
+            });
+        }
         
-        document.getElementById('nextWeek').addEventListener('click', () => {
-            currentDate.setDate(currentDate.getDate() + 7);
-            loadSessions();
-        });
+        const nextWeekBtn = document.getElementById('nextWeek');
+        if (nextWeekBtn) {
+            nextWeekBtn.addEventListener('click', () => {
+                currentDate.setDate(currentDate.getDate() + 7);
+                loadSessions();
+            });
+        }
+        // Add event listener for member search
+        const memberSearchBtn = document.getElementById('memberSearchBtn');
+        if (memberSearchBtn) {
+            memberSearchBtn.addEventListener('click', () => {
+                loadMemberSessionsForRange();
+            });
+        }
     });
 
 
@@ -683,28 +771,36 @@
         }
         
         userFreeDays.forEach(day => {
-            // Ensure start_time and end_time are strings and handle different formats
+            // Ensure start_time and end_time are always 'HH:mm' for input values
             let startTime = '08:00';
             let endTime = '20:00';
-            
+
             if (day.start_time) {
                 if (typeof day.start_time === 'string') {
-                    startTime = day.start_time.substring(0, 5);
+                    // Only use the first two parts and pad with zeros if needed
+                    const parts = day.start_time.split(':');
+                    let h = parts[0] ? parts[0].padStart(2, '0') : '00';
+                    let m = parts[1] ? parts[1].padStart(2, '0') : '00';
+                    startTime = `${h}:${m}`;
                 } else if (day.start_time.total_seconds) {
                     // Handle timedelta objects
-                    const hours = Math.floor(day.start_time.total_seconds() / 3600);
-                    const minutes = Math.floor((day.start_time.total_seconds() % 3600) / 60);
+                    const hours = Math.floor(day.start_time.total_seconds / 3600);
+                    const minutes = Math.floor((day.start_time.total_seconds % 3600) / 60);
                     startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
                 }
             }
-            
+
             if (day.end_time) {
                 if (typeof day.end_time === 'string') {
-                    endTime = day.end_time.substring(0, 5);
+                    // Only use the first two parts and pad with zeros if needed
+                    const parts = day.end_time.split(':');
+                    let h = parts[0] ? parts[0].padStart(2, '0') : '00';
+                    let m = parts[1] ? parts[1].padStart(2, '0') : '00';
+                    endTime = `${h}:${m}`;
                 } else if (day.end_time.total_seconds) {
                     // Handle timedelta objects
-                    const hours = Math.floor(day.end_time.total_seconds() / 3600);
-                    const minutes = Math.floor((day.end_time.total_seconds() % 3600) / 60);
+                    const hours = Math.floor(day.end_time.total_seconds / 3600);
+                    const minutes = Math.floor((day.end_time.total_seconds % 3600) / 60);
                     endTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
                 }
             }
@@ -828,74 +924,187 @@
     });
 
     async function renderWeeklyAvailabilityComparison() {
-        try {
-            const prefRes = await fetch('/api/preferences');
-            if (!prefRes.ok) throw new Error('Failed to fetch member preferences');
-            const prefData = await prefRes.json();
-            console.log('Member free_days:', prefData.free_days);
-            const coachRes = await fetch('/api/member/coach');
-            if (!coachRes.ok) throw new Error('Failed to fetch coach info');
-            const coachData = await coachRes.json();
-            console.log('Coach info:', coachData);
-            if (!coachData.coach) throw new Error('No coach assigned');
-            const coachId = coachData.coach.id;
-            const coachPrefRes = await fetch(`/api/member/coach/${coachId}/preferences`);
-            if (!coachPrefRes.ok) throw new Error('Failed to fetch coach preferences');
-            const coachPrefData = await coachPrefRes.json();
-            console.log('Coach free_days:', coachPrefData.free_days);
-            const memberFreeDays = prefData.free_days || [];
-            const coachFreeDays = coachPrefData.free_days || [];
-            document.getElementById('weeklyAvailabilityComparison').innerHTML = generateWeeklyAvailabilityTable(memberFreeDays, coachFreeDays);
-        } catch (error) {
-            document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading weekly availability: ${error.message}</div>`;
-            console.error(error);
-        }
+        fetch('/api/preferences').then(r => r.json()).then(prefData => {
+            fetch('/api/member/coach').then(r => r.json()).then(coachData => {
+                if (!coachData.coach) {
+                    document.getElementById('weeklyAvailabilityComparison').innerHTML = '<div class="text-red-600">No coach assigned</div>';
+                    return;
+                }
+                fetch(`/api/member/coach/${coachData.coach.id}/preferences`).then(r => r.json()).then(coachPrefData => {
+                    const memberFreeDays = prefData.free_days || [];
+                    const coachFreeDays = coachPrefData.free_days || [];
+                    document.getElementById('weeklyAvailabilityComparison').innerHTML = generateElegantWeeklyAvailabilityTable(memberFreeDays, coachFreeDays);
+                }).catch(error => {
+                    document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading coach preferences</div>`;
+                });
+            }).catch(error => {
+                document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading coach info</div>`;
+            });
+        }).catch(error => {
+            document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading member preferences</div>`;
+        });
     }
-    // Ensure this is called on page load
     renderWeeklyAvailabilityComparison();
 
-    function generateWeeklyAvailabilityTable(memberFreeDays, coachFreeDays) {
+    function generateElegantWeeklyAvailabilityTable(memberFreeDays, coachFreeDays) {
         const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-        let html = `<div class='overflow-x-auto'><table class='min-w-full border border-gray-200'><thead><tr class='bg-gray-50'><th class='border border-gray-200 p-2 text-sm font-medium text-gray-700'>Day</th><th class='border border-gray-200 p-2 text-sm font-medium text-gray-700'>Member</th><th class='border border-gray-200 p-2 text-sm font-medium text-gray-700'>Coach</th></tr></thead><tbody>`;
+        // Map free_days by day_of_week (case-insensitive)
+        const memberMap = {};
+        const coachMap = {};
+        memberFreeDays.forEach(fd => { memberMap[fd.day_of_week.toLowerCase()] = fd; });
+        coachFreeDays.forEach(fd => { coachMap[fd.day_of_week.toLowerCase()] = fd; });
+        let html = `<div class='overflow-x-auto'><table class='min-w-full border border-gray-200 rounded-lg'><thead><tr class='bg-gray-50'>
+            <th class='border border-gray-200 p-2 text-sm font-semibold text-gray-700'>Day</th>
+            <th class='border border-gray-200 p-2 text-sm font-semibold text-gray-700'>Member</th>
+            <th class='border border-gray-200 p-2 text-sm font-semibold text-gray-700'>Coach</th>
+        </tr></thead><tbody>`;
         for (const day of daysOfWeek) {
-            const memberDay = memberFreeDays.find(fd => fd.day_of_week === day);
-            const coachDay = coachFreeDays.find(fd => fd.day_of_week === day);
+            const memberDay = memberMap[day.toLowerCase()];
+            const coachDay = coachMap[day.toLowerCase()];
             html += `<tr>`;
             html += `<td class='border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50'>${day}</td>`;
-            html += `<td class='border border-gray-200 p-2 text-sm ${memberDay && memberDay.is_available ? 'text-green-700' : 'text-red-700'}'>`;
+            // Member cell
             if (memberDay && memberDay.is_available) {
-                html += `Available ${
-                    (typeof memberDay.start_time === 'string' && memberDay.start_time.includes(':'))
-                        ? memberDay.start_time.slice(0,5)
-                        : '08:00'
-                }-${
-                    (typeof memberDay.end_time === 'string' && memberDay.end_time.includes(':'))
-                        ? memberDay.end_time.slice(0,5)
-                        : '20:00'
-                }`;
+                let start = '08:00', end = '20:00';
+                if (typeof memberDay.start_time === 'string' && memberDay.start_time.match(/^\d{2}:\d{2}/)) start = memberDay.start_time.slice(0,5);
+                if (typeof memberDay.end_time === 'string' && memberDay.end_time.match(/^\d{2}:\d{2}/)) end = memberDay.end_time.slice(0,5);
+                html += `<td class='border border-gray-200 p-2 text-sm text-green-700'>Available <span class='font-mono'>${start}-${end}</span></td>`;
             } else {
-                html += 'Unavailable';
+                html += `<td class='border border-gray-200 p-2 text-sm text-red-700'>Unavailable</td>`;
             }
-            html += `</td>`;
-            html += `<td class='border border-gray-200 p-2 text-sm ${coachDay && coachDay.is_available ? 'text-green-700' : 'text-red-700'}'>`;
+            // Coach cell
             if (coachDay && coachDay.is_available) {
-                html += `Available ${
-                    (typeof coachDay.start_time === 'string' && coachDay.start_time.includes(':'))
-                        ? coachDay.start_time.slice(0,5)
-                        : '08:00'
-                }-${
-                    (typeof coachDay.end_time === 'string' && coachDay.end_time.includes(':'))
-                        ? coachDay.end_time.slice(0,5)
-                        : '20:00'
-                }`;
+                let start = '08:00', end = '20:00';
+                if (typeof coachDay.start_time === 'string' && coachDay.start_time.match(/^\d{2}:\d{2}/)) start = coachDay.start_time.slice(0,5);
+                if (typeof coachDay.end_time === 'string' && coachDay.end_time.match(/^\d{2}:\d{2}/)) end = coachDay.end_time.slice(0,5);
+                html += `<td class='border border-gray-200 p-2 text-sm text-green-700'>Available <span class='font-mono'>${start}-${end}</span></td>`;
             } else {
-                html += 'Unavailable';
+                html += `<td class='border border-gray-200 p-2 text-sm text-red-700'>Unavailable</td>`;
             }
-            html += `</td>`;
             html += `</tr>`;
         }
         html += '</tbody></table></div>';
         return html;
+    }
+
+    // Remove renderMemberSessionsTable and replace with renderMemberSessionsGrid
+    function renderMemberSessionsGrid() {
+        const container = document.getElementById('memberSessionsGrid');
+        if (!container) return;
+        container.innerHTML = '';
+        if (!memberStartDate || !memberEndDate) return;
+        const start = new Date(memberStartDate);
+        const end = new Date(memberEndDate);
+        let current = new Date(start);
+        while (current <= end) {
+            const dateStr = formatDate(current);
+            const dayName = getDayName(current);
+            // Find member's availability for this day
+            const freeDay = userFreeDays ? userFreeDays.find(fd => fd.day_of_week === dayName) : null;
+            const isAvailable = freeDay ? freeDay.is_available : true;
+            // Find sessions for this day
+            const daySessions = sessions.filter(s => s.date === dateStr);
+            // Create column
+            const dayColumn = document.createElement('div');
+            dayColumn.className = 'space-y-2';
+            // Day header
+            const dayHeader = document.createElement('div');
+            dayHeader.className = `text-center font-medium mb-2 ${isAvailable ? 'text-green-900' : 'text-red-900'}`;
+            dayHeader.innerHTML = `
+                ${current.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                <div class="text-xs ${isAvailable ? 'text-green-600' : 'text-red-600'}">
+                    ${isAvailable ? 'Available' : 'Unavailable'}
+                </div>
+            `;
+            dayColumn.appendChild(dayHeader);
+            // Sessions
+            if (daySessions.length === 0) {
+                const noSessions = document.createElement('div');
+                noSessions.className = `text-center text-sm ${isAvailable ? 'text-gray-500' : 'text-red-400'}`;
+                noSessions.textContent = isAvailable ? 'No sessions' : 'Not available';
+                dayColumn.appendChild(noSessions);
+            } else {
+                daySessions.forEach(session => {
+                    const sessionCard = document.createElement('div');
+                    sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
+                    sessionCard.onclick = () => showSessionDetails(session.id);
+                    sessionCard.innerHTML = `
+                        <div class="text-sm font-medium text-gray-900">${session.time}</div>
+                        <div class="text-xs text-gray-500">${session.coach.name}</div>
+                        <div class="text-xs text-gray-500">${session.duration} min</div>
+                        <div class="mt-1">
+                            <span class="px-2 py-1 text-xs rounded-full ${
+                                session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                                session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                'bg-blue-100 text-blue-800'
+                            }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+                        </div>
+                        ${session.notes ? `<div class='text-xs text-gray-400 mt-1 whitespace-pre-line'>${session.notes}</div>` : ''}
+                    `;
+                    dayColumn.appendChild(sessionCard);
+                });
+            }
+            container.appendChild(dayColumn);
+            current.setDate(current.getDate() + 1);
+        }
+    }
+
+    function renderMemberWeeklySchedule() {
+        const container = document.getElementById('memberWeeklySchedule');
+        if (!container) return;
+        container.innerHTML = '';
+        // Get start of week (Monday)
+        const startOfWeek = getStartOfWeek(currentDate);
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(startOfWeek);
+            date.setDate(startOfWeek.getDate() + i);
+            const dateStr = formatDate(date);
+            const dayName = getDayName(date);
+            // Find member's availability for this day
+            const freeDay = userFreeDays ? userFreeDays.find(fd => fd.day_of_week === dayName) : null;
+            const isAvailable = freeDay ? freeDay.is_available : true;
+            // Find sessions for this day
+            const daySessions = sessions.filter(s => s.date === dateStr);
+            // Create column
+            const dayColumn = document.createElement('div');
+            dayColumn.className = 'space-y-2';
+            // Day header
+            const dayHeader = document.createElement('div');
+            dayHeader.className = `text-center font-medium mb-2 ${isAvailable ? 'text-green-900' : 'text-red-900'}`;
+            dayHeader.innerHTML = `
+                ${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                <div class="text-xs ${isAvailable ? 'text-green-600' : 'text-red-600'}">
+                    ${isAvailable ? 'Available' : 'Unavailable'}
+                </div>
+            `;
+            dayColumn.appendChild(dayHeader);
+            // Sessions
+            if (daySessions.length === 0) {
+                const noSessions = document.createElement('div');
+                noSessions.className = `text-center text-sm ${isAvailable ? 'text-gray-500' : 'text-red-400'}`;
+                noSessions.textContent = isAvailable ? 'No sessions' : 'Not available';
+                dayColumn.appendChild(noSessions);
+            } else {
+                daySessions.forEach(session => {
+                    const sessionCard = document.createElement('div');
+                    sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
+                    sessionCard.onclick = () => showSessionDetails(session.id);
+                    sessionCard.innerHTML = `
+                        <div class="text-sm font-medium text-gray-900">${session.time}</div>
+                        <div class="text-xs text-gray-500">${session.coach.name}</div>
+                        <div class="mt-1">
+                            <span class="px-2 py-1 text-xs rounded-full ${
+                                session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                                session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                'bg-blue-100 text-blue-800'
+                            }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+                        </div>
+                    `;
+                    dayColumn.appendChild(sessionCard);
+                });
+            }
+            container.appendChild(dayColumn);
+        }
     }
 </script>
 {% endblock %} 
