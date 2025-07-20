@@ -193,11 +193,16 @@
                             <div class="text-xs text-gray-400">${coach.specialization} • ${coach.status}</div>
                         </div>
                     </div>
-                    <div class="text-sm text-gray-500">
-                        ${coach.preferred_workout_types?.length > 0 ? 
-                            coach.preferred_workout_types.slice(0, 2).join(', ') + 
-                            (coach.preferred_workout_types.length > 2 ? '...' : '') : 
-                            'No preferences'}
+                    <div class="flex items-center space-x-2">
+                        <div class="text-sm text-gray-500">
+                            ${coach.preferred_workout_types?.length > 0 ? 
+                                coach.preferred_workout_types.slice(0, 2).join(', ') + 
+                                (coach.preferred_workout_types.length > 2 ? '...' : '') : 
+                                'No preferences'}
+                        </div>
+                        <button onclick="showCoachPreferences(${coach.id})" title="View Preferences" class="ml-2 text-indigo-600 hover:text-indigo-800 focus:outline-none">
+                            <i class="fas fa-eye"></i>
+                        </button>
                     </div>
                 </div>
             `;
@@ -358,18 +363,14 @@
         if (!content) return;
         
         const selectedCoachesData = allCoaches.filter(c => selectedCoaches.has(c.id));
-        
-        // Get availability data for selected coaches
-        const coachIds = Array.from(selectedCoaches);
-        const availabilityResponse = await fetch(`/api/availability/bulk?user_ids=${coachIds.join(',')}`);
-        const availabilityData = await availabilityResponse.json();
-        
-        // Generate schedule HTML
-        const scheduleHtml = generateDateBasedScheduleHtml(selectedCoachesData, availabilityData.availability);
-        
+        // DEBUG: Print free_days for each selected coach
+        selectedCoachesData.forEach(coach => {
+            console.log(`Coach: ${coach.name} (ID: ${coach.id}) free_days:`, coach.free_days);
+        });
+        // Generate written schedule HTML
+        const scheduleHtml = generateWrittenScheduleHtml(selectedCoachesData);
         // Generate coach buttons HTML
         const coachButtonsHtml = generateCoachButtonsHtml(selectedCoachesData);
-        
         let html = `
             <div class="space-y-6">
                 <!-- Schedule Section -->
@@ -377,7 +378,6 @@
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Date-Based Schedule - All Selected Coaches</h3>
                     ${scheduleHtml}
                 </div>
-                
                 <!-- Coach Buttons Section -->
                 <div class="border-t border-gray-200 pt-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">View Individual Coach Preferences</h3>
@@ -387,113 +387,53 @@
                 </div>
             </div>
         `;
-        
         content.innerHTML = html;
         popup.classList.remove('hidden');
     }
     
-    // Generate date-based schedule HTML
-    function generateDateBasedScheduleHtml(coaches, availabilityData) {
-        const hours = Array.from({length: 14}, (_, i) => i + 8); // 8 AM to 9 PM
-        const days = 7; // Next 7 days
-        
-        let html = `
-            <div class="overflow-x-auto">
-                <table class="min-w-full border border-gray-200">
-                    <thead>
-                        <tr class="bg-gray-50">
-                            <th class="border border-gray-200 p-2 text-sm font-medium text-gray-700">Time</th>
-        `;
-        
-        // Generate date headers
-        for (let i = 0; i < days; i++) {
-            const date = new Date();
-            date.setDate(date.getDate() + i);
-            const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-            html += `<th class="border border-gray-200 p-2 text-sm font-medium text-gray-700">${dateStr}</th>`;
-        }
-        
-        html += '</tr></thead><tbody>';
-        
-        // Generate time rows
-        hours.forEach(hour => {
-            html += '<tr>';
-            html += `<td class="border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50">${hour}:00</td>`;
-            
-            // Generate cells for each day
-            for (let i = 0; i < days; i++) {
-                const date = new Date();
-                date.setDate(date.getDate() + i);
-                const dateStr = date.toISOString().split('T')[0];
-                
-                const availableCoaches = getAvailableCoachesAtDateTime(coaches, availabilityData, dateStr, hour);
-                const cellClass = availableCoaches.length > 0 ? 'bg-blue-50' : 'bg-gray-50';
-                const cellContent = availableCoaches.length > 0 ? 
-                    `<div class="text-xs bg-blue-100 text-blue-800 p-1 rounded">${availableCoaches.length} coach${availableCoaches.length > 1 ? 'es' : ''}</div>` : 
-                    '';
-                
-                html += `<td class="border border-gray-200 p-2 text-xs min-h-[60px] ${cellClass}" title="${availableCoaches.map(c => c.name).join(', ')}">${cellContent}</td>`;
-            }
-            
-            html += '</tr>';
-        });
-        
-        html += '</tbody></table>';
-        
-        // Add legend
-        html += `
-            <div class="mt-4 p-3 bg-gray-50 rounded-lg">
-                <h4 class="text-sm font-medium text-gray-700 mb-2">Legend:</h4>
-                <div class="flex items-center space-x-4 text-xs">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-4 h-4 bg-blue-100 border border-blue-200 rounded"></div>
-                        <span class="text-gray-600">Coaches Available</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
-                        <span class="text-gray-600">No Availability</span>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        return html;
-    }
-    
-    // Replace getAvailableCoachesAtDateTime with logic that uses both weekly and date-based availability
-    function getAvailableCoachesAtDateTime(coaches, availabilityData, dateStr, hour) {
-        return coaches.filter(coach => {
-            if (!coach || !coach.id) return false;
-            const weekday = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' });
-            const freeDay = coach.free_days ? coach.free_days.find(fd => fd.day_of_week === weekday) : null;
-            const coachAvailability = availabilityData[coach.id];
-            if (freeDay && !freeDay.is_available) {
-                if (coachAvailability && coachAvailability[dateStr] && coachAvailability[dateStr][hour] === true) {
-                    return true;
-                }
-                return false;
-            }
-            if (freeDay && freeDay.is_available) {
-                let startHour = 8;
-                let endHour = 20;
-                if (typeof freeDay.start_time === 'string' && freeDay.start_time.includes(':')) {
-                    startHour = parseInt(freeDay.start_time.split(':')[0], 10);
-                }
-                if (typeof freeDay.end_time === 'string' && freeDay.end_time.includes(':')) {
-                    endHour = parseInt(freeDay.end_time.split(':')[0], 10);
-                }
-                if (hour < startHour || hour >= endHour) {
-                    if (coachAvailability && coachAvailability[dateStr] && coachAvailability[dateStr][hour] === true) {
-                        return true;
+    // Generate written summary of weekly availability for selected coaches
+    function generateWrittenScheduleHtml(coaches) {
+        let html = '<div class="space-y-6">';
+        coaches.forEach(coach => {
+            html += `<div class="p-4 bg-white border border-gray-200 rounded-lg">
+                <div class="font-semibold text-lg text-gray-900 mb-2">${coach.name}</div>`;
+            if (coach.free_days && coach.free_days.length > 0) {
+                html += '<ul class="list-disc pl-6">';
+                const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+                daysOfWeek.forEach(day => {
+                    const fd = coach.free_days.find(d => d.day_of_week === day);
+                    html += `<li class="mb-1"><span class="font-medium">${day}:</span> `;
+                    if (fd && fd.is_available) {
+                        let start = '08:00';
+                        let end = '20:00';
+                        if (typeof fd.start_time === 'number') {
+                            const h = Math.floor(fd.start_time/3600).toString().padStart(2,'0');
+                            const m = Math.floor((fd.start_time%3600)/60).toString().padStart(2,'0');
+                            start = `${h}:${m}`;
+                        } else if (typeof fd.start_time === 'string' && fd.start_time.includes(':')) {
+                            start = fd.start_time.slice(0,5);
+                        }
+                        if (typeof fd.end_time === 'number') {
+                            const h = Math.floor(fd.end_time/3600).toString().padStart(2,'0');
+                            const m = Math.floor((fd.end_time%3600)/60).toString().padStart(2,'0');
+                            end = `${h}:${m}`;
+                        } else if (typeof fd.end_time === 'string' && fd.end_time.includes(':')) {
+                            end = fd.end_time.slice(0,5);
+                        }
+                        html += `${start}–${end}`;
+                    } else {
+                        html += '<span class="text-red-600">Unavailable</span>';
                     }
-                    return false;
-                }
+                    html += '</li>';
+                });
+                html += '</ul>';
+            } else {
+                html += '<div class="text-gray-500">No availability data</div>';
             }
-            if (!coachAvailability) return true;
-            const dateAvailability = coachAvailability[dateStr];
-            if (!dateAvailability) return true;
-            return dateAvailability[hour] !== false;
+            html += '</div>';
         });
+        html += '</div>';
+        return html;
     }
     
     // Generate coach buttons HTML
@@ -540,15 +480,15 @@
                 weeklyAvailabilityHtml += `<td class='border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50'>${day}</td>`;
                 weeklyAvailabilityHtml += `<td class='border border-gray-200 p-2 text-sm ${fd && fd.is_available ? 'text-green-700' : 'text-red-700'}'>`;
                 if (fd && fd.is_available) {
-                    weeklyAvailabilityHtml += `Available ${
-                        (typeof fd.start_time === 'string' && fd.start_time.includes(':'))
-                            ? fd.start_time.slice(0,5)
-                            : '08:00'
-                    }-${
-                        (typeof fd.end_time === 'string' && fd.end_time.includes(':'))
-                            ? fd.end_time.slice(0,5)
-                            : '20:00'
-                    }`;
+                    let start = '08:00';
+                    let end = '20:00';
+                    if (typeof fd.start_time === 'string' && fd.start_time.includes(':')) {
+                        start = fd.start_time.slice(0,5);
+                    }
+                    if (typeof fd.end_time === 'string' && fd.end_time.includes(':')) {
+                        end = fd.end_time.slice(0,5);
+                    }
+                    weeklyAvailabilityHtml += `Available ${start}-${end}`;
                 } else {
                     weeklyAvailabilityHtml += 'Unavailable';
                 }
@@ -636,7 +576,42 @@
                                         <p class="text-sm text-gray-700">${coach.notes}</p>
                                     </div>
                                 ` : ''}
-                                ${weeklyAvailabilityHtml}
+                                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+                                    <h4 class="text-md font-semibold text-gray-900 mb-3">Weekly Availability</h4>
+                                    <ul class="space-y-1">
+                                        ${(() => {
+                                            if (coach.free_days && coach.free_days.length > 0) {
+                                                const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+                                                return daysOfWeek.map(day => {
+                                                    const fd = coach.free_days.find(d => d.day_of_week === day);
+                                                    if (fd && fd.is_available) {
+                                                        let start = '08:00';
+                                                        let end = '20:00';
+                                                        if (typeof fd.start_time === 'number') {
+                                                            const h = Math.floor(fd.start_time/3600).toString().padStart(2,'0');
+                                                            const m = Math.floor((fd.start_time%3600)/60).toString().padStart(2,'0');
+                                                            start = `${h}:${m}`;
+                                                        } else if (typeof fd.start_time === 'string' && fd.start_time.includes(':')) {
+                                                            start = fd.start_time.slice(0,5);
+                                                        }
+                                                        if (typeof fd.end_time === 'number') {
+                                                            const h = Math.floor(fd.end_time/3600).toString().padStart(2,'0');
+                                                            const m = Math.floor((fd.end_time%3600)/60).toString().padStart(2,'0');
+                                                            end = `${h}:${m}`;
+                                                        } else if (typeof fd.end_time === 'string' && fd.end_time.includes(':')) {
+                                                            end = fd.end_time.slice(0,5);
+                                                        }
+                                                        return `<li><span class='font-medium text-gray-800'>${day}:</span> <span class='text-green-700'>${start}–${end}</span></li>`;
+                                                    } else {
+                                                        return `<li><span class='font-medium text-gray-800'>${day}:</span> <span class='text-red-600'>Unavailable</span></li>`;
+                                                    }
+                                                }).join('');
+                                            } else {
+                                                return '<li class="text-gray-500">No availability data</li>';
+                                            }
+                                        })()}
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>

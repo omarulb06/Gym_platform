@@ -17,6 +17,12 @@ import cv2
 import torch
 from transformers import AutoImageProcessor, SiglipForImageClassification
 import requests
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 
 # Helper function to convert non-serializable objects to JSON-serializable format
 def convert_for_json(obj):
@@ -4354,7 +4360,6 @@ async def classify_frame(
     return {"label": label, "score": score}
 
 # Add this constant at the top of your file with your actual API key
-OPENROUTER_API_KEY = "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"  # Replace with your actual OpenRouter API key
 
 @app.post("/api/chat")
 async def chat(request: Request):
