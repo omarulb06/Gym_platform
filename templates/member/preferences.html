@@ -1169,35 +1169,30 @@
     }
     // Availability logic for a single member (same as coach logic)
     function getMemberAvailableAtDateTime(member, availabilityData, dateStr, hour) {
+        const memberAvailability = availabilityData[member.id];
+        // 1. Check date-based override
+        if (memberAvailability && memberAvailability[dateStr] && typeof memberAvailability[dateStr][hour] !== 'undefined') {
+            return memberAvailability[dateStr][hour] === true;
+        }
+        // 2. Fallback to weekly pattern
         const weekday = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' });
         const freeDay = member.free_days ? member.free_days.find(fd => fd.day_of_week === weekday) : null;
-        const memberAvailability = availabilityData[member.id];
-        if (freeDay && !freeDay.is_available) {
-            if (memberAvailability && memberAvailability[dateStr] && memberAvailability[dateStr][hour] === true) {
-                return true;
-            }
-            return false;
+        if (!freeDay) return false; // If no info, treat as unavailable
+        if (!freeDay.is_available) return false;
+        // Check if hour is within allowed range
+        let startHour = 8;
+        let endHour = 20;
+        if (typeof freeDay.start_time === 'string' && freeDay.start_time.includes(':')) {
+            startHour = parseInt(freeDay.start_time.split(':')[0], 10);
+        } else if (!isNaN(freeDay.start_time)) {
+            startHour = Math.floor(Number(freeDay.start_time) / 3600);
         }
-        if (freeDay && freeDay.is_available) {
-            let startHour = 8;
-            let endHour = 20;
-            if (typeof freeDay.start_time === 'string' && freeDay.start_time.includes(':')) {
-                startHour = parseInt(freeDay.start_time.split(':')[0], 10);
-            }
-            if (typeof freeDay.end_time === 'string' && freeDay.end_time.includes(':')) {
-                endHour = parseInt(freeDay.end_time.split(':')[0], 10);
-            }
-            if (hour < startHour || hour >= endHour) {
-                if (memberAvailability && memberAvailability[dateStr] && memberAvailability[dateStr][hour] === true) {
-                    return true;
-                }
-                return false;
-            }
+        if (typeof freeDay.end_time === 'string' && freeDay.end_time.includes(':')) {
+            endHour = parseInt(freeDay.end_time.split(':')[0], 10);
+        } else if (!isNaN(freeDay.end_time)) {
+            endHour = Math.floor(Number(freeDay.end_time) / 3600);
         }
-        if (!memberAvailability) return true;
-        const dateAvailability = memberAvailability[dateStr];
-        if (!dateAvailability) return true;
-        return dateAvailability[hour] !== false;
+        return hour >= startHour && hour < endHour;
     }
     // Render on page load
     renderMyDateBasedSchedule();

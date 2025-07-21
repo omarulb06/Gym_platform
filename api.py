@@ -1,9 +1,9 @@
-from fastapi import FastAPI, HTTPException, Request, Depends, Form, status, WebSocket, WebSocketDisconnect, Query, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, Depends, Form, status, WebSocket, WebSocketDisconnect, Query, UploadFile, File, Body
 
 import pymysql
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as dt_time
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from typing import Optional, Dict, Tuple, List, Union
 import secrets
@@ -4611,6 +4611,149 @@ async def chatbot_page():
 </body>
 </html>
 """
+
+def expand_weekly_availability(free_days):
+    slots = set()
+    for day in free_days:
+        if not day['is_available']:
+            continue
+        # Parse start and end hour
+        start = day['start_time']
+        end = day['end_time']
+        # Handle both string and int (seconds)
+        if isinstance(start, int):
+            start_hour = start // 3600
+        else:
+            start_hour = int(str(start).split(':')[0])
+        if isinstance(end, int):
+            end_hour = end // 3600
+        else:
+            end_hour = int(str(end).split(':')[0])
+        for hour in range(start_hour, end_hour):
+            slots.add((day['day_of_week'], f"{hour:02d}:00"))
+    return slots
+
+def next_occurrence(day_name, hour_str):
+    days_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+    today = datetime.now()
+    today_idx = today.weekday()
+    target_idx = days_order.index(day_name)
+    hour, minute = map(int, hour_str.split(':'))
+    # Compute the next date for this day/hour
+    days_ahead = (target_idx - today_idx + 7) % 7
+    candidate_date = today.date() + timedelta(days=days_ahead)
+    candidate_dt = datetime.combine(candidate_date, dt_time(hour, minute))
+    # If it's today and hour is in the past, skip to next week
+    if candidate_dt <= today:
+        candidate_date = candidate_date + timedelta(days=7)
+        candidate_dt = datetime.combine(candidate_date, dt_time(hour, minute))
+    return candidate_dt
+
+@app.post("/api/coach/assign_best_workout")
+async def assign_best_workout_api(
+    coach_id: int = Body(...),
+    member_id: int = Body(...),
+    workout_type: str = Body(...),
+    duration: int = Body(...),
+    notes: str = Body("")
+):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Get coach weekly availability
+        cursor.execute("SELECT * FROM free_days WHERE user_id = %s AND user_type = 'coach'", (coach_id,))
+        coach_free_days = cursor.fetchall()
+        coach_slots = expand_weekly_availability(coach_free_days)
+
+        # Get member weekly availability
+        cursor.execute("SELECT * FROM free_days WHERE user_id = %s AND user_type = 'member'", (member_id,))
+        member_free_days = cursor.fetchall()
+        member_slots = expand_weekly_availability(member_free_days)
+
+        # Get member preferred time slots
+        cursor.execute("SELECT preferred_time_slots FROM user_preferences WHERE user_id = %s AND user_type = 'member'", (member_id,))
+        member_pref = cursor.fetchone()
+        preferred_times = []
+        if member_pref and member_pref['preferred_time_slots']:
+            preferred_times = json.loads(member_pref['preferred_time_slots'])
+
+        # Find intersection
+        overlap = coach_slots & member_slots
+
+        # First, try to match preferred times
+        preferred_overlap = set()
+        if preferred_times:
+            preferred_overlap = set((day, hour) for (day, hour) in overlap if hour in preferred_times)
+
+        # Use preferred_overlap if not empty, else fallback to all overlap
+        slots_to_consider = preferred_overlap if preferred_overlap else overlap
+
+        if not slots_to_consider:
+            return {"success": False, "message": "This workout cannot be assigned — no matching time slot found."}
+
+        # For each slot, compute the next occurrence (date+time) in the future
+        slot_datetimes = []
+        for day, hour in slots_to_consider:
+            dt = next_occurrence(day, hour)
+            slot_datetimes.append((dt, day, hour))
+        # Only keep future slots
+        slot_datetimes = [s for s in slot_datetimes if s[0] > datetime.now()]
+        # Sort by datetime
+        slot_datetimes.sort()
+        # Take the best 10
+        best_matches = slot_datetimes[:10]
+        if not best_matches:
+            return {"success": False, "message": "This workout cannot be assigned — no matching time slot found."}
+
+        return {
+            "success": True,
+            "matches": [
+                {
+                    "date": dt.strftime("%Y-%m-%d"),
+                    "day": day,
+                    "hour": hour
+                }
+                for dt, day, hour in best_matches
+            ]
+        }
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.post("/api/coach/create_session")
+async def create_session_api(
+    coach_id: int = Body(...),
+    member_id: int = Body(...),
+    day: str = Body(...),
+    hour: str = Body(...),
+    date: str = Body(...),
+    workout_type: str = Body(...),
+    duration: int = Body(...),
+    notes: str = Body("")
+):
+    # Use the provided date directly
+    session_date = date
+    session_time = hour
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Fetch gym_id for the coach
+        cursor.execute("SELECT gym_id FROM coaches WHERE id = %s", (coach_id,))
+        row = cursor.fetchone()
+        if not row or not row['gym_id']:
+            raise HTTPException(status_code=400, detail="Coach does not have a gym_id")
+        gym_id = row['gym_id']
+
+        cursor.execute("""
+            INSERT INTO sessions (gym_id, coach_id, member_id, session_date, session_time, duration, status, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, 'Scheduled', %s)
+        """, (gym_id, coach_id, member_id, session_date, session_time, duration, notes + f" | Workout: {workout_type}"))
+        conn.commit()
+        return {"success": True, "session_id": cursor.lastrowid}
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == "__main__":
     import uvicorn
