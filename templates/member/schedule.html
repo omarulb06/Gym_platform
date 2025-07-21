@@ -428,7 +428,7 @@
             window.coachFreeDays = data.coach_availability || [];
             
             // Load coach preferences from schedule data
-            loadCoachPreferencesFromSchedule(data.coach, data.coach_availability);
+            await loadCoachPreferencesFromSchedule(data.coach, data.coach_availability);
             
             generateSchedule();
             renderMemberSessionsGrid();
@@ -483,7 +483,7 @@
             const data = await response.json();
             sessions = data.sessions;
             window.coachFreeDays = data.coach_availability || [];
-            loadCoachPreferencesFromSchedule(data.coach, data.coach_availability);
+            await loadCoachPreferencesFromSchedule(data.coach, data.coach_availability);
             renderMemberSessionsGrid();
         } catch (error) {
             console.error('Error loading sessions:', error);
@@ -529,18 +529,29 @@
 
 
     // Load coach preferences from schedule data
-    function loadCoachPreferencesFromSchedule(coachData, coachAvailability) {
+    async function loadCoachPreferencesFromSchedule(coachData, coachAvailability) {
         if (coachData && coachAvailability) {
+            // Always fetch the latest preferences for the assigned coach
+            try {
+                const response = await fetch(`/api/member/coach/${coachData.id}/preferences`);
+                if (response.ok) {
+                    const coachPrefData = await response.json();
+                    await displayCoachPreferences(coachPrefData);
+                    return;
+                }
+            } catch (e) {
+                // fallback to schedule data if API fails
+            }
             const preferences = {
                 preferences: null, // We don't have detailed preferences, just availability
                 free_days: coachAvailability
             };
-            displayCoachPreferences(preferences);
+            await displayCoachPreferences(preferences);
         }
     }
 
     // Display coach preferences
-    function displayCoachPreferences(data) {
+    async function displayCoachPreferences(data) {
         const { preferences, free_days } = data;
         const container = document.getElementById('coachPreferencesContent');
         const section = document.getElementById('coachPreferences');
@@ -597,14 +608,37 @@
                 <div class="bg-gray-50 rounded-lg p-4">
                     <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Weekly Availability</h3>
                     <div class="grid grid-cols-2 gap-2">
-                        ${free_days.map(day => `
-                            <div class="flex items-center justify-between">
+                        ${free_days.map(day => {
+                            let start = '08:00', end = '20:00';
+                            // Robustly handle start_time
+                            if (!isNaN(day.start_time) && day.start_time !== null && day.start_time !== undefined && day.start_time !== '') {
+                                const startSeconds = Number(day.start_time);
+                                if (!isNaN(startSeconds) && startSeconds > 1000) {
+                                    start = secondsToHHMM(startSeconds);
+                                } else if (typeof day.start_time === 'string' && day.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+                                    start = day.start_time.slice(0,5);
+                                }
+                            } else if (typeof day.start_time === 'string' && day.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+                                start = day.start_time.slice(0,5);
+                            }
+                            // Robustly handle end_time
+                            if (!isNaN(day.end_time) && day.end_time !== null && day.end_time !== undefined && day.end_time !== '') {
+                                const endSeconds = Number(day.end_time);
+                                if (!isNaN(endSeconds) && endSeconds > 1000) {
+                                    end = secondsToHHMM(endSeconds);
+                                } else if (typeof day.end_time === 'string' && day.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+                                    end = day.end_time.slice(0,5);
+                                }
+                            } else if (typeof day.end_time === 'string' && day.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+                                end = day.end_time.slice(0,5);
+                            }
+                            return `<div class="flex items-center justify-between">
                                 <span class="text-sm text-gray-600">${day.day_of_week}</span>
                                 <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
-                                    ${day.is_available ? 'Available' : 'Unavailable'}
+                                    ${day.is_available ? `Available <span class='font-mono'>${start}-${end}</span>` : 'Unavailable'}
                                 </span>
-                            </div>
-                        `).join('')}
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>
                 
@@ -946,6 +980,14 @@
     }
     renderWeeklyAvailabilityComparison();
 
+    function secondsToHHMM(seconds) {
+        if (typeof seconds !== 'number') seconds = parseInt(seconds, 10);
+        if (isNaN(seconds)) return '';
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+
     function generateElegantWeeklyAvailabilityTable(memberFreeDays, coachFreeDays) {
         const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
         // Map free_days by day_of_week (case-insensitive)
@@ -965,18 +1007,46 @@
             html += `<td class='border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50'>${day}</td>`;
             // Member cell
             if (memberDay && memberDay.is_available) {
-                let start = '08:00', end = '20:00';
-                if (typeof memberDay.start_time === 'string' && memberDay.start_time.match(/^\d{2}:\d{2}/)) start = memberDay.start_time.slice(0,5);
-                if (typeof memberDay.end_time === 'string' && memberDay.end_time.match(/^\d{2}:\d{2}/)) end = memberDay.end_time.slice(0,5);
+                let start = '00:00', end = '24:00';
+                // Handle start_time
+                if (!isNaN(memberDay.start_time) && memberDay.start_time !== null && memberDay.start_time !== undefined && memberDay.start_time !== '') {
+                    const startSeconds = Number(memberDay.start_time);
+                    if (!isNaN(startSeconds) && startSeconds > 1000) {
+                        start = secondsToHHMM(startSeconds);
+                    } else if (typeof memberDay.start_time === 'string' && memberDay.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+                        start = memberDay.start_time.slice(0,5);
+                    }
+                } else if (typeof memberDay.start_time === 'string' && memberDay.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+                    start = memberDay.start_time.slice(0,5);
+                }
+                // Handle end_time
+                if (!isNaN(memberDay.end_time) && memberDay.end_time !== null && memberDay.end_time !== undefined && memberDay.end_time !== '') {
+                    const endSeconds = Number(memberDay.end_time);
+                    if (!isNaN(endSeconds) && endSeconds > 1000) {
+                        end = secondsToHHMM(endSeconds);
+                    } else if (typeof memberDay.end_time === 'string' && memberDay.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+                        end = memberDay.end_time.slice(0,5);
+                    }
+                } else if (typeof memberDay.end_time === 'string' && memberDay.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+                    end = memberDay.end_time.slice(0,5);
+                }
                 html += `<td class='border border-gray-200 p-2 text-sm text-green-700'>Available <span class='font-mono'>${start}-${end}</span></td>`;
             } else {
                 html += `<td class='border border-gray-200 p-2 text-sm text-red-700'>Unavailable</td>`;
             }
             // Coach cell
             if (coachDay && coachDay.is_available) {
-                let start = '08:00', end = '20:00';
-                if (typeof coachDay.start_time === 'string' && coachDay.start_time.match(/^\d{2}:\d{2}/)) start = coachDay.start_time.slice(0,5);
-                if (typeof coachDay.end_time === 'string' && coachDay.end_time.match(/^\d{2}:\d{2}/)) end = coachDay.end_time.slice(0,5);
+                let start = '00:00', end = '24:00';
+                if (typeof coachDay.start_time === 'number') {
+                    start = secondsToHHMM(coachDay.start_time);
+                } else if (typeof coachDay.start_time === 'string' && coachDay.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+                    start = coachDay.start_time.slice(0,5);
+                }
+                if (typeof coachDay.end_time === 'number') {
+                    end = secondsToHHMM(coachDay.end_time);
+                } else if (typeof coachDay.end_time === 'string' && coachDay.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+                    end = coachDay.end_time.slice(0,5);
+                }
                 html += `<td class='border border-gray-200 p-2 text-sm text-green-700'>Available <span class='font-mono'>${start}-${end}</span></td>`;
             } else {
                 html += `<td class='border border-gray-200 p-2 text-sm text-red-700'>Unavailable</td>`;

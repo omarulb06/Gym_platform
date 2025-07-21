@@ -42,10 +42,15 @@
             <div class="bg-white shadow rounded-lg p-6">
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-2xl font-bold text-gray-900">Member Details</h1>
-                    <button onclick="window.open('/coach/members/{{ member.id }}/add-session', 'Add Session', 'width=800,height=800')" 
-                            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        <i class="fas fa-plus mr-2"></i>Add Session
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="window.open('/coach/members/{{ member.id }}/add-session', 'Add Session', 'width=800,height=800')" 
+                                class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                            <i class="fas fa-plus mr-2"></i>Add Session
+                        </button>
+                        <button id="assignBestWorkoutBtn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                            <i class="fas fa-magic mr-2"></i>Assign Best Workout
+                        </button>
+                    </div>
                 </div>
                 <div class="flex justify-between items-start mb-6">
                     <div>
@@ -103,9 +108,45 @@
         </main>
     </div>
 
+    <!-- Assign Best Workout Modal -->
+    <div id="assignBestWorkoutModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full overflow-hidden">
+                <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-900">Assign Best Workout</h2>
+                    <button onclick="closeAssignBestWorkoutModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <form id="assignBestWorkoutForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Workout Type</label>
+                            <input type="text" name="workout_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                            <input type="number" name="duration" min="10" max="180" value="60" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                            <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
+                        </div>
+                        <div id="assignBestWorkoutMatches" class="mt-4"></div>
+                        <div class="flex justify-end gap-2 mt-4">
+                            <button type="button" onclick="closeAssignBestWorkoutModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
+                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Find Best Match</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
     <script>
         // Get member ID from URL
         const memberId = window.location.pathname.split('/').pop();
+        // Get coach ID from template context
+        const coachId = "{{ user.id }}";
 
         // Fetch member details
         async function fetchMemberDetails() {
@@ -293,6 +334,80 @@
 
         // Load member details when page loads
         fetchMemberDetails();
+
+        // Modal logic
+        const assignBtn = document.getElementById('assignBestWorkoutBtn');
+        const modal = document.getElementById('assignBestWorkoutModal');
+        const form = document.getElementById('assignBestWorkoutForm');
+        const matchesDiv = document.getElementById('assignBestWorkoutMatches');
+
+        assignBtn.onclick = function() {
+            matchesDiv.innerHTML = '';
+            form.reset();
+            modal.classList.remove('hidden');
+        };
+        function closeAssignBestWorkoutModal() {
+            modal.classList.add('hidden');
+        }
+
+        form.onsubmit = async function(e) {
+            e.preventDefault();
+            matchesDiv.innerHTML = '<div class="text-gray-500">Finding best matches...</div>';
+            const formData = new FormData(form);
+            const data = {
+                coach_id: coachId,
+                member_id: memberId,
+                workout_type: formData.get('workout_type'),
+                duration: parseInt(formData.get('duration'), 10),
+                notes: formData.get('notes')
+            };
+            const res = await fetch('/api/coach/assign_best_workout', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (!result.success) {
+                matchesDiv.innerHTML = `<div class='text-red-600'>${result.message}</div>`;
+                return;
+            }
+            // Show all returned matches for selection
+            matchesDiv.innerHTML = `<div class='mb-2 text-sm text-gray-700'>Select a time slot:</div>` +
+                result.matches.map((m, i) =>
+                    `<label class='block mb-1'><input type='radio' name='slot' value='${m.date}|${m.day}|${m.hour}' ${i===0?'checked':''}> <span class='font-mono'>${m.date} (${m.day}) ${m.hour}</span></label>`
+                ).join('') +
+                `<button type='button' class='mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700' onclick='confirmAssignBestWorkout()'>Assign Session</button>`;
+        };
+
+        async function confirmAssignBestWorkout() {
+            const formData = new FormData(form);
+            const slot = document.querySelector('input[name="slot"]:checked');
+            if (!slot) return;
+            const [date, day, hour] = slot.value.split('|');
+            const data = {
+                coach_id: coachId,
+                member_id: memberId,
+                day,
+                hour,
+                date,
+                workout_type: formData.get('workout_type'),
+                duration: parseInt(formData.get('duration'), 10),
+                notes: formData.get('notes')
+            };
+            matchesDiv.innerHTML = '<div class="text-gray-500">Assigning session...</div>';
+            const res = await fetch('/api/coach/create_session', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (result.success) {
+                matchesDiv.innerHTML = `<div class='text-green-700'>Session assigned successfully!</div>`;
+                setTimeout(() => { closeAssignBestWorkoutModal(); location.reload(); }, 1200);
+            } else {
+                matchesDiv.innerHTML = `<div class='text-red-600'>Failed to assign session.</div>`;
+            }
+        }
     </script>
 </body>
 </html> 
