@@ -1,959 +1,950 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Member Details - PowerFit</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Navigation -->
-        <nav class="bg-white shadow-lg">
-            <div class="max-w-7xl mx-auto px-4">
-                <div class="flex justify-between h-16">
-                    <div class="flex">
-                        <div class="flex-shrink-0 flex items-center">
-                            <i class="fas fa-dumbbell text-indigo-600 text-2xl"></i>
-                            <span class="ml-2 text-xl font-bold text-gray-800">PowerFit</span>
-                        </div>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="text-gray-600">{{ user.name }}</span>
-                        <button onclick="logout()" class="ml-4 text-gray-600 hover:text-gray-800">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </nav>
+{% extends "base.html" %}
 
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <!-- Back Button -->
-            <div class="mb-6">
-                <a href="/coach/members" class="text-indigo-600 hover:text-indigo-800">
-                    <i class="fas fa-arrow-left"></i> Back to Members
-                </a>
-            </div>
+{% block title %}Member Details - PowerFit{% endblock %}
 
-            <!-- Member Details -->
-            <div class="bg-white shadow rounded-lg p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-2xl font-bold text-gray-900">Member Details</h1>
-                    <div class="flex gap-2">
-                        <button onclick="window.open('/coach/members/{{ member.id }}/add-session', 'Add Session', 'width=800,height=800')" 
-                                class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                            <i class="fas fa-plus mr-2"></i>Add Session
-                        </button>
-                        <button id="assignBestWorkoutBtn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                            <i class="fas fa-magic mr-2"></i>Assign Best Workout
-                        </button>
-                    </div>
-                </div>
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900" id="memberName">Loading...</h1>
-                        <p class="text-gray-600" id="memberEmail">Loading...</p>
-                    </div>
-                    <div class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm" id="membershipType">
-                        Loading...
-                    </div>
-                </div>
+{% block content_title %}
+ <div class="mb-4 sm:mb-6 lg:mb-8 animate-fade-in">
+ <!-- Back Button -->
+ <div class="mb-4 sm:mb-6">
+ <a href="/coach/members" class="inline-flex items-center text-primary-600 hover:text-primary-800 transition-colors duration-200 group">
+ <i class="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform duration-200"></i> 
+ Back to Members
+ </a>
+ </div>
+ <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent mb-2">
+ Member Details
+ </h1>
+ <p class="text-gray-600 text-lg">Comprehensive member profile and training management</p>
+ </div>
+{% endblock %}
 
-                <!-- Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <h3 class="text-sm font-medium text-gray-500">Total Sessions</h3>
-                        <p class="text-2xl font-bold text-gray-900" id="totalSessions">0</p>
-                    </div>
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <h3 class="text-sm font-medium text-gray-500">Completed Sessions</h3>
-                        <p class="text-2xl font-bold text-gray-900" id="completedSessions">0</p>
-                    </div>
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <h3 class="text-sm font-medium text-gray-500">Last Session</h3>
-                        <p class="text-2xl font-bold text-gray-900" id="lastSession">Never</p>
-                    </div>
-                </div>
+{% block content %}
+ <!-- Member Details -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl border border-white/20 hover:shadow-2xl transition-all duration-300 animate-scale-in">
+ <div class="px-8 py-8 sm:p-10">
+ <div class="flex justify-between items-center mb-6 sm:mb-8">
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+ <i class="fas fa-user-circle text-xl"></i>
+ </div>
+ <div>
+ <h2 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Member Profile</h2>
+ <p class="text-gray-600">Detailed member information and training data</p>
+ </div>
+ </div>
+ <div class="flex gap-3">
+ <button onclick="window.open('/coach/members/{{ member.id }}/add-session', 'Add Session', 'width=800,height=800')" 
+ class="bg-gradient-to-r from-primary-500 to-blue-600 text-white px-3 py-2 sm:px-4 sm:px-6 sm:py-3 rounded-xl hover:from-primary-600 hover:to-blue-700 focus:outline-none transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 font-medium">
+ <i class="fas fa-plus mr-2"></i>Add Session
+ </button>
+ <button id="assignBestWorkoutBtn" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 sm:px-4 sm:px-6 sm:py-3 rounded-xl hover:from-green-600 hover:to-emerald-700 focus:outline-none transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 font-medium">
+ <i class="fas fa-magic mr-2"></i>Assign Best Workout
+ </button>
+ </div>
+ </div>
+ <div class="flex justify-between items-start mb-4 sm:mb-6">
+ <div>
+ <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900" id="memberName">Loading...</h1>
+ <p class="text-gray-600" id="memberEmail">Loading...</p>
+ </div>
+ <div class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm" id="membershipType">
+ Loading...
+ </div>
+ </div>
 
-                <!-- Member Preferences -->
-                <div class="mt-8">
-                    <h2 class="text-lg font-medium text-gray-900 mb-4">Member Preferences & Availability</h2>
-                    <div id="memberPreferences" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="text-center text-gray-500">Loading preferences...</div>
-                    </div>
-                </div>
+ <!-- Stats -->
+ <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:p-6 mb-4 sm:mb-6">
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-500">Total Sessions</h3>
+ <p class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900" id="totalSessions">0</p>
+ </div>
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-500">Completed Sessions</h3>
+ <p class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900" id="completedSessions">0</p>
+ </div>
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-500">Last Session</h3>
+ <p class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900" id="lastSession">Never</p>
+ </div>
+ </div>
 
-                <!-- Recent Sessions -->
-                <div class="mt-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-medium text-gray-900">Recent Sessions</h2>
-                        <div class="flex items-center space-x-4">
-                            <div class="relative">
-                                <input type="text" 
-                                       id="sessionSearch" 
-                                       placeholder="Search by workout type, date, or status..." 
-                                       class="w-64 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="space-y-4" id="recentSessions">
-                        <div class="text-center text-gray-500">Loading sessions...</div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+ <!-- Member Preferences -->
+ <div class="mt-8">
+ <h2 class="text-lg font-medium text-gray-900 mb-4">Member Preferences & Availability</h2>
+ <div id="memberPreferences" class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:p-6">
+ <div class="text-center text-gray-500">Loading preferences...</div>
+ </div>
+ </div>
 
-    <!-- Assign Best Workout Modal with Schedule View -->
+ <!-- Recent Sessions -->
+ <div class="mt-8">
+ <div class="flex justify-between items-center mb-4">
+ <h2 class="text-lg font-medium text-gray-900">Recent Sessions</h2>
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="relative">
+ <input type="text" 
+ id="sessionSearch" 
+ placeholder="Search by workout type, date, or status..." 
+ class="w-64 px-3 py-2 sm:px-4 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+ <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+ </div>
+ </div>
+ </div>
+ <div class="space-y-4" id="recentSessions">
+ <div class="text-center text-gray-500">Loading sessions...</div>
+ </div>
+ </div>
+ </div>
+ </main>
+ </div>
+
+     <!-- Assign Best Workout Modal with Schedule View -->
     <div id="assignBestWorkoutModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-        <div class="flex items-start justify-center min-h-screen p-4 py-8">
-            <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-                <div class="flex justify-between items-center p-6 border-b border-gray-200">
+        <div class="flex items-start justify-center min-h-screen p-2 sm:p-4 py-4 sm:py-8">
+            <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 sm:p-4 lg:p-6 border-b border-gray-200 space-y-3 sm:space-y-0">
                     <div>
-                        <h2 class="text-xl font-semibold text-gray-900">Weekly Schedule & Workout Assignment</h2>
-                        <p class="text-sm text-gray-600 mt-1">View schedule, preferences, and assign the best workout time</p>
+                        <h2 class="text-lg sm:text-xl font-semibold text-gray-900">Weekly Schedule & Workout Assignment</h2>
+                        <p class="text-xs sm:text-sm text-gray-600 mt-1">View schedule, preferences, and assign the best workout time</p>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <div class="flex space-x-2">
-                            <button id="prevWeekModal" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
-                                <i class="fas fa-chevron-left mr-1"></i>Prev
+                    <div class="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-4">
+                        <div class="flex space-x-1 sm:space-x-2">
+                            <button id="prevWeekModal" class="bg-gray-500 text-white px-2 sm:px-3 py-1 rounded text-xs sm:text-sm hover:bg-gray-600">
+                                <i class="fas fa-chevron-left mr-1"></i><span class="hidden sm:inline">Prev</span>
                             </button>
-                            <button id="nextWeekModal" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
-                                Next<i class="fas fa-chevron-right ml-1"></i>
+                            <button id="nextWeekModal" class="bg-gray-500 text-white px-2 sm:px-3 py-1 rounded text-xs sm:text-sm hover:bg-gray-600">
+                                <span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right ml-1"></i>
                             </button>
                         </div>
                         <button onclick="closeAssignBestWorkoutModal()" class="text-gray-400 hover:text-gray-600">
-                            <i class="fas fa-times text-xl"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="flex-1 overflow-y-auto modal-scroll p-6" style="max-height: calc(90vh - 120px);">
+                            <i class="fas fa-times text-lg sm:text-xl"></i>
+ </button>
+ </div>
+ </div>
+ 
+                 <div class="flex-1 overflow-y-auto modal-scroll p-3 sm:p-4 lg:p-6" style="max-height: calc(95vh - 120px);">
                     <!-- Week Info and Form -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                        <!-- Assignment Form -->
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <h3 class="font-semibold mb-3">Session Details</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+                         <!-- Assignment Form -->
+                        <div class="bg-gray-50 rounded-lg p-3 sm:p-4">
+                            <h3 class="font-semibold mb-3 text-sm sm:text-base">Session Details</h3>
                             <form id="assignBestWorkoutForm" class="space-y-3">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Workout Type</label>
-                                    <select name="workout_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm">
-                                        <option value="">Select workout type...</option>
-                                        <option value="Upper Body">Upper Body</option>
-                                        <option value="Lower Body">Lower Body</option>
-                                        <option value="Full Body">Full Body</option>
-                                        <option value="Cardio">Cardio</option>
-                                        <option value="Strength Training">Strength Training</option>
-                                        <option value="Flexibility">Flexibility</option>
-                                        <option value="HIIT">HIIT</option>
-                                        <option value="General Training">General Training</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Duration</label>
-                                    <select name="duration" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm">
-                                        <option value="60">60 minutes</option>
-                                        <option value="90">90 minutes</option>
-                                        <option value="120">120 minutes</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                                    <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"></textarea>
-                                </div>
-                                <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm">
-                                    Find Best Times
-                                </button>
-                            </form>
-                        </div>
-                        
-                        <!-- Coach Info -->
-                        <div class="bg-blue-50 rounded-lg p-4">
-                            <h3 class="font-semibold text-blue-800 mb-3">
-                                <i class="fas fa-user-tie mr-2"></i>Coach Information
-                            </h3>
-                            <div id="modalCoachInfo" class="text-sm">
-                                <p><strong>Name:</strong> <span id="modalCoachName">{{ user.name }}</span></p>
-                                <p><strong>Specialization:</strong> <span id="modalCoachSpecialization">Loading...</span></p>
-                                <p><strong>Preferred Times:</strong> <span id="modalCoachPreferences">Loading...</span></p>
-                            </div>
-                        </div>
-                        
-                        <!-- Member Info -->
-                        <div class="bg-green-50 rounded-lg p-4">
-                            <h3 class="font-semibold text-green-800 mb-3">
-                                <i class="fas fa-user mr-2"></i>Member Information
-                            </h3>
-                            <div id="modalMemberInfo" class="text-sm">
-                                <p><strong>Name:</strong> <span id="modalMemberName">Loading...</span></p>
-                                <p><strong>Membership:</strong> <span id="modalMemberMembership">Loading...</span></p>
-                                <p><strong>Preferred Times:</strong> <span id="modalMemberPreferences">Loading...</span></p>
-                            </div>
-                        </div>
-                    </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-1">Workout Type</label>
+ <select name="workout_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm">
+ <option value="">Select workout type...</option>
+ <option value="Upper Body">Upper Body</option>
+ <option value="Lower Body">Lower Body</option>
+ <option value="Full Body">Full Body</option>
+ <option value="Cardio">Cardio</option>
+ <option value="Strength Training">Strength Training</option>
+ <option value="Flexibility">Flexibility</option>
+ <option value="HIIT">HIIT</option>
+ <option value="General Training">General Training</option>
+ </select>
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+ <select name="duration" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm">
+ <option value="60">60 minutes</option>
+ <option value="90">90 minutes</option>
+ <option value="120">120 minutes</option>
+ </select>
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+ <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm"></textarea>
+ </div>
+ <button type="submit" class="w-full bg-green-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-green-700 text-sm">
+ Find Best Times
+ </button>
+ </form>
+ </div>
+ 
+ <!-- Coach Info -->
+ <div class="bg-blue-50 rounded-lg p-4">
+ <h3 class="font-semibold text-blue-800 mb-3">
+ <i class="fas fa-user-tie mr-2"></i>Coach Information
+ </h3>
+ <div id="modalCoachInfo" class="text-sm">
+ <p><strong>Name:</strong> <span id="modalCoachName">{{ user.name }}</span></p>
+ <p><strong>Specialization:</strong> <span id="modalCoachSpecialization">Loading...</span></p>
+ <p><strong>Preferred Times:</strong> <span id="modalCoachPreferences">Loading...</span></p>
+ </div>
+ </div>
+ 
+ <!-- Member Info -->
+ <div class="bg-green-50 rounded-lg p-4">
+ <h3 class="font-semibold text-green-800 mb-3">
+ <i class="fas fa-user mr-2"></i>Member Information
+ </h3>
+ <div id="modalMemberInfo" class="text-sm">
+ <p><strong>Name:</strong> <span id="modalMemberName">Loading...</span></p>
+ <p><strong>Membership:</strong> <span id="modalMemberMembership">Loading...</span></p>
+ <p><strong>Preferred Times:</strong> <span id="modalMemberPreferences">Loading...</span></p>
+ </div>
+ </div>
+ </div>
 
-                    <!-- Week Display -->
-                    <div class="mb-4">
-                        <div id="modalWeekInfo" class="text-lg font-medium text-gray-700 text-center">
-                            Loading week information...
-                        </div>
-                    </div>
+ <!-- Week Display -->
+ <div class="mb-4">
+ <div id="modalWeekInfo" class="text-lg font-medium text-gray-700 text-center">
+ Loading week information...
+ </div>
+ </div>
 
-                    <!-- Legend -->
-                    <div class="bg-white border rounded-lg p-4 mb-6">
-                        <h3 class="font-semibold mb-3 text-sm">Schedule Legend</h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-purple-300 rounded mr-2"></div>
-                                <span>Both Prefer (Score: 4)</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-blue-300 rounded mr-2"></div>
-                                <span>Coach Prefers (Score: 3)</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-green-300 rounded mr-2"></div>
-                                <span>Member Prefers (Score: 2)</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-gray-300 rounded mr-2"></div>
-                                <span>Available (Score: 1)</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-red-200 border border-red-400 rounded mr-2"></div>
-                                <span>Coach Session</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-orange-200 border border-orange-400 rounded mr-2"></div>
-                                <span>Member Session</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-yellow-200 border-2 border-yellow-500 rounded mr-2"></div>
-                                <span>Best Match</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-blue-200 border border-blue-400 rounded mr-2"></div>
-                                <span>Coach Available</span>
-                            </div>
-                        </div>
-                    </div>
+ <!-- Legend -->
+ <div class="bg-white border rounded-lg p-4 mb-4 sm:mb-6">
+ <h3 class="font-semibold mb-3 text-sm">Schedule Legend</h3>
+ <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+ <div class="flex items-center">
+ <div class="w-3 h-3 bg-purple-300 rounded mr-2"></div>
+ <span>Both Prefer (Score: 4)</span>
+ </div>
+ <div class="flex items-center">
+ <div class="w-3 h-3 bg-blue-300 rounded mr-2"></div>
+ <span>Coach Prefers (Score: 3)</span>
+ </div>
+ <div class="flex items-center">
+ <div class="w-3 h-3 bg-green-300 rounded mr-2"></div>
+ <span>Member Prefers (Score: 2)</span>
+ </div>
+ <div class="flex items-center">
+ <div class="w-3 h-3 bg-gray-300 rounded mr-2"></div>
+ <span>Available (Score: 1)</span>
+ </div>
+ <div class="flex items-center">
+ <div class="w-3 h-3 bg-red-200 border border-red-400 rounded mr-2"></div>
+ <span>Coach Session</span>
+ </div>
+ <div class="flex items-center">
+ <div class="w-3 h-3 bg-orange-200 border border-orange-400 rounded mr-2"></div>
+ <span>Member Session</span>
+ </div>
+ <div class="flex items-center">
+ <div class="w-3 h-3 bg-yellow-200 border-2 border-yellow-500 rounded mr-2"></div>
+ <span>Best Match</span>
+ </div>
+ <div class="flex items-center">
+ <div class="w-3 h-3 bg-blue-200 border border-blue-400 rounded mr-2"></div>
+ <span>Coach Available</span>
+ </div>
+ </div>
+ </div>
 
-                    <!-- Schedule Grid -->
-                    <div class="bg-white border rounded-lg overflow-hidden mb-6">
-                        <div class="overflow-x-auto overflow-y-auto modal-scroll max-h-96">
-                            <table id="modalScheduleTable" class="min-w-full text-xs">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
-                                            Time
-                                        </th>
-                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mon</th>
-                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tue</th>
-                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wed</th>
-                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thu</th>
-                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fri</th>
-                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sat</th>
-                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sun</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="modalScheduleBody" class="bg-white divide-y divide-gray-200">
-                                    <!-- Schedule will be populated here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                     <!-- Schedule Grid -->
+                    <div class="bg-white border rounded-lg overflow-hidden mb-4 sm:mb-6">
+                        <div class="overflow-x-auto overflow-y-auto modal-scroll max-h-64 sm:max-h-80 lg:max-h-96">
+                            <table id="modalScheduleTable" class="min-w-full text-xs sm:text-sm" style="min-width: 800px;">
+ <thead class="bg-gray-50">
+ <tr>
+ <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+ Time
+ </th>
+ <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mon</th>
+ <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tue</th>
+ <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wed</th>
+ <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thu</th>
+ <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fri</th>
+ <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sat</th>
+ <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sun</th>
+ </tr>
+ </thead>
+ <tbody id="modalScheduleBody" class="bg-white divide-y divide-gray-200">
+ <!-- Schedule will be populated here -->
+ </tbody>
+ </table>
+ </div>
+ </div>
 
-                    <!-- Best Matches Section -->
-                    <div id="modalBestMatches" class="hidden">
-                        <h3 class="font-semibold mb-3">
-                            <i class="fas fa-star mr-2 text-yellow-500"></i>Best Available Time Slots
-                        </h3>
-                        <div id="assignBestWorkoutMatches" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto modal-scroll">
-                            <!-- Best matches will be populated here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Best Matches Section -->
+ <div id="modalBestMatches" class="hidden">
+ <h3 class="font-semibold mb-3">
+ <i class="fas fa-star mr-2 text-yellow-500"></i>Best Available Time Slots
+ </h3>
+ <div id="assignBestWorkoutMatches" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto modal-scroll">
+ <!-- Best matches will be populated here -->
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+     </div>
+{% endblock %}
 
-    <script>
-        // Get member ID from URL
-        const memberId = window.location.pathname.split('/').pop();
-        // Get coach ID from template context
-        const coachId = "{{ user.id }}";
+<script>
+ // Get member ID from URL
+ const memberId = window.location.pathname.split('/').pop();
+ // Get coach ID from template context
+ const coachId = "{{ user.id }}";
 
-        // Fetch member details
-        async function fetchMemberDetails() {
-            try {
-                const response = await fetch(`/api/coach/members/${memberId}`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch member details');
-                }
-                const data = await response.json();
-                updateMemberDetails(data);
-                
-                // Also fetch member preferences
-                fetchMemberPreferences();
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Failed to load member details');
-            }
-        }
+ // Fetch member details
+ async function fetchMemberDetails() {
+ try {
+ const response = await fetch(`/api/coach/members/${memberId}`);
+ if (!response.ok) {
+ throw new Error('Failed to fetch member details');
+ }
+ const data = await response.json();
+ updateMemberDetails(data);
+ 
+ // Also fetch member preferences
+ fetchMemberPreferences();
+ } catch (error) {
+ console.error('Error:', error);
+ alert('Failed to load member details');
+ }
+ }
 
-        // Fetch member preferences
-        async function fetchMemberPreferences() {
-            try {
-                const response = await fetch(`/api/coach/members/${memberId}/preferences`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch member preferences');
-                }
-                const data = await response.json();
-                displayMemberPreferences(data);
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('memberPreferences').innerHTML = '<div class="text-center text-gray-500">Failed to load preferences</div>';
-            }
-        }
+ // Fetch member preferences
+ async function fetchMemberPreferences() {
+ try {
+ const response = await fetch(`/api/coach/members/${memberId}/preferences`);
+ if (!response.ok) {
+ throw new Error('Failed to fetch member preferences');
+ }
+ const data = await response.json();
+ displayMemberPreferences(data);
+ } catch (error) {
+ console.error('Error:', error);
+ document.getElementById('memberPreferences').innerHTML = '<div class="text-center text-gray-500">Failed to load preferences</div>';
+ }
+ }
 
-        // Display member preferences
-        function displayMemberPreferences(data) {
-            const { preferences, free_days } = data;
-            const container = document.getElementById('memberPreferences');
-            
-            if (!preferences && (!free_days || free_days.length === 0)) {
-                container.innerHTML = '<div class="text-center text-gray-500">No preferences set</div>';
-                return;
-            }
-            
-            const workoutTypes = preferences?.preferred_workout_types || [];
-            const duration = preferences?.preferred_duration || 60;
-            const timeSlots = preferences?.preferred_time_slots || [];
-            const notes = preferences?.notes || '';
-            
-            container.innerHTML = `
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-sm font-medium text-gray-900 mb-3">Workout Preferences</h3>
-                    <div class="space-y-2">
-                        <div>
-                            <span class="text-sm text-gray-600">Preferred Types:</span>
-                            <div class="mt-1">
-                                ${workoutTypes.length > 0 ? 
-                                    workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
-                                    '<span class="text-gray-500 text-sm">None specified</span>'
-                                }
-                            </div>
-                        </div>
-                        <div>
-                            <span class="text-sm text-gray-600">Duration:</span>
-                            <span class="text-sm font-medium">${duration} minutes</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-sm font-medium text-gray-900 mb-3">Time Preferences</h3>
-                    <div class="space-y-2">
-                        <div>
-                            <span class="text-sm text-gray-600">Preferred Times:</span>
-                            <div class="mt-1">
-                                ${timeSlots.length > 0 ? 
-                                    timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
-                                    '<span class="text-gray-500 text-sm">None specified</span>'
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-sm font-medium text-gray-900 mb-3">Weekly Availability</h3>
-                    <div class="grid grid-cols-2 gap-2">
-                        ${free_days.map(day => `
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-600">${day.day_of_week}</span>
-                                <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
-                                    ${day.is_available ? 'Available' : 'Unavailable'}
-                                </span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                ${notes ? `
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <h3 class="text-sm font-medium text-gray-900 mb-3">Notes</h3>
-                        <p class="text-sm text-gray-600">${notes}</p>
-                    </div>
-                ` : ''}
-            `;
-        }
+ // Display member preferences
+ function displayMemberPreferences(data) {
+ const { preferences, free_days } = data;
+ const container = document.getElementById('memberPreferences');
+ 
+ if (!preferences && (!free_days || free_days.length === 0)) {
+ container.innerHTML = '<div class="text-center text-gray-500">No preferences set</div>';
+ return;
+ }
+ 
+ const workoutTypes = preferences?.preferred_workout_types || [];
+ const duration = preferences?.preferred_duration || 60;
+ const timeSlots = preferences?.preferred_time_slots || [];
+ const notes = preferences?.notes || '';
+ 
+ container.innerHTML = `
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Workout Preferences</h3>
+ <div class="space-y-2">
+ <div>
+ <span class="text-sm text-gray-600">Preferred Types:</span>
+ <div class="mt-1">
+ ${workoutTypes.length > 0 ? 
+ workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
+ '<span class="text-gray-500 text-sm">None specified</span>'
+ }
+ </div>
+ </div>
+ <div>
+ <span class="text-sm text-gray-600">Duration:</span>
+ <span class="text-sm font-medium">${duration} minutes</span>
+ </div>
+ </div>
+ </div>
+ 
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Time Preferences</h3>
+ <div class="space-y-2">
+ <div>
+ <span class="text-sm text-gray-600">Preferred Times:</span>
+ <div class="mt-1">
+ ${timeSlots.length > 0 ? 
+ timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
+ '<span class="text-gray-500 text-sm">None specified</span>'
+ }
+ </div>
+ </div>
+ </div>
+ </div>
+ 
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Weekly Availability</h3>
+ <div class="grid grid-cols-2 gap-2">
+ ${free_days.map(day => `
+ <div class="flex items-center justify-between">
+ <span class="text-sm text-gray-600">${day.day_of_week}</span>
+ <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
+ ${day.is_available ? 'Available' : 'Unavailable'}
+ </span>
+ </div>
+ `).join('')}
+ </div>
+ </div>
+ 
+ ${notes ? `
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Notes</h3>
+ <p class="text-sm text-gray-600">${notes}</p>
+ </div>
+ ` : ''}
+ `;
+ }
 
-        // Update member details in the UI
-        function updateMemberDetails(data) {
-            const { member, recent_sessions } = data;
-            
-            // Store sessions globally for filtering
-            window.allSessions = recent_sessions;
-            
-            // Update basic info
-            document.getElementById('memberName').textContent = member.name;
-            document.getElementById('memberEmail').textContent = member.email;
-            document.getElementById('membershipType').textContent = member.membership_type;
-            
-            // Update stats
-            document.getElementById('totalSessions').textContent = member.total_sessions;
-            document.getElementById('completedSessions').textContent = member.completed_sessions;
-            document.getElementById('lastSession').textContent = member.last_session || 'Never';
-            
-            // Display all sessions initially
-            displaySessions(recent_sessions);
-        }
+ // Update member details in the UI
+ function updateMemberDetails(data) {
+ const { member, recent_sessions } = data;
+ 
+ // Store sessions globally for filtering
+ window.allSessions = recent_sessions;
+ 
+ // Update basic info
+ document.getElementById('memberName').textContent = member.name;
+ document.getElementById('memberEmail').textContent = member.email;
+ document.getElementById('membershipType').textContent = member.membership_type;
+ 
+ // Update stats
+ document.getElementById('totalSessions').textContent = member.total_sessions;
+ document.getElementById('completedSessions').textContent = member.completed_sessions;
+ document.getElementById('lastSession').textContent = member.last_session || 'Never';
+ 
+ // Display all sessions initially
+ displaySessions(recent_sessions);
+ }
 
-        // Function to display sessions
-        function displaySessions(sessions) {
-            const sessionsContainer = document.getElementById('recentSessions');
-            if (sessions.length === 0) {
-                sessionsContainer.innerHTML = '<div class="text-center text-gray-500">No sessions found</div>';
-            } else {
-                sessionsContainer.innerHTML = sessions.map(session => `
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="font-medium text-gray-900">${session.date} at ${session.time}</h3>
-                                <p class="text-sm text-gray-500">${session.workout.type}</p>
-                            </div>
-                            <span class="px-2 py-1 text-sm rounded-full ${
-                                session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                                session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                'bg-blue-100 text-blue-800'
-                            }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
-                        </div>
-                        ${session.workout.exercises.length > 0 ? `
-                            <div class="mt-2">
-                                <h4 class="text-sm font-medium text-gray-700">Exercises:</h4>
-                                <ul class="mt-1 text-sm text-gray-600">
-                                    ${session.workout.exercises.map(exercise => `
-                                        <li>${exercise}</li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                        ` : ''}
-                    </div>
-                `).join('');
-            }
-        }
+ // Function to display sessions
+ function displaySessions(sessions) {
+ const sessionsContainer = document.getElementById('recentSessions');
+ if (sessions.length === 0) {
+ sessionsContainer.innerHTML = '<div class="text-center text-gray-500">No sessions found</div>';
+ } else {
+ sessionsContainer.innerHTML = sessions.map(session => `
+ <div class="bg-gray-50 rounded-lg p-4">
+ <div class="flex justify-between items-start">
+ <div>
+ <h3 class="font-medium text-gray-900">${session.date} at ${session.time}</h3>
+ <p class="text-sm text-gray-500">${session.workout.type}</p>
+ </div>
+ <span class="px-2 py-1 text-sm rounded-full ${
+ session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+ session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+ 'bg-blue-100 text-blue-800'
+ }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+ </div>
+ ${session.workout.exercises.length > 0 ? `
+ <div class="mt-2">
+ <h4 class="text-sm font-medium text-gray-700">Exercises:</h4>
+ <ul class="mt-1 text-sm text-gray-600">
+ ${session.workout.exercises.map(exercise => `
+ <li>${exercise}</li>
+ `).join('')}
+ </ul>
+ </div>
+ ` : ''}
+ </div>
+ `).join('');
+ }
+ }
 
-        // Add search functionality
-        document.getElementById('sessionSearch').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            const filteredSessions = window.allSessions.filter(session => {
-                return (
-                    session.workout.type.toLowerCase().includes(searchTerm) ||
-                    session.date.toLowerCase().includes(searchTerm) ||
-                    session.status.toLowerCase().includes(searchTerm) ||
-                    session.workout.exercises.some(exercise => 
-                        exercise.toLowerCase().includes(searchTerm)
-                    )
-                );
-            });
-            displaySessions(filteredSessions);
-        });
+ // Add search functionality
+ document.getElementById('sessionSearch').addEventListener('input', function(e) {
+ const searchTerm = e.target.value.toLowerCase();
+ const filteredSessions = window.allSessions.filter(session => {
+ return (
+ session.workout.type.toLowerCase().includes(searchTerm) ||
+ session.date.toLowerCase().includes(searchTerm) ||
+ session.status.toLowerCase().includes(searchTerm) ||
+ session.workout.exercises.some(exercise => 
+ exercise.toLowerCase().includes(searchTerm)
+ )
+ );
+ });
+ displaySessions(filteredSessions);
+ });
 
-        // Logout function
-        function logout() {
-            fetch('/api/logout', { method: 'POST' })
-                .then(() => window.location.href = '/')
-                .catch(error => console.error('Error:', error));
-        }
+ // Logout function
+ function logout() {
+ fetch('/api/logout', { method: 'POST' })
+ .then(() => window.location.href = '/')
+ .catch(error => console.error('Error:', error));
+ }
 
-        // Load member details when page loads
-        fetchMemberDetails();
+ // Load member details when page loads
+ fetchMemberDetails();
 
-        // Enhanced Modal logic with Schedule View
-        const assignBtn = document.getElementById('assignBestWorkoutBtn');
-        const modal = document.getElementById('assignBestWorkoutModal');
-        const form = document.getElementById('assignBestWorkoutForm');
-        const matchesDiv = document.getElementById('assignBestWorkoutMatches');
-        
-        let currentModalWeek = new Date();
-        let modalScheduleData = null;
-        let modalBestMatches = [];
+ // Enhanced Modal logic with Schedule View
+ const assignBtn = document.getElementById('assignBestWorkoutBtn');
+ const modal = document.getElementById('assignBestWorkoutModal');
+ const form = document.getElementById('assignBestWorkoutForm');
+ const matchesDiv = document.getElementById('assignBestWorkoutMatches');
+ 
+ let currentModalWeek = new Date();
+ let modalScheduleData = null;
+ let modalBestMatches = [];
 
-        // Modal week navigation
-        function getModalWeekStart(date) {
-            const d = new Date(date);
-            const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-            return new Date(d.setDate(diff));
-        }
+ // Modal week navigation
+ function getModalWeekStart(date) {
+ const d = new Date(date);
+ const day = d.getDay();
+ const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+ return new Date(d.setDate(diff));
+ }
 
-        function formatModalDate(date) {
-            return date.toISOString().split('T')[0];
-        }
+ function formatModalDate(date) {
+ return date.toISOString().split('T')[0];
+ }
 
-        function formatModalWeekInfo(weekStart) {
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekEnd.getDate() + 6);
-            const options = { month: 'long', day: 'numeric', year: 'numeric' };
-            return `Week of ${weekStart.toLocaleDateString('en-US', options)} - ${weekEnd.toLocaleDateString('en-US', options)}`;
-        }
+ function formatModalWeekInfo(weekStart) {
+ const weekEnd = new Date(weekStart);
+ weekEnd.setDate(weekEnd.getDate() + 6);
+ const options = { month: 'long', day: 'numeric', year: 'numeric' };
+ return `Week of ${weekStart.toLocaleDateString('en-US', options)} - ${weekEnd.toLocaleDateString('en-US', options)}`;
+ }
 
-        function formatModalTimeSlot(hour) {
-            return `${hour.toString().padStart(2, '0')}:00`;
-        }
+ function formatModalTimeSlot(hour) {
+ return `${hour.toString().padStart(2, '0')}:00`;
+ }
 
-        function getModalPreferenceClass(slot) {
-            if (!slot.available_for_both) return '';
-            switch(slot.preference_score) {
-                case 4: return 'modal-preference-both';
-                case 3: return 'modal-preference-coach';
-                case 2: return 'modal-preference-member';
-                case 1: return 'modal-preference-available';
-                default: return '';
-            }
-        }
+ function getModalPreferenceClass(slot) {
+ if (!slot.available_for_both) return '';
+ switch(slot.preference_score) {
+ case 4: return 'modal-preference-both';
+ case 3: return 'modal-preference-coach';
+ case 2: return 'modal-preference-member';
+ case 1: return 'modal-preference-available';
+ default: return '';
+ }
+ }
 
-        function getModalCellContent(slot, day, hour, bestMatches = []) {
-            let content = '<div class="h-16 p-1 text-xs overflow-y-auto">';
-            
-            // Check if this slot is a best match
-            const isBestMatch = bestMatches.some(match => 
-                match.day === day && parseInt(match.hour) === hour
-            );
-            
-            let hasAnySessions = false;
-            
-            if (slot.coach_session) {
-                hasAnySessions = true;
-                content += `
-                    <div class="bg-red-100 border border-red-300 rounded p-1 mb-1 relative group">
-                        <div class="font-semibold text-red-800 text-xs truncate">Coach Session</div>
-                        <div class="text-red-600 text-xs truncate">${slot.coach_session.member_name}</div>
-                        <div class="text-red-500 text-xs">${slot.coach_session.time}</div>
-                        <div class="absolute left-0 top-0 bg-red-800 text-white p-2 rounded shadow-lg hidden group-hover:block z-10 min-w-48">
-                            <div class="font-semibold">Coach Session</div>
-                            <div>Member: ${slot.coach_session.member_name}</div>
-                            <div>Time: ${slot.coach_session.time}</div>
-                            <div>Duration: ${slot.coach_session.duration} min</div>
-                            <div>Type: ${slot.coach_session.session_type}</div>
-                            <div>Status: ${slot.coach_session.status}</div>
-                            ${slot.coach_session.notes ? `<div>Notes: ${slot.coach_session.notes}</div>` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (slot.member_session) {
-                hasAnySessions = true;
-                content += `
-                    <div class="bg-orange-100 border border-orange-300 rounded p-1 mb-1 relative group">
-                        <div class="font-semibold text-orange-800 text-xs truncate">Member Session</div>
-                        <div class="text-orange-600 text-xs truncate">${slot.member_session.coach_name}</div>
-                        <div class="text-orange-500 text-xs">${slot.member_session.time}</div>
-                        <div class="absolute left-0 top-0 bg-orange-800 text-white p-2 rounded shadow-lg hidden group-hover:block z-10 min-w-48">
-                            <div class="font-semibold">Member Session</div>
-                            <div>Coach: ${slot.member_session.coach_name}</div>
-                            <div>Time: ${slot.member_session.time}</div>
-                            <div>Duration: ${slot.member_session.duration} min</div>
-                            <div>Type: ${slot.member_session.session_type}</div>
-                            <div>Status: ${slot.member_session.status}</div>
-                            ${slot.member_session.notes ? `<div>Notes: ${slot.member_session.notes}</div>` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (slot.available_for_both && !hasAnySessions) {
-                const borderClass = isBestMatch ? 'border-2 border-yellow-500 bg-yellow-100' : '';
-                content += `
-                    <div class="modal-available-slot cursor-pointer hover:bg-opacity-80 rounded p-1 ${borderClass} h-full" 
-                         data-day="${day}" data-hour="${hour}" data-score="${slot.preference_score}">
-                        <div class="text-center h-full flex flex-col justify-center">
-                            ${isBestMatch ? '<i class="fas fa-star text-yellow-600"></i>' : '<i class="fas fa-plus text-green-600"></i>'}
-                            <div class="text-xs">${isBestMatch ? 'Best Match' : 'Available'}</div>
-                            <div class="font-semibold text-xs">Score: ${slot.preference_score}</div>
-                        </div>
-                    </div>
-                `;
-            } else if (slot.available_for_both && hasAnySessions) {
-                // Show a small indicator that there are conflicts
-                content += `
-                    <div class="bg-yellow-100 border border-yellow-400 rounded p-1 text-center">
-                        <div class="text-xs text-yellow-800">⚠️ Conflicts</div>
-                    </div>
-                `;
-            }
-            
-            // If slot has preference indicators but no sessions, show availability
-            if (!hasAnySessions && !slot.available_for_both) {
-                if (slot.coach_available || slot.member_available) {
-                    const availabilityText = [];
-                    if (slot.coach_available) availabilityText.push('Coach');
-                    if (slot.member_available) availabilityText.push('Member');
-                    
-                    content += `
-                        <div class="bg-gray-100 border border-gray-300 rounded p-1 text-center">
-                            <div class="text-xs text-gray-600">${availabilityText.join(' + ')}</div>
-                            <div class="text-xs text-gray-500">Available</div>
-                        </div>
-                    `;
-                }
-            }
-            
-            content += '</div>';
-            return content;
-        }
+ function getModalCellContent(slot, day, hour, bestMatches = []) {
+ let content = '<div class="h-16 p-1 text-xs overflow-y-auto">';
+ 
+ // Check if this slot is a best match
+ const isBestMatch = bestMatches.some(match => 
+ match.day === day && parseInt(match.hour) === hour
+ );
+ 
+ let hasAnySessions = false;
+ 
+ if (slot.coach_session) {
+ hasAnySessions = true;
+ content += `
+ <div class="bg-red-100 border border-red-300 rounded p-1 mb-1 relative group">
+ <div class="font-semibold text-red-800 text-xs truncate">Coach Session</div>
+ <div class="text-red-600 text-xs truncate">${slot.coach_session.member_name}</div>
+ <div class="text-red-500 text-xs">${slot.coach_session.time}</div>
+ <div class="absolute left-0 top-0 bg-red-800 text-white p-2 rounded shadow-lg hidden group-hover:block z-10 min-w-48">
+ <div class="font-semibold">Coach Session</div>
+ <div>Member: ${slot.coach_session.member_name}</div>
+ <div>Time: ${slot.coach_session.time}</div>
+ <div>Duration: ${slot.coach_session.duration} min</div>
+ <div>Type: ${slot.coach_session.session_type}</div>
+ <div>Status: ${slot.coach_session.status}</div>
+ ${slot.coach_session.notes ? `<div>Notes: ${slot.coach_session.notes}</div>` : ''}
+ </div>
+ </div>
+ `;
+ }
+ 
+ if (slot.member_session) {
+ hasAnySessions = true;
+ content += `
+ <div class="bg-orange-100 border border-orange-300 rounded p-1 mb-1 relative group">
+ <div class="font-semibold text-orange-800 text-xs truncate">Member Session</div>
+ <div class="text-orange-600 text-xs truncate">${slot.member_session.coach_name}</div>
+ <div class="text-orange-500 text-xs">${slot.member_session.time}</div>
+ <div class="absolute left-0 top-0 bg-orange-800 text-white p-2 rounded shadow-lg hidden group-hover:block z-10 min-w-48">
+ <div class="font-semibold">Member Session</div>
+ <div>Coach: ${slot.member_session.coach_name}</div>
+ <div>Time: ${slot.member_session.time}</div>
+ <div>Duration: ${slot.member_session.duration} min</div>
+ <div>Type: ${slot.member_session.session_type}</div>
+ <div>Status: ${slot.member_session.status}</div>
+ ${slot.member_session.notes ? `<div>Notes: ${slot.member_session.notes}</div>` : ''}
+ </div>
+ </div>
+ `;
+ }
+ 
+ if (slot.available_for_both && !hasAnySessions) {
+ const borderClass = isBestMatch ? 'border-2 border-yellow-500 bg-yellow-100' : '';
+ content += `
+ <div class="modal-available-slot cursor-pointer hover:bg-opacity-80 rounded p-1 ${borderClass} h-full" 
+ data-day="${day}" data-hour="${hour}" data-score="${slot.preference_score}">
+ <div class="text-center h-full flex flex-col justify-center">
+ ${isBestMatch ? '<i class="fas fa-star text-yellow-600"></i>' : '<i class="fas fa-plus text-green-600"></i>'}
+ <div class="text-xs">${isBestMatch ? 'Best Match' : 'Available'}</div>
+ <div class="font-semibold text-xs">Score: ${slot.preference_score}</div>
+ </div>
+ </div>
+ `;
+ } else if (slot.available_for_both && hasAnySessions) {
+ // Show a small indicator that there are conflicts
+ content += `
+ <div class="bg-yellow-100 border border-yellow-400 rounded p-1 text-center">
+ <div class="text-xs text-yellow-800">⚠️ Conflicts</div>
+ </div>
+ `;
+ }
+ 
+ // If slot has preference indicators but no sessions, show availability
+ if (!hasAnySessions && !slot.available_for_both) {
+ if (slot.coach_available || slot.member_available) {
+ const availabilityText = [];
+ if (slot.coach_available) availabilityText.push('Coach');
+ if (slot.member_available) availabilityText.push('Member');
+ 
+ content += `
+ <div class="bg-gray-100 border border-gray-300 rounded p-1 text-center">
+ <div class="text-xs text-gray-600">${availabilityText.join(' + ')}</div>
+ <div class="text-xs text-gray-500">Available</div>
+ </div>
+ `;
+ }
+ }
+ 
+ content += '</div>';
+ return content;
+ }
 
-        assignBtn.onclick = async function() {
-            currentModalWeek = getModalWeekStart(new Date());
-            document.getElementById('modalWeekInfo').textContent = formatModalWeekInfo(currentModalWeek);
-            
-            // Load coach and member info in modal
-            await loadModalParticipantsInfo();
-            
-            matchesDiv.innerHTML = '';
-            form.reset();
-            modal.classList.remove('hidden');
-            
-            // Load initial schedule
-            await loadModalSchedule();
-        };
+ assignBtn.onclick = async function() {
+ currentModalWeek = getModalWeekStart(new Date());
+ document.getElementById('modalWeekInfo').textContent = formatModalWeekInfo(currentModalWeek);
+ 
+ // Load coach and member info in modal
+ await loadModalParticipantsInfo();
+ 
+ matchesDiv.innerHTML = '';
+ form.reset();
+ modal.classList.remove('hidden');
+ 
+ // Load initial schedule
+ await loadModalSchedule();
+ };
 
-        async function loadModalParticipantsInfo() {
-            try {
-                // Get coach preferences and info
-                const coachResponse = await fetch(`/api/coach/preferences`);
-                if (coachResponse.ok) {
-                    const coachData = await coachResponse.json();
-                    const coachPrefs = coachData.preferences?.preferred_time_slots || [];
-                    document.getElementById('modalCoachPreferences').textContent = 
-                        coachPrefs.length > 0 ? coachPrefs.join(', ') + ':00' : 'None set';
-                    
-                    // Set coach specialization
-                    if (coachData.coach_info?.specialization) {
-                        document.getElementById('modalCoachSpecialization').textContent = coachData.coach_info.specialization;
-                    } else {
-                        document.getElementById('modalCoachSpecialization').textContent = 'Not specified';
-                    }
-                }
+ async function loadModalParticipantsInfo() {
+ try {
+ // Get coach preferences and info
+ const coachResponse = await fetch(`/api/coach/preferences`);
+ if (coachResponse.ok) {
+ const coachData = await coachResponse.json();
+ const coachPrefs = coachData.preferences?.preferred_time_slots || [];
+ document.getElementById('modalCoachPreferences').textContent = 
+ coachPrefs.length > 0 ? coachPrefs.join(', ') + ':00' : 'None set';
+ 
+ // Set coach specialization
+ if (coachData.coach_info?.specialization) {
+ document.getElementById('modalCoachSpecialization').textContent = coachData.coach_info.specialization;
+ } else {
+ document.getElementById('modalCoachSpecialization').textContent = 'Not specified';
+ }
+ }
 
-                // Get member name and membership from existing data
-                const memberName = document.getElementById('memberName').textContent;
-                const memberMembership = document.getElementById('membershipType').textContent;
-                
-                document.getElementById('modalMemberName').textContent = memberName;
-                document.getElementById('modalMemberMembership').textContent = memberMembership;
+ // Get member name and membership from existing data
+ const memberName = document.getElementById('memberName').textContent;
+ const memberMembership = document.getElementById('membershipType').textContent;
+ 
+ document.getElementById('modalMemberName').textContent = memberName;
+ document.getElementById('modalMemberMembership').textContent = memberMembership;
 
-                // Get member preferences from existing display
-                const memberPrefsElement = document.getElementById('memberPreferences');
-                if (memberPrefsElement) {
-                    const timeSlotElements = memberPrefsElement.querySelectorAll('.bg-green-100');
-                    const timeSlots = Array.from(timeSlotElements).map(el => el.textContent);
-                    document.getElementById('modalMemberPreferences').textContent = 
-                        timeSlots.length > 0 ? timeSlots.join(', ') : 'None set';
-                }
-            } catch (error) {
-                console.error('Error loading modal participants info:', error);
-            }
-        }
+ // Get member preferences from existing display
+ const memberPrefsElement = document.getElementById('memberPreferences');
+ if (memberPrefsElement) {
+ const timeSlotElements = memberPrefsElement.querySelectorAll('.bg-green-100');
+ const timeSlots = Array.from(timeSlotElements).map(el => el.textContent);
+ document.getElementById('modalMemberPreferences').textContent = 
+ timeSlots.length > 0 ? timeSlots.join(', ') : 'None set';
+ }
+ } catch (error) {
+ console.error('Error loading modal participants info:', error);
+ }
+ }
 
-        async function loadModalSchedule() {
-            try {
-                const weekStart = formatModalDate(currentModalWeek);
-                const response = await fetch(`/api/coach/schedule_view/${coachId}/${memberId}?week_start=${weekStart}`);
-                const data = await response.json();
-                
-                if (!data.success) {
-                    throw new Error('Failed to load schedule data');
-                }
-                
-                modalScheduleData = data;
-                displayModalSchedule(data);
-            } catch (error) {
-                console.error('Error loading modal schedule:', error);
-                document.getElementById('modalScheduleBody').innerHTML = 
-                    '<tr><td colspan="8" class="text-center text-red-500 p-4">Error loading schedule data</td></tr>';
-            }
-        }
+ async function loadModalSchedule() {
+ try {
+ const weekStart = formatModalDate(currentModalWeek);
+ const response = await fetch(`/api/coach/schedule_view/${coachId}/${memberId}?week_start=${weekStart}`);
+ const data = await response.json();
+ 
+ if (!data.success) {
+ throw new Error('Failed to load schedule data');
+ }
+ 
+ modalScheduleData = data;
+ displayModalSchedule(data);
+ } catch (error) {
+ console.error('Error loading modal schedule:', error);
+ document.getElementById('modalScheduleBody').innerHTML = 
+ '<tr><td colspan="8" class="text-center text-red-500 p-4">Error loading schedule data</td></tr>';
+ }
+ }
 
-        function displayModalSchedule(data, bestMatches = []) {
-            const scheduleBody = document.getElementById('modalScheduleBody');
-            scheduleBody.innerHTML = '';
-            
-            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-            
-            // Generate rows for each hour (8 AM to 10 PM)
-            for (let hour = 8; hour <= 22; hour++) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="px-2 py-1 whitespace-nowrap text-xs font-medium text-gray-900 bg-gray-50">
-                        ${formatModalTimeSlot(hour)}
-                    </td>
-                `;
-                
-                days.forEach(day => {
-                    const slot = data.schedule_grid[day][hour];
-                    const cell = document.createElement('td');
-                    cell.className = `px-1 py-1 whitespace-nowrap text-xs border-l border-gray-200 ${getModalPreferenceClass(slot)}`;
-                    cell.innerHTML = getModalCellContent(slot, day, hour, bestMatches);
-                    row.appendChild(cell);
-                });
-                
-                scheduleBody.appendChild(row);
-            }
-            
-            // Add click handlers for available slots
-            document.querySelectorAll('.modal-available-slot').forEach(slot => {
-                slot.addEventListener('click', function() {
-                    const day = this.dataset.day;
-                    const hour = this.dataset.hour;
-                    assignSessionFromModal(day, hour);
-                });
-            });
-        }
+ function displayModalSchedule(data, bestMatches = []) {
+ const scheduleBody = document.getElementById('modalScheduleBody');
+ scheduleBody.innerHTML = '';
+ 
+ const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+ 
+ // Generate rows for each hour (8 AM to 10 PM)
+ for (let hour = 8; hour <= 22; hour++) {
+ const row = document.createElement('tr');
+ row.innerHTML = `
+ <td class="px-2 py-1 whitespace-nowrap text-xs font-medium text-gray-900 bg-gray-50">
+ ${formatModalTimeSlot(hour)}
+ </td>
+ `;
+ 
+ days.forEach(day => {
+ const slot = data.schedule_grid[day][hour];
+ const cell = document.createElement('td');
+ cell.className = `px-1 py-1 whitespace-nowrap text-xs border-l border-gray-200 ${getModalPreferenceClass(slot)}`;
+ cell.innerHTML = getModalCellContent(slot, day, hour, bestMatches);
+ row.appendChild(cell);
+ });
+ 
+ scheduleBody.appendChild(row);
+ }
+ 
+ // Add click handlers for available slots
+ document.querySelectorAll('.modal-available-slot').forEach(slot => {
+ slot.addEventListener('click', function() {
+ const day = this.dataset.day;
+ const hour = this.dataset.hour;
+ assignSessionFromModal(day, hour);
+ });
+ });
+ }
 
-        function closeAssignBestWorkoutModal() {
-            modal.classList.add('hidden');
-            document.getElementById('modalBestMatches').classList.add('hidden');
-            modalBestMatches = [];
-        }
+ function closeAssignBestWorkoutModal() {
+ modal.classList.add('hidden');
+ document.getElementById('modalBestMatches').classList.add('hidden');
+ modalBestMatches = [];
+ }
 
-        // Week navigation in modal
-        document.getElementById('prevWeekModal').addEventListener('click', function() {
-            currentModalWeek.setDate(currentModalWeek.getDate() - 7);
-            document.getElementById('modalWeekInfo').textContent = formatModalWeekInfo(currentModalWeek);
-            loadModalSchedule();
-        });
+ // Week navigation in modal
+ document.getElementById('prevWeekModal').addEventListener('click', function() {
+ currentModalWeek.setDate(currentModalWeek.getDate() - 7);
+ document.getElementById('modalWeekInfo').textContent = formatModalWeekInfo(currentModalWeek);
+ loadModalSchedule();
+ });
 
-        document.getElementById('nextWeekModal').addEventListener('click', function() {
-            currentModalWeek.setDate(currentModalWeek.getDate() + 7);
-            document.getElementById('modalWeekInfo').textContent = formatModalWeekInfo(currentModalWeek);
-            loadModalSchedule();
-        });
+ document.getElementById('nextWeekModal').addEventListener('click', function() {
+ currentModalWeek.setDate(currentModalWeek.getDate() + 7);
+ document.getElementById('modalWeekInfo').textContent = formatModalWeekInfo(currentModalWeek);
+ loadModalSchedule();
+ });
 
-        form.onsubmit = async function(e) {
-            e.preventDefault();
-            matchesDiv.innerHTML = '<div class="text-gray-500 text-center p-4">Finding best matches...</div>';
-            
-            const formData = new FormData(form);
-            const data = {
-                coach_id: coachId,
-                member_id: memberId,
-                workout_type: formData.get('workout_type'),
-                duration: parseInt(formData.get('duration'), 10),
-                notes: formData.get('notes')
-            };
-            
-            try {
-                const res = await fetch('/api/coach/assign_best_workout', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
-                const result = await res.json();
-                
-                if (!result.success) {
-                    matchesDiv.innerHTML = `<div class='text-red-600 text-center p-4'>${result.message}</div>`;
-                    return;
-                }
-                
-                modalBestMatches = result.matches;
-                displayModalBestMatches(result.matches);
-                
-                // Refresh schedule to show best matches highlighted
-                if (modalScheduleData) {
-                    displayModalSchedule(modalScheduleData, result.matches);
-                }
-                
-                document.getElementById('modalBestMatches').classList.remove('hidden');
-                
-            } catch (error) {
-                matchesDiv.innerHTML = `<div class='text-red-600 text-center p-4'>Error finding matches: ${error.message}</div>`;
-            }
-        };
+ form.onsubmit = async function(e) {
+ e.preventDefault();
+ matchesDiv.innerHTML = '<div class="text-gray-500 text-center p-4">Finding best matches...</div>';
+ 
+ const formData = new FormData(form);
+ const data = {
+ coach_id: coachId,
+ member_id: memberId,
+ workout_type: formData.get('workout_type'),
+ duration: parseInt(formData.get('duration'), 10),
+ notes: formData.get('notes')
+ };
+ 
+ try {
+ const res = await fetch('/api/coach/assign_best_workout', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify(data)
+ });
+ const result = await res.json();
+ 
+ if (!result.success) {
+ matchesDiv.innerHTML = `<div class='text-red-600 text-center p-4'>${result.message}</div>`;
+ return;
+ }
+ 
+ modalBestMatches = result.matches;
+ displayModalBestMatches(result.matches);
+ 
+ // Refresh schedule to show best matches highlighted
+ if (modalScheduleData) {
+ displayModalSchedule(modalScheduleData, result.matches);
+ }
+ 
+ document.getElementById('modalBestMatches').classList.remove('hidden');
+ 
+ } catch (error) {
+ matchesDiv.innerHTML = `<div class='text-red-600 text-center p-4'>Error finding matches: ${error.message}</div>`;
+ }
+ };
 
-        function displayModalBestMatches(matches) {
-            if (matches.length === 0) {
-                matchesDiv.innerHTML = '<div class="text-gray-500 text-center p-4">No optimal time slots found for this week.</div>';
-                return;
-            }
-            
-            matchesDiv.innerHTML = matches.map((match, index) => {
-                const preferenceText = {
-                    4: '🌟 Both prefer this time',
-                    3: '👨‍💼 Coach prefers this time',
-                    2: '👤 Member prefers this time',
-                    1: '✅ Available slot'
-                }[match.preference_score] || 'Available';
-                
-                return `
-                    <div class="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
-                         onclick="assignSessionFromModalMatch('${match.day}', ${match.hour}, '${match.date}')">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <h4 class="font-semibold text-sm text-gray-900">${match.day}</h4>
-                                <p class="text-xs text-gray-600">${match.date} at ${formatModalTimeSlot(match.hour)}</p>
-                                <p class="text-xs text-gray-500">${preferenceText}</p>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-lg font-bold text-green-600">#{index + 1}</div>
-                                <div class="text-xs text-gray-500">Score: ${match.preference_score}</div>
-                                <button class="mt-1 bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700">
-                                    Assign
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
+ function displayModalBestMatches(matches) {
+ if (matches.length === 0) {
+ matchesDiv.innerHTML = '<div class="text-gray-500 text-center p-4">No optimal time slots found for this week.</div>';
+ return;
+ }
+ 
+ matchesDiv.innerHTML = matches.map((match, index) => {
+ const preferenceText = {
+ 4: '🌟 Both prefer this time',
+ 3: '👨‍💼 Coach prefers this time',
+ 2: '👤 Member prefers this time',
+ 1: '✅ Available slot'
+ }[match.preference_score] || 'Available';
+ 
+ return `
+ <div class="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
+ onclick="assignSessionFromModalMatch('${match.day}', ${match.hour}, '${match.date}')">
+ <div class="flex justify-between items-center">
+ <div>
+ <h4 class="font-semibold text-sm text-gray-900">${match.day}</h4>
+ <p class="text-xs text-gray-600">${match.date} at ${formatModalTimeSlot(match.hour)}</p>
+ <p class="text-xs text-gray-500">${preferenceText}</p>
+ </div>
+ <div class="text-right">
+ <div class="text-lg font-bold text-green-600">#{index + 1}</div>
+ <div class="text-xs text-gray-500">Score: ${match.preference_score}</div>
+ <button class="mt-1 bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700">
+ Assign
+ </button>
+ </div>
+ </div>
+ </div>
+ `;
+ }).join('');
+ }
 
-        async function assignSessionFromModal(day, hour, date = null) {
-            const formData = new FormData(form);
-            
-            if (!formData.get('workout_type')) {
-                alert('Please fill in the session details first');
-                return;
-            }
+ async function assignSessionFromModal(day, hour, date = null) {
+ const formData = new FormData(form);
+ 
+ if (!formData.get('workout_type')) {
+ alert('Please fill in the session details first');
+ return;
+ }
 
-            // Calculate the date for this day/hour if not provided
-            if (!date) {
-                const weekStart = new Date(currentModalWeek);
-                const dayIndex = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].indexOf(day);
-                const targetDate = new Date(weekStart);
-                targetDate.setDate(targetDate.getDate() + dayIndex);
-                date = formatModalDate(targetDate);
-            }
+ // Calculate the date for this day/hour if not provided
+ if (!date) {
+ const weekStart = new Date(currentModalWeek);
+ const dayIndex = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].indexOf(day);
+ const targetDate = new Date(weekStart);
+ targetDate.setDate(targetDate.getDate() + dayIndex);
+ date = formatModalDate(targetDate);
+ }
 
-            await confirmModalAssignment(day, hour, date, formData);
-        }
+ await confirmModalAssignment(day, hour, date, formData);
+ }
 
-        async function assignSessionFromModalMatch(day, hour, date) {
-            const formData = new FormData(form);
-            
-            if (!formData.get('workout_type')) {
-                alert('Please fill in the session details first');
-                return;
-            }
+ async function assignSessionFromModalMatch(day, hour, date) {
+ const formData = new FormData(form);
+ 
+ if (!formData.get('workout_type')) {
+ alert('Please fill in the session details first');
+ return;
+ }
 
-            await confirmModalAssignment(day, hour, date, formData);
-        }
+ await confirmModalAssignment(day, hour, date, formData);
+ }
 
-        async function confirmModalAssignment(day, hour, date, formData) {
-            const timeStr = formatModalTimeSlot(hour);
-            
-            if (!confirm(`Assign session on ${day}, ${date} at ${timeStr}?`)) {
-                return;
-            }
+ async function confirmModalAssignment(day, hour, date, formData) {
+ const timeStr = formatModalTimeSlot(hour);
+ 
+ if (!confirm(`Assign session on ${day}, ${date} at ${timeStr}?`)) {
+ return;
+ }
 
-            try {
-                const data = {
-                    coach_id: coachId,
-                    member_id: memberId,
-                    session_date: date,
-                    session_time: timeStr,
-                    duration: parseInt(formData.get('duration'), 10),
-                    workout_type: formData.get('workout_type'),
-                    notes: formData.get('notes')
-                };
+ try {
+ const data = {
+ coach_id: coachId,
+ member_id: memberId,
+ session_date: date,
+ session_time: timeStr,
+ duration: parseInt(formData.get('duration'), 10),
+ workout_type: formData.get('workout_type'),
+ notes: formData.get('notes')
+ };
 
-                const res = await fetch('/api/coach/assign_workout_from_schedule', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
+ const res = await fetch('/api/coach/assign_workout_from_schedule', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify(data)
+ });
 
-                const result = await res.json();
+ const result = await res.json();
 
-                if (result.success) {
-                    alert('Session assigned successfully!');
-                    closeAssignBestWorkoutModal();
-                    location.reload(); // Refresh the page to show updated data
-                } else {
-                    alert(`Failed to assign session: ${result.message || 'Unknown error'}`);
-                }
-            } catch (error) {
-                console.error('Error assigning session:', error);
-                alert('Error assigning session: ' + error.message);
-            }
-        }
-    </script>
+ if (result.success) {
+ alert('Session assigned successfully!');
+ closeAssignBestWorkoutModal();
+ location.reload(); // Refresh the page to show updated data
+ } else {
+ alert(`Failed to assign session: ${result.message || 'Unknown error'}`);
+ }
+ } catch (error) {
+ console.error('Error assigning session:', error);
+ alert('Error assigning session: ' + error.message);
+ }
+ }
+ </script>
 
-    <style>
-        .modal-preference-both {
-            background-color: #e9d5ff !important; /* purple-200 */
-        }
+ <style>
+ .modal-preference-both {
+ background-color: #e9d5ff !important; /* purple-200 */
+ }
 
-        .modal-preference-coach {
-            background-color: #bfdbfe !important; /* blue-200 */
-        }
+ .modal-preference-coach {
+ background-color: #bfdbfe !important; /* blue-200 */
+ }
 
-        .modal-preference-member {
-            background-color: #bbf7d0 !important; /* green-200 */
-        }
+ .modal-preference-member {
+ background-color: #bbf7d0 !important; /* green-200 */
+ }
 
-        .modal-preference-available {
-            background-color: #e5e7eb !important; /* gray-200 */
-        }
+ .modal-preference-available {
+ background-color: #e5e7eb !important; /* gray-200 */
+ }
 
-        .modal-available-slot {
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+ .modal-available-slot {
+ min-height: 60px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ }
 
-        /* Tooltip styles for better session info display */
-        .group:hover .group-hover\\:block {
-            display: block !important;
-        }
+ /* Tooltip styles for better session info display */
+ .group:hover .group-hover\\:block {
+ display: block !important;
+ }
 
-        /* Ensure tooltips appear above other elements */
-        .z-10 {
-            z-index: 10;
-        }
+ /* Ensure tooltips appear above other elements */
+ .z-10 {
+ z-index: 10;
+ }
 
-        /* Better spacing for schedule cells */
-        #modalScheduleTable td {
-            vertical-align: top;
-            height: 64px;
-        }
+ /* Better spacing for schedule cells */
+ #modalScheduleTable td {
+ vertical-align: top;
+ height: 64px;
+ }
 
-        /* Smooth scrolling for modal */
-        .modal-scroll {
-            scroll-behavior: smooth;
-        }
+ /* Smooth scrolling for modal */
+ .modal-scroll {
+ scroll-behavior: smooth;
+ }
 
-        /* Custom scrollbar styling */
-        .modal-scroll::-webkit-scrollbar {
-            width: 8px;
-        }
+ /* Custom scrollbar styling */
+ .modal-scroll::-webkit-scrollbar {
+ width: 8px;
+ }
 
-        .modal-scroll::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
+ .modal-scroll::-webkit-scrollbar-track {
+ background: #f1f1f1;
+ border-radius: 4px;
+ }
 
-        .modal-scroll::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 4px;
-        }
+ .modal-scroll::-webkit-scrollbar-thumb {
+ background: #c1c1c1;
+ border-radius: 4px;
+ }
 
-        .modal-scroll::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
+ .modal-scroll::-webkit-scrollbar-thumb:hover {
+ background: #a8a8a8;
+ }
 
-        /* Ensure modal content doesn't overflow screen */
-        @media (max-height: 600px) {
-            .modal-container {
-                max-height: 95vh;
-            }
-        }
-    </style>
+ /* Ensure modal content doesn't overflow screen */
+ @media (max-height: 600px) {
+ .modal-container {
+ max-height: 95vh;
+ }
+ }
+ </style>
 </body>
 </html> 

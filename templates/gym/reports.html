@@ -3,260 +3,241 @@
 {% block title %}Reports - PowerFit{% endblock %}
 
 {% block content %}
-    <!-- Reports Overview -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h3 class="text-lg leading-6 font-medium text-gray-900">Reports & Analytics</h3>
-                    <p class="mt-1 text-sm text-gray-500">View your gym's performance metrics</p>
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Reports Overview -->
+ <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="flex justify-between items-center">
+ <div>
+ <h3 class="text-lg leading-6 font-medium text-gray-900">Reports & Analytics</h3>
+ <p class="mt-1 text-sm text-gray-500">View your gym's performance metrics</p>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- Key Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <!-- Total Members -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
-                    <i class="fas fa-users text-white text-2xl"></i>
-                </div>
-                <div class="ml-5">
-                    <h4 class="text-lg font-medium text-gray-900">Total Members</h4>
-                    <p id="totalMembers" class="text-2xl font-semibold text-gray-900">-</p>
-                </div>
-            </div>
-        </div>
+ <!-- Key Metrics -->
+ <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:p-6 mb-4 sm:mb-6">
+ <!-- Total Members -->
+ <div class="bg-white shadow rounded-lg p-4 sm:p-6">
+ <div class="flex items-center">
+ <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+ <i class="fas fa-users text-white text-lg sm:text-xl lg:text-2xl"></i>
+ </div>
+ <div class="ml-5">
+ <h4 class="text-lg font-medium text-gray-900">Total Members</h4>
+ <p id="totalMembers" class="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900">-</p>
+ </div>
+ </div>
+ </div>
 
-        <!-- Monthly Revenue -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
-                    <i class="fas fa-dollar-sign text-white text-2xl"></i>
-                </div>
-                <div class="ml-5">
-                    <h4 class="text-lg font-medium text-gray-900">Monthly Revenue</h4>
-                    <p id="monthlyRevenue" class="text-2xl font-semibold text-gray-900">-</p>
-                </div>
-            </div>
-        </div>
+ <!-- Monthly Revenue -->
+ <div class="bg-white shadow rounded-lg p-4 sm:p-6">
+ <div class="flex items-center">
+ <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+ <i class="fas fa-dollar-sign text-white text-lg sm:text-xl lg:text-2xl"></i>
+ </div>
+ <div class="ml-5">
+ <h4 class="text-lg font-medium text-gray-900">Monthly Revenue</h4>
+ <p id="monthlyRevenue" class="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900">-</p>
+ </div>
+ </div>
+ </div>
 
-        <!-- Session Completion Rate -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
-                    <i class="fas fa-chart-line text-white text-2xl"></i>
-                </div>
-                <div class="ml-5">
-                    <h4 class="text-lg font-medium text-gray-900">Session Completion Rate</h4>
-                    <p id="completionRate" class="text-2xl font-semibold text-gray-900">-</p>
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Session Completion Rate -->
+ <div class="bg-white shadow rounded-lg p-4 sm:p-6">
+ <div class="flex items-center">
+ <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+ <i class="fas fa-chart-line text-white text-lg sm:text-xl lg:text-2xl"></i>
+ </div>
+ <div class="ml-5">
+ <h4 class="text-lg font-medium text-gray-900">Session Completion Rate</h4>
+ <p id="completionRate" class="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900">-</p>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- Charts -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <!-- Membership Distribution -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <h4 class="text-lg font-medium text-gray-900 mb-4">Membership Distribution</h4>
-            <div class="h-64">
-                <canvas id="membershipChart"></canvas>
-            </div>
-        </div>
+ <!-- Charts -->
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:p-6 mb-4 sm:mb-6">
+ <!-- Membership Distribution -->
+ <div class="bg-white shadow rounded-lg p-4 sm:p-6">
+ <h4 class="text-lg font-medium text-gray-900 mb-4">Membership Distribution</h4>
+ <div class="h-64">
+ <canvas id="membershipChart"></canvas>
+ </div>
+ </div>
 
-        <!-- Coach Performance -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <h4 class="text-lg font-medium text-gray-900 mb-4">Coach Performance</h4>
-            <div class="h-64">
-                <canvas id="coachChart"></canvas>
-            </div>
-        </div>
-    </div>
+ <!-- Coach Performance -->
+ <div class="bg-white shadow rounded-lg p-4 sm:p-6">
+ <h4 class="text-lg font-medium text-gray-900 mb-4">Coach Performance</h4>
+ <div class="h-64">
+ <canvas id="coachChart"></canvas>
+ </div>
+ </div>
+ </div>
 
-    <!-- Detailed Statistics -->
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-4 py-5 sm:p-6">
-            <h4 class="text-lg font-medium text-gray-900 mb-4">Coach Performance Details</h4>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
-                        <tr>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coach</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Sessions</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unique Members</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completion Rate</th>
-                        </tr>
-                    </thead>
-                    <tbody id="coachStatsTable" class="bg-white divide-y divide-gray-200">
-                        <!-- Coach stats will be loaded here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+ <!-- Detailed Statistics -->
+ <div class="bg-white shadow rounded-lg">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <h4 class="text-lg font-medium text-gray-900 mb-4">Coach Performance Details</h4>
+ <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+ <table class="min-w-full responsive-table divide-y divide-gray-200">
+ <thead>
+ <tr>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coach</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Sessions</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unique Members</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completion Rate</th>
+ </tr>
+ </thead>
+ <tbody id="coachStatsTable" class="bg-white divide-y divide-gray-200">
+ <!-- Coach stats will be loaded here -->
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    let membershipChart;
-    let coachChart;
+ let membershipChart;
+ let coachChart;
 
-    // Load reports data
-    async function loadReports() {
-        try {
-            const response = await fetch('/api/gym/reports');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            updateDashboard(data);
-        } catch (error) {
-            console.error('Error loading reports:', error);
-        }
-    }
+ // Load reports data
+ async function loadReports() {
+ try {
+ const response = await fetch('/api/gym/reports');
+ if (!response.ok) {
+ throw new Error(`HTTP error! status: ${response.status}`);
+ }
+ const data = await response.json();
+ updateDashboard(data);
+ } catch (error) {
+ console.error('Error loading reports:', error);
+ }
+ }
 
-    // Update dashboard with data
-    function updateDashboard(data) {
-        // Update key metrics
-        const totalMembers = data.membership_stats.reduce((sum, stat) => sum + stat.count, 0);
-        document.getElementById('totalMembers').textContent = totalMembers;
-        
-        const monthlyRevenue = data.revenue_stats.monthly_revenue || 0;
-        document.getElementById('monthlyRevenue').textContent = `$${monthlyRevenue.toFixed(2)}`;
-        
-        const completionRate = data.session_stats.total_sessions > 0 
-            ? (data.session_stats.completed_sessions / data.session_stats.total_sessions * 100).toFixed(1)
-            : 0;
-        document.getElementById('completionRate').textContent = `${completionRate}%`;
+ // Update dashboard with data
+ function updateDashboard(data) {
+ // Update key metrics
+ const totalMembers = data.membership_stats.reduce((sum, stat) => sum + stat.count, 0);
+ document.getElementById('totalMembers').textContent = totalMembers;
+ 
+ const monthlyRevenue = data.revenue_stats.monthly_revenue || 0;
+ document.getElementById('monthlyRevenue').textContent = `$${monthlyRevenue.toFixed(2)}`;
+ 
+ const completionRate = data.session_stats.total_sessions > 0 
+ ? (data.session_stats.completed_sessions / data.session_stats.total_sessions * 100).toFixed(1)
+ : 0;
+ document.getElementById('completionRate').textContent = `${completionRate}%`;
 
-        // Update membership chart
-        updateMembershipChart(data.membership_stats);
-        
-        // Update coach chart
-        updateCoachChart(data.coach_stats);
-        
-        // Update coach stats table
-        updateCoachStatsTable(data.coach_stats);
-    }
+ // Update membership chart
+ updateMembershipChart(data.membership_stats);
+ 
+ // Update coach chart
+ updateCoachChart(data.coach_stats);
+ 
+ // Update coach stats table
+ updateCoachStatsTable(data.coach_stats);
+ }
 
-    // Update membership distribution chart
-    function updateMembershipChart(membershipStats) {
-        const ctx = document.getElementById('membershipChart').getContext('2d');
-        
-        if (membershipChart) {
-            membershipChart.destroy();
-        }
-        
-        membershipChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: membershipStats.map(stat => stat.membership_type),
-                datasets: [{
-                    data: membershipStats.map(stat => stat.count),
-                    backgroundColor: [
-                        '#4F46E5', // Indigo
-                        '#10B981', // Green
-                        '#F59E0B'  // Yellow
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
-    }
+ // Update membership distribution chart
+ function updateMembershipChart(membershipStats) {
+ const ctx = document.getElementById('membershipChart').getContext('2d');
+ 
+ if (membershipChart) {
+ membershipChart.destroy();
+ }
+ 
+ membershipChart = new Chart(ctx, {
+ type: 'doughnut',
+ data: {
+ labels: membershipStats.map(stat => stat.membership_type),
+ datasets: [{
+ data: membershipStats.map(stat => stat.count),
+ backgroundColor: [
+ '#4F46E5', // Indigo
+ '#10B981', // Green
+ '#F59E0B' // Yellow
+ ]
+ }]
+ },
+ options: {
+ responsive: true,
+ maintainAspectRatio: false,
+ plugins: {
+ legend: {
+ position: 'bottom'
+ }
+ }
+ }
+ });
+ }
 
-    // Update coach performance chart
-    function updateCoachChart(coachStats) {
-        const ctx = document.getElementById('coachChart').getContext('2d');
-        
-        if (coachChart) {
-            coachChart.destroy();
-        }
-        
-        coachChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: coachStats.map(stat => stat.coach_name),
-                datasets: [{
-                    label: 'Completed Sessions',
-                    data: coachStats.map(stat => stat.completed_sessions),
-                    backgroundColor: '#4F46E5'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
+ // Update coach performance chart
+ function updateCoachChart(coachStats) {
+ const ctx = document.getElementById('coachChart').getContext('2d');
+ 
+ if (coachChart) {
+ coachChart.destroy();
+ }
+ 
+ coachChart = new Chart(ctx, {
+ type: 'bar',
+ data: {
+ labels: coachStats.map(stat => stat.coach_name),
+ datasets: [{
+ label: 'Completed Sessions',
+ data: coachStats.map(stat => stat.completed_sessions),
+ backgroundColor: '#4F46E5'
+ }]
+ },
+ options: {
+ responsive: true,
+ maintainAspectRatio: false,
+ scales: {
+ y: {
+ beginAtZero: true,
+ ticks: {
+ precision: 0
+ }
+ }
+ },
+ plugins: {
+ legend: {
+ display: false
+ }
+ }
+ }
+ });
+ }
 
-    // Update coach stats table
-    function updateCoachStatsTable(coachStats) {
-        const tableBody = document.getElementById('coachStatsTable');
-        tableBody.innerHTML = coachStats.map(stat => {
-            const completionRate = stat.total_sessions > 0 
-                ? (stat.completed_sessions / stat.total_sessions * 100).toFixed(1)
-                : 0;
-            
-            return `
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${stat.coach_name}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stat.total_sessions}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stat.completed_sessions}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stat.unique_members}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${completionRate}%</td>
-                </tr>
-            `;
-        }).join('');
-    }
+ // Update coach stats table
+ function updateCoachStatsTable(coachStats) {
+ const tableBody = document.getElementById('coachStatsTable');
+ tableBody.innerHTML = coachStats.map(stat => {
+ const completionRate = stat.total_sessions > 0 
+ ? (stat.completed_sessions / stat.total_sessions * 100).toFixed(1)
+ : 0;
+ 
+ return `
+ <tr>
+ <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${stat.coach_name}</td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stat.total_sessions}</td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stat.completed_sessions}</td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${stat.unique_members}</td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${completionRate}%</td>
+ </tr>
+ `;
+ }).join('');
+ }
 
-    // Load data when page loads
-    document.addEventListener('DOMContentLoaded', loadReports);
+ // Load data when page loads
+ document.addEventListener('DOMContentLoaded', loadReports);
 </script>
 {% endblock %}
 
-{% block sidebar %}
-<a href="/gym/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-home mr-2"></i> Dashboard
-</a>
-<a href="/gym/members" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-users mr-2"></i> Members
-</a>
-<a href="/gym/coaches" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-user-tie mr-2"></i> Coaches
-</a>
-<a href="/gym/sessions" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-calendar mr-2"></i> Sessions
-</a>
-<a href="/gym/reports" class="block py-2 px-4 bg-indigo-700">
-    <i class="fas fa-chart-bar mr-2"></i> Reports
-</a>
-<a href="/gym/messages" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-envelope mr-2"></i> Messages
-</a>
-{% endblock %} 
+ 

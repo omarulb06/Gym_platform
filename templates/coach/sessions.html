@@ -3,343 +3,318 @@
 {% block title %}All Sessions - PowerFit{% endblock %}
 
 {% block content %}
-    <!-- Welcome Section -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">All Sessions</h3>
-            <p class="mt-1 text-sm text-gray-500">View and manage all training sessions</p>
-        </div>
-    </div>
+ <!-- Welcome Section -->
+ <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <h3 class="text-lg leading-6 font-medium text-gray-900">All Sessions</h3>
+ <p class="mt-1 text-sm text-gray-500">View and manage all training sessions</p>
+ </div>
+ </div>
 
-    <!-- Filters -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <!-- Date Range -->
-                <div>
-                    <label for="dateRange" class="block text-sm font-medium text-gray-700">Date Range</label>
-                    <select id="dateRange" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                        <option value="all">All Time</option>
-                    </select>
-                </div>
+ <!-- Filters -->
+ <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+ <!-- Date Range -->
+ <div>
+ <label for="dateRange" class="block text-sm font-medium text-gray-700">Date Range</label>
+ <select id="dateRange" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:border-indigo-500 sm:text-sm rounded-md">
+ <option value="today">Today</option>
+ <option value="week">This Week</option>
+ <option value="month">This Month</option>
+ <option value="all">All Time</option>
+ </select>
+ </div>
 
-                <!-- Status -->
-                <div>
-                    <label for="statusFilter" class="block text-sm font-medium text-gray-700">Status</label>
-                    <select id="statusFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                        <option value="all">All Status</option>
-                        <option value="scheduled">Scheduled</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-                </div>
+ <!-- Status -->
+ <div>
+ <label for="statusFilter" class="block text-sm font-medium text-gray-700">Status</label>
+ <select id="statusFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:border-indigo-500 sm:text-sm rounded-md">
+ <option value="all">All Status</option>
+ <option value="scheduled">Scheduled</option>
+ <option value="completed">Completed</option>
+ <option value="cancelled">Cancelled</option>
+ </select>
+ </div>
 
-                <!-- Member -->
-                <div>
-                    <label for="memberFilter" class="block text-sm font-medium text-gray-700">Member</label>
-                    <select id="memberFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                        <option value="all">All Members</option>
-                        <!-- Members will be populated here -->
-                    </select>
-                </div>
+ <!-- Member -->
+ <div>
+ <label for="memberFilter" class="block text-sm font-medium text-gray-700">Member</label>
+ <select id="memberFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:border-indigo-500 sm:text-sm rounded-md">
+ <option value="all">All Members</option>
+ <!-- Members will be populated here -->
+ </select>
+ </div>
 
-                <!-- Search -->
-                <div>
-                    <label for="searchInput" class="block text-sm font-medium text-gray-700">Search</label>
-                    <div class="mt-1 relative rounded-md shadow-sm">
-                        <input type="text" id="searchInput" 
-                               class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-4 pr-12 sm:text-sm border-gray-300 rounded-md"
-                               placeholder="Search by member, email, or workout type...">
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Search -->
+ <div>
+ <label for="searchInput" class="block text-sm font-medium text-gray-700">Search</label>
+ <div class="mt-1 relative rounded-md shadow-sm">
+ <input type="text" id="searchInput" 
+ class="focus:outline-none focus:border-indigo-500 block w-full pl-4 pr-12 sm:text-sm border-gray-300 rounded-md"
+ placeholder="Search by member, email, or workout type...">
+ <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+ <i class="fas fa-search text-gray-400"></i>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- Sessions List -->
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
-                        <tr>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200" id="sessions-table">
-                        <!-- Sessions will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+ <!-- Sessions List -->
+ <div class="bg-white shadow rounded-lg">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+ <table class="min-w-full responsive-table divide-y divide-gray-200">
+ <thead>
+ <tr>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+ </tr>
+ </thead>
+ <tbody class="bg-white divide-y divide-gray-200" id="sessions-table">
+ <!-- Sessions will be populated here -->
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
 
-    <!-- Session Details Modal -->
-    <div id="sessionModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-                <div class="px-4 py-5 sm:p-6">
-                    <div class="flex justify-between items-start">
-                        <h3 class="text-lg font-medium text-gray-900">Session Details</h3>
-                        <button onclick="closeSessionModal()" class="text-gray-400 hover:text-gray-500">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="mt-4 space-y-4">
-                        <div>
-                            <p class="text-sm text-gray-500">Member</p>
-                            <p class="text-base font-medium text-gray-900" id="modalMemberName">-</p>
-                            <p class="text-sm text-gray-500" id="modalMemberEmail">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Date & Time</p>
-                            <p class="text-base font-medium text-gray-900" id="modalDateTime">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Duration</p>
-                            <p class="text-base font-medium text-gray-900" id="modalDuration">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Workout Type</p>
-                            <p class="text-base font-medium text-gray-900" id="modalWorkoutType">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Exercises</p>
-                            <ul class="text-sm text-gray-900 list-disc list-inside" id="modalExercises">
-                                <!-- Exercises will be populated here -->
-                            </ul>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Status</p>
-                            <p class="text-base font-medium text-gray-900" id="modalStatus">-</p>
-                        </div>
-                        <div id="modalActions" class="flex space-x-2">
-                            <!-- Action buttons will be populated here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-{% endblock %}
-
-{% block sidebar %}
-<a href="/coach/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-home mr-2"></i> Dashboard
-</a>
-<a href="/coach/members" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-users mr-2"></i> My Members
-</a>
-<a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-calendar mr-2"></i> Schedule
-</a>
-<a href="/coach/sessions" class="block py-2 px-4 bg-indigo-700">
-    <i class="fas fa-clipboard-list mr-2"></i> Sessions
-</a>
-<a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-chart-line mr-2"></i> Progress
-</a>
-<a href="/coach/preferences" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-cog mr-2"></i> Preferences
-</a>
-<div class="border-t border-indigo-700 my-2"></div>
-<a href="/coach/messages" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-envelope mr-2"></i> Messages
-</a>
+ <!-- Session Details Modal -->
+ <div id="sessionModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
+ <div class="flex items-center justify-center min-h-screen p-4">
+ <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="flex justify-between items-start">
+ <h3 class="text-lg font-medium text-gray-900">Session Details</h3>
+ <button onclick="closeSessionModal()" class="text-gray-400 hover:text-gray-500">
+ <i class="fas fa-times"></i>
+ </button>
+ </div>
+ <div class="mt-4 space-y-4">
+ <div>
+ <p class="text-sm text-gray-500">Member</p>
+ <p class="text-base font-medium text-gray-900" id="modalMemberName">-</p>
+ <p class="text-sm text-gray-500" id="modalMemberEmail">-</p>
+ </div>
+ <div>
+ <p class="text-sm text-gray-500">Date & Time</p>
+ <p class="text-base font-medium text-gray-900" id="modalDateTime">-</p>
+ </div>
+ <div>
+ <p class="text-sm text-gray-500">Duration</p>
+ <p class="text-base font-medium text-gray-900" id="modalDuration">-</p>
+ </div>
+ <div>
+ <p class="text-sm text-gray-500">Workout Type</p>
+ <p class="text-base font-medium text-gray-900" id="modalWorkoutType">-</p>
+ </div>
+ <div>
+ <p class="text-sm text-gray-500">Exercises</p>
+ <ul class="text-sm text-gray-900 list-disc list-inside" id="modalExercises">
+ <!-- Exercises will be populated here -->
+ </ul>
+ </div>
+ <div>
+ <p class="text-sm text-gray-500">Status</p>
+ <p class="text-base font-medium text-gray-900" id="modalStatus">-</p>
+ </div>
+ <div id="modalActions" class="flex space-x-2">
+ <!-- Action buttons will be populated here -->
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Store sessions globally
-    let sessions = [];
+ // Store sessions globally
+ let sessions = [];
 
-    // Load sessions data
-    async function loadSessionsData(filters = {}) {
-        try {
-            const queryParams = new URLSearchParams(filters).toString();
-            const response = await fetch(`/api/coach/sessions?${queryParams}`);
-            sessions = await response.json();  // Store sessions globally
-            
-            // Update sessions table
-            const sessionsTable = document.getElementById('sessions-table');
-            sessionsTable.innerHTML = '';
-            
-            sessions.forEach(session => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">${session.member.name}</div>
-                        <div class="text-sm text-gray-500">${session.member.email}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.date}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.time}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">${session.workout.type}</div>
-                        <div class="text-sm text-gray-500">${session.workout.exercises.length} exercises</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            ${session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 
-                              session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' : 
-                              'bg-blue-100 text-blue-800'}">
-                            ${session.status.charAt(0).toUpperCase() + session.status.slice(1)}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button onclick="viewSessionDetails(${session.id})" 
-                                class="text-indigo-600 hover:text-indigo-900 mr-2">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        ${session.status === 'scheduled' ? `
-                            <button onclick="updateSessionStatus(${session.id}, 'completed')"
-                                    class="text-green-600 hover:text-green-900 mr-2">
-                                <i class="fas fa-check"></i>
-                            </button>
-                            <button onclick="updateSessionStatus(${session.id}, 'cancelled')"
-                                    class="text-red-600 hover:text-red-900">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        ` : ''}
-                    </td>
-                `;
-                sessionsTable.appendChild(row);
-            });
-        } catch (error) {
-            console.error('Error loading sessions data:', error);
-        }
-    }
+ // Load sessions data
+ async function loadSessionsData(filters = {}) {
+ try {
+ const queryParams = new URLSearchParams(filters).toString();
+ const response = await fetch(`/api/coach/sessions?${queryParams}`);
+ sessions = await response.json(); // Store sessions globally
+ 
+ // Update sessions table
+ const sessionsTable = document.getElementById('sessions-table');
+ sessionsTable.innerHTML = '';
+ 
+ sessions.forEach(session => {
+ const row = document.createElement('tr');
+ row.innerHTML = `
+ <td class="px-6 py-4 whitespace-nowrap">
+ <div class="text-sm font-medium text-gray-900">${session.member.name}</div>
+ <div class="text-sm text-gray-500">${session.member.email}</div>
+ </td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.date}</td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.time}</td>
+ <td class="px-6 py-4 whitespace-nowrap">
+ <div class="text-sm text-gray-900">${session.workout.type}</div>
+ <div class="text-sm text-gray-500">${session.workout.exercises.length} exercises</div>
+ </td>
+ <td class="px-6 py-4 whitespace-nowrap">
+ <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+ ${session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 
+ session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' : 
+ 'bg-blue-100 text-blue-800'}">
+ ${session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+ </span>
+ </td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+ <button onclick="viewSessionDetails(${session.id})" 
+ class="text-indigo-600 hover:text-indigo-900 mr-2">
+ <i class="fas fa-eye"></i>
+ </button>
+ ${session.status === 'scheduled' ? `
+ <button onclick="updateSessionStatus(${session.id}, 'completed')"
+ class="text-green-600 hover:text-green-900 mr-2">
+ <i class="fas fa-check"></i>
+ </button>
+ <button onclick="updateSessionStatus(${session.id}, 'cancelled')"
+ class="text-red-600 hover:text-red-900">
+ <i class="fas fa-times"></i>
+ </button>
+ ` : ''}
+ </td>
+ `;
+ sessionsTable.appendChild(row);
+ });
+ } catch (error) {
+ console.error('Error loading sessions data:', error);
+ }
+ }
 
-    // Load members for filter
-    async function loadMembers() {
-        try {
-            const response = await fetch('/api/coach/members');
-            const members = await response.json();
-            
-            const memberFilter = document.getElementById('memberFilter');
-            members.forEach(member => {
-                const option = document.createElement('option');
-                option.value = member.id;
-                option.textContent = member.name;
-                memberFilter.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error loading members:', error);
-        }
-    }
+ // Load members for filter
+ async function loadMembers() {
+ try {
+ const response = await fetch('/api/coach/members');
+ const members = await response.json();
+ 
+ const memberFilter = document.getElementById('memberFilter');
+ members.forEach(member => {
+ const option = document.createElement('option');
+ option.value = member.id;
+ option.textContent = member.name;
+ memberFilter.appendChild(option);
+ });
+ } catch (error) {
+ console.error('Error loading members:', error);
+ }
+ }
 
-    // View session details
-    function viewSessionDetails(sessionId) {
-        // Find the session in the current sessions array
-        const session = sessions.find(s => s.id === sessionId);
-        if (!session) {
-            console.error('Session not found');
-            return;
-        }
+ // View session details
+ function viewSessionDetails(sessionId) {
+ // Find the session in the current sessions array
+ const session = sessions.find(s => s.id === sessionId);
+ if (!session) {
+ console.error('Session not found');
+ return;
+ }
 
-        const modal = document.getElementById('sessionModal');
-        document.getElementById('modalMemberName').textContent = session.member.name;
-        document.getElementById('modalMemberEmail').textContent = session.member.email;
-        document.getElementById('modalDateTime').textContent = `${session.date} at ${session.time}`;
-        document.getElementById('modalDuration').textContent = `${session.duration} minutes`;
-        document.getElementById('modalWorkoutType').textContent = session.workout.type;
-        document.getElementById('modalStatus').textContent = session.status.charAt(0).toUpperCase() + session.status.slice(1);
+ const modal = document.getElementById('sessionModal');
+ document.getElementById('modalMemberName').textContent = session.member.name;
+ document.getElementById('modalMemberEmail').textContent = session.member.email;
+ document.getElementById('modalDateTime').textContent = `${session.date} at ${session.time}`;
+ document.getElementById('modalDuration').textContent = `${session.duration} minutes`;
+ document.getElementById('modalWorkoutType').textContent = session.workout.type;
+ document.getElementById('modalStatus').textContent = session.status.charAt(0).toUpperCase() + session.status.slice(1);
 
-        // Populate exercises
-        const exercisesList = document.getElementById('modalExercises');
-        exercisesList.innerHTML = '';
-        session.workout.exercises.forEach(exercise => {
-            const li = document.createElement('li');
-            li.textContent = exercise;
-            exercisesList.appendChild(li);
-        });
+ // Populate exercises
+ const exercisesList = document.getElementById('modalExercises');
+ exercisesList.innerHTML = '';
+ session.workout.exercises.forEach(exercise => {
+ const li = document.createElement('li');
+ li.textContent = exercise;
+ exercisesList.appendChild(li);
+ });
 
-        // Set up action buttons
-        const actionsDiv = document.getElementById('modalActions');
-        actionsDiv.innerHTML = '';
-        if (session.status === 'scheduled') {
-            actionsDiv.innerHTML = `
-                <button onclick="updateSessionStatus(${session.id}, 'completed')" 
-                        class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
-                    <i class="fas fa-check mr-2"></i> Mark as Completed
-                </button>
-                <button onclick="updateSessionStatus(${session.id}, 'cancelled')"
-                        class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                    <i class="fas fa-times mr-2"></i> Cancel Session
-                </button>
-            `;
-        }
+ // Set up action buttons
+ const actionsDiv = document.getElementById('modalActions');
+ actionsDiv.innerHTML = '';
+ if (session.status === 'scheduled') {
+ actionsDiv.innerHTML = `
+ <button onclick="updateSessionStatus(${session.id}, 'completed')" 
+ class="flex-1 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-green-700">
+ <i class="fas fa-check mr-2"></i> Mark as Completed
+ </button>
+ <button onclick="updateSessionStatus(${session.id}, 'cancelled')"
+ class="flex-1 bg-red-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-red-700">
+ <i class="fas fa-times mr-2"></i> Cancel Session
+ </button>
+ `;
+ }
 
-        modal.classList.remove('hidden');
-    }
+ modal.classList.remove('hidden');
+ }
 
-    // Close session details modal
-    function closeSessionModal() {
-        document.getElementById('sessionModal').classList.add('hidden');
-    }
+ // Close session details modal
+ function closeSessionModal() {
+ document.getElementById('sessionModal').classList.add('hidden');
+ }
 
-    // Update session status
-    async function updateSessionStatus(sessionId, status) {
-        try {
-            const response = await fetch(`/api/coach/sessions/${sessionId}/status?status=${status}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-            
-            if (response.ok) {
-                // Reload sessions with current filters
-                const filters = {
-                    dateRange: document.getElementById('dateRange').value,
-                    status: document.getElementById('statusFilter').value,
-                    member: document.getElementById('memberFilter').value,
-                    search: document.getElementById('searchInput').value,
-                };
-                loadSessionsData(filters);
-            }
-        } catch (error) {
-            console.error('Error updating session status:', error);
-        }
-    }
+ // Update session status
+ async function updateSessionStatus(sessionId, status) {
+ try {
+ const response = await fetch(`/api/coach/sessions/${sessionId}/status?status=${status}`, {
+ method: 'PUT',
+ headers: {
+ 'Content-Type': 'application/json',
+ }
+ });
+ 
+ if (response.ok) {
+ // Reload sessions with current filters
+ const filters = {
+ dateRange: document.getElementById('dateRange').value,
+ status: document.getElementById('statusFilter').value,
+ member: document.getElementById('memberFilter').value,
+ search: document.getElementById('searchInput').value,
+ };
+ loadSessionsData(filters);
+ }
+ } catch (error) {
+ console.error('Error updating session status:', error);
+ }
+ }
 
-    // Handle filter changes
-    function handleFilterChange() {
-        const filters = {
-            dateRange: document.getElementById('dateRange').value,
-            status: document.getElementById('statusFilter').value,
-            member: document.getElementById('memberFilter').value,
-            search: document.getElementById('searchInput').value,
-            searchType: 'all'  // This will search in member name, email, and workout type
-        };
-        loadSessionsData(filters);
-    }
+ // Handle filter changes
+ function handleFilterChange() {
+ const filters = {
+ dateRange: document.getElementById('dateRange').value,
+ status: document.getElementById('statusFilter').value,
+ member: document.getElementById('memberFilter').value,
+ search: document.getElementById('searchInput').value,
+ searchType: 'all' // This will search in member name, email, and workout type
+ };
+ loadSessionsData(filters);
+ }
 
-    // Add event listeners
-    document.getElementById('dateRange').addEventListener('change', handleFilterChange);
-    document.getElementById('statusFilter').addEventListener('change', handleFilterChange);
-    document.getElementById('memberFilter').addEventListener('change', handleFilterChange);
-    
-    let searchTimeout;
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(handleFilterChange, 300);
-    });
+ // Add event listeners
+ document.getElementById('dateRange').addEventListener('change', handleFilterChange);
+ document.getElementById('statusFilter').addEventListener('change', handleFilterChange);
+ document.getElementById('memberFilter').addEventListener('change', handleFilterChange);
+ 
+ let searchTimeout;
+ document.getElementById('searchInput').addEventListener('input', (e) => {
+ clearTimeout(searchTimeout);
+ searchTimeout = setTimeout(handleFilterChange, 300);
+ });
 
-    // Load data when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-        loadMembers();
-        loadSessionsData();
-    });
+ // Load data when page loads
+ document.addEventListener('DOMContentLoaded', () => {
+ loadMembers();
+ loadSessionsData();
+ });
 </script>
 {% endblock %} 

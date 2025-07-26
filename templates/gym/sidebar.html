@@ -1,21 +1,103 @@
 {% block sidebar %}
-<a href="/gym/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-home mr-2"></i> Dashboard
-</a>
-<a href="/gym/members" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-users mr-2"></i> Members
-</a>
-<a href="/gym/coaches" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-user-tie mr-2"></i> Coaches
-</a>
-<a href="/gym/sessions" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-calendar mr-2"></i> Sessions
-</a>
-<a href="/gym/reports" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-chart-bar mr-2"></i> Reports
-</a>
-<div class="border-t border-indigo-700 my-2"></div>
-<a href="/gym/messages" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-envelope mr-2"></i> Messages
-</a>
+<nav class="space-y-1">
+    <a href="/gym/dashboard" class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200 hover:scale-105 hover:shadow-md">
+        <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary-100 text-primary-600 group-hover:bg-primary-200 transition-all duration-200 mr-3">
+            <i class="fas fa-home text-lg"></i>
+        </div>
+        <span class="font-medium">Dashboard</span>
+        <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <i class="fas fa-arrow-right text-xs"></i>
+        </div>
+    </a>
+    
+    <a href="/gym/members" class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200 hover:scale-105 hover:shadow-md">
+        <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 text-blue-600 group-hover:bg-blue-200 transition-all duration-200 mr-3">
+            <i class="fas fa-users text-lg"></i>
+        </div>
+        <span class="font-medium">Members</span>
+        <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <i class="fas fa-arrow-right text-xs"></i>
+        </div>
+    </a>
+    
+    <a href="/gym/coaches" class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200 hover:scale-105 hover:shadow-md">
+        <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-green-100 text-green-600 group-hover:bg-green-200 transition-all duration-200 mr-3">
+            <i class="fas fa-user-tie text-lg"></i>
+        </div>
+        <span class="font-medium">Coaches</span>
+        <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <i class="fas fa-arrow-right text-xs"></i>
+        </div>
+    </a>
+    
+    <a href="/gym/sessions" class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200 hover:scale-105 hover:shadow-md">
+        <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 text-purple-600 group-hover:bg-purple-200 transition-all duration-200 mr-3">
+            <i class="fas fa-calendar-check text-lg"></i>
+        </div>
+        <span class="font-medium">Sessions</span>
+        <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <i class="fas fa-arrow-right text-xs"></i>
+        </div>
+    </a>
+    
+    <a href="/gym/reports" class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200 hover:scale-105 hover:shadow-md">
+        <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-yellow-100 text-yellow-600 group-hover:bg-yellow-200 transition-all duration-200 mr-3">
+            <i class="fas fa-chart-bar text-lg"></i>
+        </div>
+        <span class="font-medium">Reports</span>
+        <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <i class="fas fa-arrow-right text-xs"></i>
+        </div>
+    </a>
+    
+    <!-- Divider -->
+    <div class="relative py-2">
+        <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-200"></div>
+        </div>
+        <div class="relative flex justify-center text-xs uppercase">
+            <span class="bg-white px-2 text-gray-500 font-medium">Communication</span>
+        </div>
+    </div>
+    
+    <a href="/gym/messages" class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl text-gray-700 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200 hover:scale-105 hover:shadow-md">
+        <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-100 text-orange-600 group-hover:bg-orange-200 transition-all duration-200 mr-3">
+            <i class="fas fa-envelope text-lg"></i>
+        </div>
+        <span class="font-medium">Messages</span>
+        <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <i class="fas fa-arrow-right text-xs"></i>
+        </div>
+    </a>
+</nav>
+
+<!-- User Stats Section -->
+<div class="mt-6 p-4 bg-gradient-to-br from-primary-50 to-accent-50 rounded-xl border border-primary-100 shadow-sm">
+    <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+        <i class="fas fa-chart-pie text-primary-600 mr-2"></i>
+        My Stats
+    </h4>
+    <div class="space-y-3">
+        <div class="flex justify-between items-center">
+            <span class="text-xs text-gray-600">Total Members</span>
+            <span class="text-xs font-semibold text-primary-600" id="totalMembers">0</span>
+        </div>
+        <div class="flex justify-between items-center">
+            <span class="text-xs text-gray-600">Active Coaches</span>
+            <span class="text-xs font-semibold text-green-600" id="activeCoaches">0</span>
+        </div>
+        <div class="flex justify-between items-center">
+            <span class="text-xs text-gray-600">Today's Sessions</span>
+            <span class="text-xs font-semibold text-accent-600" id="todaySessions">0</span>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div class="bg-gradient-to-r from-primary-500 to-accent-500 h-2 rounded-full transition-all duration-500" style="width: 75%" id="capacityBar"></div>
+        </div>
+        <div class="text-center mt-1">
+            <span class="text-xs text-gray-500">Capacity Utilization</span>
+        </div>
+    </div>
+</div>
 {% endblock %} 

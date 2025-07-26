@@ -1,0 +1,985 @@
+{% extends "base.html" %}
+
+{% block head %}
+<!-- TensorFlow.js for free food recognition -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@latest/dist/mobilenet.min.js"></script>
+{% endblock %}
+
+{% block content_title %}
+<div class="flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+        <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-lg">
+            <i class="fas fa-utensils text-xl"></i>
+        </div>
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">AI Calorie Tracker</h1>
+            <p class="text-gray-600 text-sm sm:text-base">Free AI-powered nutrition analysis</p>
+        </div>
+    </div>
+    <div class="hidden sm:flex items-center space-x-2">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-green-400 to-emerald-400 text-white shadow-sm">
+            <i class="fas fa-crown mr-1"></i>VIP Feature
+        </span>
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <i class="fas fa-free-code-camp mr-1"></i>100% Free
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Photo Analysis -->
+        <div class="glass rounded-xl p-6 hover:shadow-lg transition-all duration-300 border border-emerald-100">
+            <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600 mb-4">
+                <i class="fas fa-camera text-xl"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Smart Photo Analysis</h3>
+            <p class="text-gray-600 text-sm mb-4">Upload a photo for free AI food recognition</p>
+            <button onclick="openPhotoAnalysis()" class="w-full px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all">
+                <i class="fas fa-camera mr-2"></i>Analyze Photo
+            </button>
+        </div>
+
+        <!-- Search Food -->
+        <div class="glass rounded-xl p-6 hover:shadow-lg transition-all duration-300 border border-blue-100">
+            <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 mb-4">
+                <i class="fas fa-search text-xl"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Food Database</h3>
+            <p class="text-gray-600 text-sm mb-4">Search 2.8M+ foods with nutrition data</p>
+            <button onclick="openFoodSearch()" class="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all">
+                <i class="fas fa-search mr-2"></i>Search Foods
+            </button>
+        </div>
+
+        <!-- Manual Entry -->
+        <div class="glass rounded-xl p-6 hover:shadow-lg transition-all duration-300 border border-purple-100">
+            <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 text-purple-600 mb-4">
+                <i class="fas fa-edit text-xl"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Quick Entry</h3>
+            <p class="text-gray-600 text-sm mb-4">Add food items manually</p>
+            <button onclick="openManualEntry()" class="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all">
+                <i class="fas fa-edit mr-2"></i>Add Food
+            </button>
+        </div>
+    </div>
+
+    <!-- Today's Summary -->
+    <div class="glass rounded-xl p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-chart-pie text-emerald-600 mr-2"></i>
+                Today's Nutrition
+            </h2>
+            <span class="text-sm text-gray-500" id="currentDate"></span>
+        </div>
+
+        <!-- Macronutrient Progress -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="text-center">
+                <div class="relative w-20 h-20 mx-auto mb-2">
+                    <svg class="w-20 h-20 transform -rotate-90">
+                        <circle cx="40" cy="40" r="36" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+                        <circle cx="40" cy="40" r="36" stroke="#10b981" stroke-width="8" fill="none" 
+                                stroke-dasharray="226" stroke-dashoffset="226" id="caloriesProgress" class="transition-all duration-1000"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-lg font-bold text-gray-900" id="caloriesPercent">0%</span>
+                    </div>
+                </div>
+                <div class="text-sm font-medium text-gray-900" id="caloriesText">0 / 2000</div>
+                <div class="text-xs text-gray-500">Calories</div>
+            </div>
+
+            <div class="text-center">
+                <div class="relative w-20 h-20 mx-auto mb-2">
+                    <svg class="w-20 h-20 transform -rotate-90">
+                        <circle cx="40" cy="40" r="36" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+                        <circle cx="40" cy="40" r="36" stroke="#3b82f6" stroke-width="8" fill="none" 
+                                stroke-dasharray="226" stroke-dashoffset="226" id="proteinProgress" class="transition-all duration-1000"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-lg font-bold text-gray-900" id="proteinPercent">0%</span>
+                    </div>
+                </div>
+                <div class="text-sm font-medium text-gray-900" id="proteinText">0g / 150g</div>
+                <div class="text-xs text-gray-500">Protein</div>
+            </div>
+
+            <div class="text-center">
+                <div class="relative w-20 h-20 mx-auto mb-2">
+                    <svg class="w-20 h-20 transform -rotate-90">
+                        <circle cx="40" cy="40" r="36" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+                        <circle cx="40" cy="40" r="36" stroke="#f59e0b" stroke-width="8" fill="none" 
+                                stroke-dasharray="226" stroke-dashoffset="226" id="carbsProgress" class="transition-all duration-1000"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-lg font-bold text-gray-900" id="carbsPercent">0%</span>
+                    </div>
+                </div>
+                <div class="text-sm font-medium text-gray-900" id="carbsText">0g / 250g</div>
+                <div class="text-xs text-gray-500">Carbs</div>
+            </div>
+
+            <div class="text-center">
+                <div class="relative w-20 h-20 mx-auto mb-2">
+                    <svg class="w-20 h-20 transform -rotate-90">
+                        <circle cx="40" cy="40" r="36" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+                        <circle cx="40" cy="40" r="36" stroke="#ef4444" stroke-width="8" fill="none" 
+                                stroke-dasharray="226" stroke-dashoffset="226" id="fatProgress" class="transition-all duration-1000"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-lg font-bold text-gray-900" id="fatPercent">0%</span>
+                    </div>
+                </div>
+                <div class="text-sm font-medium text-gray-900" id="fatText">0g / 70g</div>
+                <div class="text-xs text-gray-500">Fat</div>
+            </div>
+        </div>
+
+        <!-- AI Feedback -->
+        <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-4 border border-emerald-100">
+            <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600">
+                        <i class="fas fa-robot text-sm"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-medium text-emerald-800 mb-1">Smart Nutrition Coach</h4>
+                    <p class="text-sm text-emerald-700" id="aiFeedback">Start logging your meals to get personalized nutrition advice!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Meals -->
+    <div class="glass rounded-xl p-6 border border-gray-100">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+            <i class="fas fa-utensils text-emerald-600 mr-2"></i>
+            Today's Meals
+        </h2>
+        
+        <div class="space-y-4" id="todaysMeals">
+            <!-- Meals will be loaded here -->
+        </div>
+
+        <div class="text-center text-gray-500 py-8" id="noMealsMessage">
+            <i class="fas fa-utensils text-4xl mb-2 opacity-50"></i>
+            <p>No meals logged today. Start by adding your first meal!</p>
+        </div>
+    </div>
+
+    <!-- Weekly Progress -->
+    <div class="glass rounded-xl p-6 border border-gray-100">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+            <i class="fas fa-chart-line text-emerald-600 mr-2"></i>
+            Weekly Progress
+        </h2>
+        
+        <div class="h-64 flex items-center justify-center text-gray-500">
+            <div class="text-center">
+                <i class="fas fa-chart-line text-4xl mb-2 opacity-50"></i>
+                <p>Weekly progress chart coming soon...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Analysis Modal -->
+<div id="photoModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Smart Photo Analysis</h3>
+                <button onclick="closeModal('photoModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="photoForm" enctype="multipart/form-data">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Meal Type</label>
+                        <select name="meal_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="Breakfast">Breakfast</option>
+                            <option value="Lunch">Lunch</option>
+                            <option value="Dinner">Dinner</option>
+                            <option value="Snack">Snack</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Food Photo</label>
+                        <input type="file" name="file" accept="image/*" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                               onchange="analyzePhotoWithTensorFlow(this)">
+                        <p class="text-xs text-gray-500 mt-1">Our AI will try to identify foods in your photo</p>
+                    </div>
+                    
+                    <!-- Photo Preview -->
+                    <div id="photoPreview" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Photo Preview</label>
+                        <img id="previewImage" class="w-full h-48 object-cover rounded-lg border border-gray-300">
+                    </div>
+                    
+                    <!-- AI Detection Results -->
+                    <div id="detectionResults" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">AI Detection Results</label>
+                        <div id="detectedFoodsList" class="space-y-2">
+                            <!-- Detected foods will appear here -->
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                        <textarea name="notes" rows="3" 
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                  placeholder="Any additional details about your meal..."></textarea>
+                    </div>
+                    
+                    <div class="flex space-x-3 pt-4">
+                        <button type="button" onclick="closeModal('photoModal')" 
+                                class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" id="submitPhotoBtn"
+                                class="flex-1 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all">
+                            <i class="fas fa-save mr-2"></i>Save Meal
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Food Search Modal -->
+<div id="searchModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Search Foods</h3>
+                <button onclick="closeModal('searchModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <div class="flex space-x-2">
+                    <input type="text" id="foodSearchQuery" placeholder="Search food or scan barcode..." 
+                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button onclick="searchFood()" 
+                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Powered by Open Food Facts - 2.8M+ products</p>
+            </div>
+            
+            <div id="searchResults" class="space-y-2 max-h-96 overflow-y-auto">
+                <!-- Search results will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manual Entry Modal -->
+<div id="manualModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Add Food Manually</h3>
+                <button onclick="closeModal('manualModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="manualForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Meal Type</label>
+                        <select name="meal_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="Breakfast">Breakfast</option>
+                            <option value="Lunch">Lunch</option>
+                            <option value="Dinner">Dinner</option>
+                            <option value="Snack">Snack</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Food Name</label>
+                        <input type="text" name="food_name" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                               placeholder="e.g., Grilled Chicken Breast">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                            <input type="number" name="quantity" step="0.1" required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                   placeholder="100">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Unit</label>
+                            <select name="unit" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option value="grams">Grams</option>
+                                <option value="ml">ML</option>
+                                <option value="pieces">Pieces</option>
+                                <option value="cups">Cups</option>
+                                <option value="tablespoons">Tablespoons</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Calories</label>
+                        <input type="number" name="calories" step="0.1" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                               placeholder="165">
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Protein (g)</label>
+                            <input type="number" name="protein" step="0.1" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                   placeholder="31">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Carbs (g)</label>
+                            <input type="number" name="carbs" step="0.1" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                   placeholder="0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fat (g)</label>
+                            <input type="number" name="fat" step="0.1" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                   placeholder="3.6">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                        <textarea name="notes" rows="2" 
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                  placeholder="Any additional details..."></textarea>
+                    </div>
+                    
+                    <div class="flex space-x-3 pt-4">
+                        <button type="button" onclick="closeModal('manualModal')" 
+                                class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all">
+                            <i class="fas fa-plus mr-2"></i>Add Food
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables
+let mobilenetModel = null;
+let detectedFoodsData = [];
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    loadNutritionDashboard();
+    updateCurrentDate();
+    loadTensorFlowModel();
+});
+
+// Load TensorFlow.js MobileNet model for food recognition
+async function loadTensorFlowModel() {
+    try {
+        console.log('Loading TensorFlow.js MobileNet model...');
+        mobilenetModel = await mobilenet.load();
+        console.log('TensorFlow.js model loaded successfully!');
+    } catch (error) {
+        console.error('Error loading TensorFlow.js model:', error);
+    }
+}
+
+function updateCurrentDate() {
+    const today = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('currentDate').textContent = today.toLocaleDateString('en-US', options);
+}
+
+async function loadNutritionDashboard() {
+    try {
+        const response = await fetch(`/api/nutrition/dashboard/{{ user.id if user else 1 }}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            updateNutritionProgress(data.today);
+            loadTodaysMeals(data.today.meals);
+            
+            if (data.today.totals.calories > 0) {
+                document.getElementById('aiFeedback').textContent = 
+                    data.weekly_analysis[0]?.ai_feedback || 'Great job tracking your nutrition today!';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading nutrition dashboard:', error);
+    }
+}
+
+// TensorFlow.js Photo Analysis
+async function analyzePhotoWithTensorFlow(fileInput) {
+    if (!fileInput.files || !fileInput.files[0]) return;
+    
+    const file = fileInput.files[0];
+    const imageUrl = URL.createObjectURL(file);
+    
+    // Show preview
+    const preview = document.getElementById('photoPreview');
+    const previewImage = document.getElementById('previewImage');
+    previewImage.src = imageUrl;
+    preview.classList.remove('hidden');
+    
+    // Show loading state
+    const resultsDiv = document.getElementById('detectionResults');
+    const foodsList = document.getElementById('detectedFoodsList');
+    foodsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-emerald-600"></i><p class="text-sm text-gray-600 mt-2">Analyzing food in photo...</p></div>';
+    resultsDiv.classList.remove('hidden');
+    
+    try {
+        if (!mobilenetModel) {
+            await loadTensorFlowModel();
+        }
+        
+        // Create image element for TensorFlow
+        const img = new Image();
+        img.onload = async () => {
+            try {
+                // Get predictions from MobileNet
+                const predictions = await mobilenetModel.classify(img);
+                
+                // Process predictions to extract food-related items
+                const foodPredictions = filterFoodPredictions(predictions);
+                
+                if (foodPredictions.length > 0) {
+                    detectedFoodsData = await estimateNutritionFromPredictions(foodPredictions);
+                    displayDetectedFoods(detectedFoodsData);
+                } else {
+                    // No food detected
+                    detectedFoodsData = [{
+                        name: "Unknown Food Item",
+                        quantity: 100,
+                        calories: 200,
+                        protein: 5,
+                        carbs: 20,
+                        fat: 10,
+                        confidence: 0.3
+                    }];
+                    displayDetectedFoods(detectedFoodsData);
+                }
+            } catch (error) {
+                console.error('Error analyzing photo:', error);
+                showErrorInResults();
+            }
+        };
+        img.src = imageUrl;
+        
+    } catch (error) {
+        console.error('Error with TensorFlow analysis:', error);
+        showErrorInResults();
+    }
+}
+
+function filterFoodPredictions(predictions) {
+    // Debug: Log all predictions to see what MobileNet is detecting
+    console.log('🔍 MobileNet Predictions:', predictions.map(p => ({
+        name: p.className,
+        confidence: Math.round(p.probability * 100) + '%'
+    })));
+    
+    // Expanded food-related keywords in ImageNet classes
+    const foodKeywords = [
+        // Fruits
+        'apple', 'banana', 'strawberry', 'orange', 'lemon', 'pineapple', 'grapes',
+        'watermelon', 'cantaloupe', 'fig', 'pomegranate', 'jackfruit', 'custard apple',
+        
+        // Vegetables
+        'broccoli', 'mushroom', 'bell pepper', 'cucumber', 'artichoke', 'corn',
+        'acorn squash', 'spaghetti squash', 'zucchini', 'head cabbage', 'cauliflower',
+        'carrot', 'radish', 'sweet potato', 'butternut squash',
+        
+        // Prepared foods
+        'pizza', 'hamburger', 'hotdog', 'sandwich', 'taco', 'burrito', 'bagel', 
+        'pretzel', 'cheeseburger', 'meat loaf', 'ice cream', 'chocolate', 'custard', 
+        'pudding', 'consomme', 'trifle', 'french loaf', 'pretzel', 'bagel',
+        
+        // Drinks & containers (often appear with food)
+        'espresso', 'cup', 'plate', 'wine bottle', 'beer bottle', 'cocktail shaker', 
+        'soup bowl', 'coffee mug', 'water bottle'
+    ];
+    
+    // First try exact keyword matching
+    let foodPredictions = predictions.filter(pred => 
+        foodKeywords.some(keyword => 
+            pred.className.toLowerCase().includes(keyword)
+        )
+    );
+    
+    // If no exact matches found, try broader food-related patterns
+    if (foodPredictions.length === 0) {
+        console.log('🔄 No exact matches, trying broader patterns...');
+        
+        const broadFoodPatterns = [
+            // Common food-related words that might appear in class names
+            /fruit/i, /vegetable/i, /food/i, /eat/i, /meal/i, /dish/i, 
+            /bread/i, /cake/i, /pie/i, /soup/i, /salad/i, /meat/i,
+            /cheese/i, /milk/i, /egg/i, /fish/i, /chicken/i, /beef/i,
+            /rice/i, /pasta/i, /noodle/i, /bean/i, /nut/i, /seed/i
+        ];
+        
+        foodPredictions = predictions.filter(pred => 
+            broadFoodPatterns.some(pattern => 
+                pattern.test(pred.className)
+            )
+        );
+    }
+    
+    // If still no matches, accept any prediction with reasonable confidence
+    if (foodPredictions.length === 0) {
+        console.log('🤷 No food patterns found, using top predictions as potential food...');
+        foodPredictions = predictions.filter(pred => pred.probability > 0.1).slice(0, 2);
+    }
+    
+    console.log('✅ Filtered Food Predictions:', foodPredictions.map(p => ({
+        name: p.className,
+        confidence: Math.round(p.probability * 100) + '%'
+    })));
+    
+    return foodPredictions.slice(0, 3); // Take top 3 food-related predictions
+}
+
+async function estimateNutritionFromPredictions(predictions) {
+    // Expanded nutrition database based on detected food types
+    const nutritionDatabase = {
+        // Fruits (per 100g)
+        'apple': { calories: 52, protein: 0.3, carbs: 14, fat: 0.2, defaultGrams: 150 },
+        'banana': { calories: 89, protein: 1.1, carbs: 23, fat: 0.3, defaultGrams: 120 },
+        'orange': { calories: 47, protein: 0.9, carbs: 12, fat: 0.1, defaultGrams: 130 },
+        'strawberry': { calories: 32, protein: 0.7, carbs: 8, fat: 0.3, defaultGrams: 100 },
+        'grape': { calories: 62, protein: 0.6, carbs: 16, fat: 0.2, defaultGrams: 80 },
+        'pineapple': { calories: 50, protein: 0.5, carbs: 13, fat: 0.1, defaultGrams: 100 },
+        'watermelon': { calories: 30, protein: 0.6, carbs: 8, fat: 0.2, defaultGrams: 200 },
+        'lemon': { calories: 29, protein: 1.1, carbs: 9, fat: 0.3, defaultGrams: 60 },
+        
+        // Vegetables (per 100g)
+        'broccoli': { calories: 34, protein: 2.8, carbs: 7, fat: 0.4, defaultGrams: 100 },
+        'carrot': { calories: 41, protein: 0.9, carbs: 10, fat: 0.2, defaultGrams: 80 },
+        'cucumber': { calories: 16, protein: 0.7, carbs: 4, fat: 0.1, defaultGrams: 100 },
+        'pepper': { calories: 31, protein: 1, carbs: 7, fat: 0.3, defaultGrams: 80 },
+        'mushroom': { calories: 22, protein: 3.1, carbs: 3, fat: 0.3, defaultGrams: 70 },
+        'corn': { calories: 86, protein: 3.3, carbs: 19, fat: 1.4, defaultGrams: 100 },
+        'potato': { calories: 77, protein: 2, carbs: 17, fat: 0.1, defaultGrams: 150 },
+        
+        // Prepared foods
+        'pizza': { calories: 285, protein: 12, carbs: 36, fat: 10, defaultGrams: 150 },
+        'hamburger': { calories: 540, protein: 25, carbs: 40, fat: 31, defaultGrams: 200 },
+        'sandwich': { calories: 320, protein: 15, carbs: 45, fat: 8, defaultGrams: 180 },
+        'hotdog': { calories: 290, protein: 11, carbs: 3, fat: 26, defaultGrams: 100 },
+        'bagel': { calories: 250, protein: 10, carbs: 49, fat: 1.5, defaultGrams: 90 },
+        'pretzel': { calories: 380, protein: 9, carbs: 80, fat: 3, defaultGrams: 60 },
+        
+        // Desserts
+        'ice cream': { calories: 207, protein: 3.5, carbs: 24, fat: 11, defaultGrams: 100 },
+        'chocolate': { calories: 546, protein: 4.9, carbs: 61, fat: 31, defaultGrams: 40 },
+        'cake': { calories: 257, protein: 3, carbs: 46, fat: 8, defaultGrams: 80 },
+        
+        // Generic categories for unknown items
+        'fruit': { calories: 50, protein: 0.8, carbs: 12, fat: 0.2, defaultGrams: 120 },
+        'vegetable': { calories: 25, protein: 2, carbs: 5, fat: 0.3, defaultGrams: 100 },
+        'bread': { calories: 265, protein: 9, carbs: 49, fat: 3.2, defaultGrams: 50 },
+        'meat': { calories: 250, protein: 26, carbs: 0, fat: 15, defaultGrams: 100 },
+        'default': { calories: 200, protein: 8, carbs: 25, fat: 8, defaultGrams: 100 }
+    };
+    
+    return predictions.map(pred => {
+        const foodName = pred.className.toLowerCase();
+        let nutritionData = nutritionDatabase['default'];
+        let matchedKey = 'default';
+        
+        console.log(`🔍 Trying to match: "${foodName}"`);
+        
+        // Find matching nutrition data with better matching logic
+        for (const [key, data] of Object.entries(nutritionDatabase)) {
+            if (key === 'default') continue;
+            
+            // Try exact match first
+            if (foodName.includes(key)) {
+                nutritionData = data;
+                matchedKey = key;
+                console.log(`✅ Exact match found: ${key}`);
+                break;
+            }
+            
+            // Try partial matches for common variations
+            if (key === 'apple' && (foodName.includes('granny') || foodName.includes('red delicious'))) {
+                nutritionData = data;
+                matchedKey = key;
+                console.log(`✅ Apple variant match: ${key}`);
+                break;
+            }
+            
+            // Generic category fallbacks
+            if (key === 'fruit' && (foodName.includes('berry') || foodName.includes('melon') || foodName.includes('citrus'))) {
+                nutritionData = data;
+                matchedKey = key;
+                console.log(`✅ Fruit category match: ${key}`);
+                break;
+            }
+            
+            if (key === 'vegetable' && (foodName.includes('green') || foodName.includes('leaf'))) {
+                nutritionData = data;
+                matchedKey = key;
+                console.log(`✅ Vegetable category match: ${key}`);
+                break;
+            }
+        }
+        
+        console.log(`📊 Final match for "${foodName}": ${matchedKey}`);
+        
+        return {
+            name: pred.className,
+            quantity: nutritionData.defaultGrams,
+            calories: Math.round(nutritionData.calories * (nutritionData.defaultGrams / 100)),
+            protein: Math.round(nutritionData.protein * (nutritionData.defaultGrams / 100) * 10) / 10,
+            carbs: Math.round(nutritionData.carbs * (nutritionData.defaultGrams / 100) * 10) / 10,
+            fat: Math.round(nutritionData.fat * (nutritionData.defaultGrams / 100) * 10) / 10,
+            confidence: pred.probability
+        };
+    });
+}
+
+function displayDetectedFoods(foods) {
+    const foodsList = document.getElementById('detectedFoodsList');
+    
+    foodsList.innerHTML = foods.map((food, index) => `
+        <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <h4 class="font-medium text-gray-900">${food.name}</h4>
+                    <p class="text-xs text-gray-500">Confidence: ${Math.round(food.confidence * 100)}%</p>
+                </div>
+                <button onclick="removeFoodItem(${index})" class="text-red-500 hover:text-red-700">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                <div>
+                    <input type="number" value="${food.quantity}" onchange="updateFoodQuantity(${index}, this.value)" 
+                           class="w-16 px-1 py-0.5 border border-gray-300 rounded text-xs">g
+                </div>
+                <div>${food.calories} cal</div>
+                <div>P: ${food.protein}g</div>
+                <div>C: ${food.carbs}g | F: ${food.fat}g</div>
+            </div>
+        </div>
+    `).join('');
+    
+    if (foods.length > 0) {
+        document.getElementById('submitPhotoBtn').innerHTML = '<i class="fas fa-save mr-2"></i>Save Meal';
+        document.getElementById('submitPhotoBtn').disabled = false;
+    }
+}
+
+function showErrorInResults() {
+    const foodsList = document.getElementById('detectedFoodsList');
+    foodsList.innerHTML = `
+        <div class="text-center py-4 text-gray-500">
+            <i class="fas fa-exclamation-triangle text-yellow-500 mb-2"></i>
+            <p class="text-sm">Couldn't identify foods in this photo</p>
+            <p class="text-xs">You can still save it and add details manually</p>
+        </div>
+    `;
+    
+    detectedFoodsData = [{
+        name: "Unknown Food Item",
+        quantity: 100,
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        confidence: 0.1
+    }];
+    
+    document.getElementById('submitPhotoBtn').innerHTML = '<i class="fas fa-save mr-2"></i>Save Anyway';
+    document.getElementById('submitPhotoBtn').disabled = false;
+}
+
+function removeFoodItem(index) {
+    detectedFoodsData.splice(index, 1);
+    displayDetectedFoods(detectedFoodsData);
+}
+
+function updateFoodQuantity(index, newQuantity) {
+    if (detectedFoodsData[index]) {
+        const ratio = newQuantity / detectedFoodsData[index].quantity;
+        detectedFoodsData[index].quantity = parseFloat(newQuantity);
+        detectedFoodsData[index].calories = Math.round(detectedFoodsData[index].calories * ratio);
+        detectedFoodsData[index].protein = Math.round(detectedFoodsData[index].protein * ratio * 10) / 10;
+        detectedFoodsData[index].carbs = Math.round(detectedFoodsData[index].carbs * ratio * 10) / 10;
+        detectedFoodsData[index].fat = Math.round(detectedFoodsData[index].fat * ratio * 10) / 10;
+        displayDetectedFoods(detectedFoodsData);
+    }
+}
+
+function updateNutritionProgress(todayData) {
+    const { totals, goals, progress } = todayData;
+    
+    // Update progress circles
+    updateProgressCircle('calories', progress.calories, totals.calories, goals.daily_calorie_goal);
+    updateProgressCircle('protein', progress.protein, totals.protein, goals.daily_protein_goal, 'g');
+    updateProgressCircle('carbs', progress.carbs, totals.carbs, goals.daily_carbs_goal, 'g');
+    updateProgressCircle('fat', progress.fat, totals.fat, goals.daily_fat_goal, 'g');
+}
+
+function updateProgressCircle(type, percentage, current, goal, unit = '') {
+    const circle = document.getElementById(`${type}Progress`);
+    const percentElement = document.getElementById(`${type}Percent`);
+    const textElement = document.getElementById(`${type}Text`);
+    
+    const circumference = 226; // 2 * π * 36
+    const offset = circumference - (Math.min(percentage, 100) / 100) * circumference;
+    
+    circle.style.strokeDashoffset = offset;
+    percentElement.textContent = `${Math.round(percentage)}%`;
+    textElement.textContent = `${Math.round(current)}${unit} / ${Math.round(goal)}${unit}`;
+}
+
+function loadTodaysMeals(meals) {
+    const container = document.getElementById('todaysMeals');
+    const noMealsMessage = document.getElementById('noMealsMessage');
+    
+    if (meals.length === 0) {
+        container.style.display = 'none';
+        noMealsMessage.style.display = 'block';
+        return;
+    }
+    
+    container.style.display = 'block';
+    noMealsMessage.style.display = 'none';
+    
+    container.innerHTML = meals.map(meal => `
+        <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <i class="fas ${getMealIcon(meal.meal_type)}"></i>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-900">${meal.meal_type}</h4>
+                    <p class="text-sm text-gray-600">${Math.round(meal.calories)} calories</p>
+                </div>
+            </div>
+            <div class="text-right text-sm text-gray-600">
+                <div>P: ${Math.round(meal.protein)}g</div>
+                <div>C: ${Math.round(meal.carbs)}g • F: ${Math.round(meal.fat)}g</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getMealIcon(mealType) {
+    const icons = {
+        'Breakfast': 'fa-coffee',
+        'Lunch': 'fa-hamburger',
+        'Dinner': 'fa-utensils',
+        'Snack': 'fa-cookie-bite'
+    };
+    return icons[mealType] || 'fa-utensils';
+}
+
+// Modal functions
+function openPhotoAnalysis() {
+    document.getElementById('photoModal').classList.remove('hidden');
+    // Reset form
+    document.getElementById('photoPreview').classList.add('hidden');
+    document.getElementById('detectionResults').classList.add('hidden');
+    detectedFoodsData = [];
+}
+
+function openFoodSearch() {
+    document.getElementById('searchModal').classList.remove('hidden');
+}
+
+function openManualEntry() {
+    document.getElementById('manualModal').classList.remove('hidden');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+}
+
+// Photo analysis form
+document.getElementById('photoForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    formData.append('detected_foods', JSON.stringify(detectedFoodsData));
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+        
+        const response = await fetch('/api/nutrition/analyze-photo', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Photo and meal data saved successfully!', 'success');
+            closeModal('photoModal');
+            loadNutritionDashboard();
+            this.reset();
+        } else {
+            showNotification(data.detail || 'Failed to save meal', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving photo meal:', error);
+        showNotification('Error saving meal', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Meal';
+    }
+});
+
+// Food search
+async function searchFood() {
+    const query = document.getElementById('foodSearchQuery').value.trim();
+    if (!query) return;
+    
+    try {
+        const response = await fetch(`/api/nutrition/search-food?query=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            displaySearchResults(data.foods);
+        }
+    } catch (error) {
+        console.error('Error searching food:', error);
+        showNotification('Error searching food', 'error');
+    }
+}
+
+function displaySearchResults(foods) {
+    const container = document.getElementById('searchResults');
+    
+    if (foods.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-4">No foods found</p>';
+        return;
+    }
+    
+    container.innerHTML = foods.map(food => `
+        <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer" onclick="selectFood(${JSON.stringify(food).replace(/"/g, '&quot;')})">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h4 class="font-medium text-gray-900">${food.name}</h4>
+                    <p class="text-sm text-gray-600">${food.brand}</p>
+                    <p class="text-xs text-blue-600">Open Food Facts</p>
+                </div>
+                <div class="text-sm text-gray-600 text-right">
+                    <div>${food.calories_per_100g} cal/100g</div>
+                    <div class="text-xs">P:${food.protein_per_100g}g C:${food.carbs_per_100g}g F:${food.fat_per_100g}g</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function selectFood(food) {
+    // Fill manual form with selected food data
+    closeModal('searchModal');
+    openManualEntry();
+    
+    const form = document.getElementById('manualForm');
+    form.food_name.value = food.name;
+    form.quantity.value = 100;
+    form.calories.value = food.calories_per_100g;
+    form.protein.value = food.protein_per_100g;
+    form.carbs.value = food.carbs_per_100g;
+    form.fat.value = food.fat_per_100g;
+}
+
+// Manual food entry
+document.getElementById('manualForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding...';
+        
+        const response = await fetch('/api/nutrition/add-food', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Food added successfully!', 'success');
+            closeModal('manualModal');
+            loadNutritionDashboard();
+            this.reset();
+        } else {
+            showNotification(data.detail || 'Failed to add food', 'error');
+        }
+    } catch (error) {
+        console.error('Error adding food:', error);
+        showNotification('Error adding food', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-plus mr-2"></i>Add Food';
+    }
+});
+
+// Utility functions
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.classList.remove('translate-x-full'), 100);
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => document.body.removeChild(notification), 300);
+    }, 3000);
+}
+
+// Enter key search
+document.getElementById('foodSearchQuery').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchFood();
+    }
+});
+</script>
+{% endblock %} 

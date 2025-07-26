@@ -2,374 +2,390 @@
 
 {% block title %}Gym Dashboard - PowerFit{% endblock %}
 
+{% block content_title %}
+ <div class="mb-4 sm:mb-6 lg:mb-8 animate-fade-in">
+ <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent mb-2">
+ Welcome back, <span id="gymName" class="gradient-text">PowerFit Gym</span>! 🏋️‍♂️
+ </h1>
+ <p class="text-gray-600 text-lg">Comprehensive gym management and performance analytics</p>
+ </div>
+{% endblock %}
+
 {% block content %}
-    <!-- Welcome Section -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Welcome, <span id="gymName">-</span></h3>
-            <p class="mt-1 text-sm text-gray-500">Here's an overview of your gym's performance</p>
-        </div>
-    </div>
+ <!-- Welcome Section -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl mb-6 sm:mb-8 border border-white/20 hover:shadow-2xl transition-all duration-300 animate-scale-in">
+ <div class="px-8 py-8 sm:p-10">
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+ <i class="fas fa-building text-lg sm:text-xl lg:text-2xl"></i>
+ </div>
+ <div>
+ <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Gym Control Center</h3>
+ <p class="text-gray-600 mt-1">Monitor and manage your fitness facility operations</p>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- Stats Section -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <!-- Total Members -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
-                    <i class="fas fa-users text-white text-2xl"></i>
-                </div>
-                <div class="ml-5">
-                    <h4 class="text-lg font-medium text-gray-900">Total Members</h4>
-                    <p class="text-2xl font-semibold text-gray-900" id="totalMembers">-</p>
-                </div>
-            </div>
-        </div>
+     <!-- Stats Section -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-8">
+ <!-- Total Members -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-scale-in">
+ <div class="flex items-center space-x-4">
+ <div class="flex-shrink-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-3 shadow-lg">
+ <i class="fas fa-users text-white text-xl"></i>
+ </div>
+ <div class="flex-1 min-w-0">
+ <h4 class="text-sm sm:text-base font-semibold text-gray-900">Total Members</h4>
+ <p class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent" id="totalMembers">-</p>
+ </div>
+ </div>
+ </div>
 
-        <!-- Active Coaches -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
-                    <i class="fas fa-user-tie text-white text-2xl"></i>
-                </div>
-                <div class="ml-5">
-                    <h4 class="text-lg font-medium text-gray-900">Active Coaches</h4>
-                    <p class="text-2xl font-semibold text-gray-900" id="activeCoaches">-</p>
-                </div>
-            </div>
-        </div>
+ <!-- Active Coaches -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-scale-in" style="animation-delay: 0.1s">
+ <div class="flex items-center space-x-4">
+ <div class="flex-shrink-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-3 shadow-lg">
+ <i class="fas fa-user-tie text-white text-xl"></i>
+ </div>
+ <div class="flex-1 min-w-0">
+ <h4 class="text-sm sm:text-base font-semibold text-gray-900">Active Coaches</h4>
+ <p class="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent" id="activeCoaches">-</p>
+ </div>
+ </div>
+ </div>
 
-        <!-- Today's Sessions -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
-                    <i class="fas fa-calendar-check text-white text-2xl"></i>
-                </div>
-                <div class="ml-5">
-                    <h4 class="text-lg font-medium text-gray-900">Today's Sessions</h4>
-                    <p class="text-2xl font-semibold text-gray-900" id="todaySessions">-</p>
-                </div>
-            </div>
-        </div>
+ <!-- Today's Sessions -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-scale-in" style="animation-delay: 0.2s">
+ <div class="flex items-center space-x-4">
+ <div class="flex-shrink-0 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl p-3 shadow-lg">
+ <i class="fas fa-calendar-check text-white text-xl"></i>
+ </div>
+ <div class="flex-1 min-w-0">
+ <h4 class="text-sm sm:text-base font-semibold text-gray-900">Today's Sessions</h4>
+ <p class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent" id="todaySessions">-</p>
+ </div>
+ </div>
+ </div>
 
-        <!-- Monthly Revenue -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-yellow-500 rounded-md p-3">
-                    <i class="fas fa-dollar-sign text-white text-2xl"></i>
-                </div>
-                <div class="ml-5">
-                    <h4 class="text-lg font-medium text-gray-900">Monthly Revenue</h4>
-                    <p class="text-2xl font-semibold text-gray-900" id="monthlyRevenue">-</p>
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Monthly Revenue -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-scale-in" style="animation-delay: 0.3s">
+ <div class="flex items-center space-x-4">
+ <div class="flex-shrink-0 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl p-3 shadow-lg">
+ <i class="fas fa-dollar-sign text-white text-xl"></i>
+ </div>
+ <div class="flex-1 min-w-0">
+ <h4 class="text-sm sm:text-base font-semibold text-gray-900">Monthly Revenue</h4>
+ <p class="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent" id="monthlyRevenue">-</p>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- Recent Activity -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Recent Members -->
-        <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Members</h3>
-                <div id="recentMembers" class="space-y-4">
-                    <!-- Members will be loaded here -->
-                </div>
-            </div>
-        </div>
+ <!-- Recent Activity -->
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:p-6">
+ <!-- Recent Members -->
+ <div class="bg-white shadow rounded-lg">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Members</h3>
+ <div id="recentMembers" class="space-y-4">
+ <!-- Members will be loaded here -->
+ </div>
+ </div>
+ </div>
 
-        <!-- Recent Sessions -->
-        <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Sessions</h3>
-                <div id="recentSessions" class="space-y-4">
-                    <!-- Sessions will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Recent Sessions -->
+ <div class="bg-white shadow rounded-lg">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Sessions</h3>
+ <div id="recentSessions" class="space-y-4">
+ <!-- Sessions will be loaded here -->
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- AI Chatbot Section -->
-    <div class="bg-white shadow rounded-lg mt-6">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">
-                    <i class="fas fa-comments mr-2 text-indigo-600"></i>AI Assistant
-                </h3>
-                <button id="toggleChatbot" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
-                    <i class="fas fa-chevron-down mr-1"></i>Show Chat
-                </button>
-            </div>
-            
-            <!-- Chatbot Interface (Hidden by default) -->
-            <div id="chatbotInterface" class="hidden">
-                <!-- Role Selection -->
-                <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                    <div class="flex items-center justify-center space-x-4">
-                        <span class="text-sm font-medium text-gray-700">Select your role:</span>
-                        <div class="flex space-x-2">
-                            <button id="memberBtn" class="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-blue-500 hover:text-blue-700 transition-colors">
-                                Member
-                            </button>
-                            <button id="coachBtn" class="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-green-500 hover:text-green-700 transition-colors">
-                                Coach
-                            </button>
-                        </div>
-                    </div>
-                </div>
+ <!-- AI Chatbot Section -->
+ <div class="bg-white shadow rounded-lg mt-6">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="flex justify-between items-center mb-4">
+ <h3 class="text-lg leading-6 font-medium text-gray-900">
+ <i class="fas fa-comments mr-2 text-indigo-600"></i>AI Assistant
+ </h3>
+ <button id="toggleChatbot" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+ <i class="fas fa-chevron-down mr-1"></i>Show Chat
+ </button>
+ </div>
+ 
+ <!-- Chatbot Interface (Hidden by default) -->
+ <div id="chatbotInterface" class="hidden">
+ <!-- Role Selection -->
+ <div class="bg-gray-50 rounded-lg p-4 mb-4">
+ <div class="flex items-center justify-center space-x-2 sm:space-x-4">
+ <span class="text-sm font-medium text-gray-700">Select your role:</span>
+ <div class="flex space-x-2">
+ <button id="memberBtn" class="px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-blue-500 hover:text-blue-700 transition-colors">
+ Member
+ </button>
+ <button id="coachBtn" class="px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-green-500 hover:text-green-700 transition-colors">
+ Coach
+ </button>
+ </div>
+ </div>
+ </div>
 
-                <!-- Chat Messages Container -->
-                <div id="chatMessages" class="bg-gray-50 rounded-lg p-4 mb-4 h-64 overflow-y-auto space-y-3">
-                    <!-- Welcome message -->
-                    <div class="flex justify-start">
-                        <div class="max-w-xs bg-blue-500 text-white rounded-lg px-3 py-2">
-                            <p class="text-sm">Hello! I'm your AI assistant. How can I help you today?</p>
-                        </div>
-                    </div>
-                </div>
+ <!-- Chat Messages Container -->
+ <div id="chatMessages" class="bg-gray-50 rounded-lg p-4 mb-4 h-64 overflow-y-auto space-y-3">
+ <!-- Welcome message -->
+ <div class="flex justify-start">
+ <div class="max-w-xs bg-blue-500 text-white rounded-lg px-3 py-2">
+ <p class="text-sm">Hello! I'm your AI assistant. How can I help you today?</p>
+ </div>
+ </div>
+ </div>
 
-                <!-- Typing Indicator -->
-                <div id="typingIndicator" class="hidden bg-gray-50 rounded-lg p-3 mb-4">
-                    <div class="flex items-center space-x-2">
-                        <div class="bg-gray-300 rounded-full p-2">
-                            <div class="w-2 h-2 bg-gray-600 rounded-full"></div>
-                        </div>
-                        <div class="flex space-x-1">
-                            <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
-                            <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
-                            <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
-                        </div>
-                        <span class="text-sm text-gray-500">AI is typing...</span>
-                    </div>
-                </div>
+ <!-- Typing Indicator -->
+ <div id="typingIndicator" class="hidden bg-gray-50 rounded-lg p-3 mb-4">
+ <div class="flex items-center space-x-2">
+ <div class="bg-gray-300 rounded-full p-2">
+ <div class="w-2 h-2 bg-gray-600 rounded-full"></div>
+ </div>
+ <div class="flex space-x-1">
+ <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+ <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+ <div class="typing-dot w-2 h-2 bg-gray-400 rounded-full"></div>
+ </div>
+ <span class="text-sm text-gray-500">AI is typing...</span>
+ </div>
+ </div>
 
-                <!-- Input Area -->
-                <div class="flex space-x-3">
-                    <input 
-                        type="text" 
-                        id="messageInput" 
-                        placeholder="Type your message here..."
-                        class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        onkeypress="handleKeyPress(event)"
-                    >
-                    <button 
-                        id="sendButton"
-                        onclick="sendMessage()"
-                        class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors text-sm"
-                    >
-                        Send
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Input Area -->
+ <div class="flex space-x-3">
+ <input 
+ type="text" 
+ id="messageInput" 
+ placeholder="Type your message here..."
+ class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:outline-none focus:border-transparent"
+ onkeypress="handleKeyPress(event)"
+ >
+ <button 
+ id="sendButton"
+ onclick="sendMessage()"
+ class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:outline-none transition-colors text-sm"
+ >
+ Send
+ </button>
+ </div>
+ </div>
+ </div>
+ </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Load gym dashboard data
-    async function loadDashboardData() {
-        try {
-            const response = await fetch('/api/gym/dashboard');
-            const data = await response.json();
-            
-            // Update gym name
-            document.getElementById('gymName').textContent = data.gym.name;
-            
-            // Update stats
-            document.getElementById('totalMembers').textContent = data.stats.total_members;
-            document.getElementById('activeCoaches').textContent = data.stats.active_coaches;
-            document.getElementById('todaySessions').textContent = data.stats.today_sessions;
-            document.getElementById('monthlyRevenue').textContent = `$${data.stats.monthly_revenue.toLocaleString()}`;
-            
-            // Update recent members
-            const recentMembersDiv = document.getElementById('recentMembers');
-            if (data.recent_members.length === 0) {
-                recentMembersDiv.innerHTML = '<p class="text-gray-500">No recent members.</p>';
-            } else {
-                recentMembersDiv.innerHTML = data.recent_members.map(member => `
-                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div>
-                            <h4 class="font-medium text-gray-900">${member.name}</h4>
-                            <p class="text-sm text-gray-500">${member.membership_type}</p>
-                            <p class="text-xs text-gray-400">Joined ${new Date(member.join_date).toLocaleDateString()}</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                ${member.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                ${member.status}
-                            </span>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            // Update recent sessions
-            const recentSessionsDiv = document.getElementById('recentSessions');
-            if (data.recent_sessions.length === 0) {
-                recentSessionsDiv.innerHTML = '<p class="text-gray-500">No recent sessions.</p>';
-            } else {
-                recentSessionsDiv.innerHTML = data.recent_sessions.map(session => `
-                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div>
-                            <h4 class="font-medium text-gray-900">${session.member_name}</h4>
-                            <p class="text-sm text-gray-500">${session.notes || 'General Training'}</p>
-                            <p class="text-xs text-gray-400">${new Date(session.session_date).toLocaleDateString()} at ${session.session_time}</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                ${session.status === 'Completed' ? 'bg-green-100 text-green-800' : 
-                                  session.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
-                                  'bg-blue-100 text-blue-800'}">
-                                ${session.status}
-                            </span>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        } catch (error) {
-            console.error('Error loading dashboard data:', error);
-        }
-    }
+ // Load gym dashboard data
+ async function loadDashboardData() {
+ try {
+ const response = await fetch('/api/gym/dashboard');
+ const data = await response.json();
+ 
+ // Update gym name
+ document.getElementById('gymName').textContent = data.gym.name;
+ 
+ // Update stats
+ document.getElementById('totalMembers').textContent = data.stats.total_members;
+ document.getElementById('activeCoaches').textContent = data.stats.active_coaches;
+ document.getElementById('todaySessions').textContent = data.stats.today_sessions;
+ document.getElementById('monthlyRevenue').textContent = `$${data.stats.monthly_revenue.toLocaleString()}`;
+ 
+ // Update recent members
+ const recentMembersDiv = document.getElementById('recentMembers');
+ if (data.recent_members.length === 0) {
+ recentMembersDiv.innerHTML = '<p class="text-gray-500">No recent members.</p>';
+ } else {
+ recentMembersDiv.innerHTML = data.recent_members.map(member => `
+ <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+ <div>
+ <h4 class="font-medium text-gray-900">${member.name}</h4>
+ <p class="text-sm text-gray-500">${member.membership_type}</p>
+ <p class="text-xs text-gray-400">Joined ${new Date(member.join_date).toLocaleDateString()}</p>
+ </div>
+ <div class="text-right">
+ <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+ ${member.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+ ${member.status}
+ </span>
+ </div>
+ </div>
+ `).join('');
+ }
+ 
+ // Update recent sessions
+ const recentSessionsDiv = document.getElementById('recentSessions');
+ if (data.recent_sessions.length === 0) {
+ recentSessionsDiv.innerHTML = '<p class="text-gray-500">No recent sessions.</p>';
+ } else {
+ recentSessionsDiv.innerHTML = data.recent_sessions.map(session => `
+ <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+ <div>
+ <h4 class="font-medium text-gray-900">${session.member_name}</h4>
+ <p class="text-sm text-gray-500">${session.notes || 'General Training'}</p>
+ <p class="text-xs text-gray-400">${new Date(session.session_date).toLocaleDateString()} at ${session.session_time}</p>
+ </div>
+ <div class="text-right">
+ <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+ ${session.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+ session.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
+ 'bg-blue-100 text-blue-800'}">
+ ${session.status}
+ </span>
+ </div>
+ </div>
+ `).join('');
+ }
+ } catch (error) {
+ console.error('Error loading dashboard data:', error);
+ }
+ }
 
-    // Chatbot Functions
-    let currentRole = 'member'; // Default role for gym dashboard
+ // Chatbot Functions
+ let currentRole = 'member'; // Default role for gym dashboard
 
-    function handleKeyPress(event) {
-        if (event.key === 'Enter') {
-            sendMessage();
-        }
-    }
+ function handleKeyPress(event) {
+ if (event.key === 'Enter') {
+ sendMessage();
+ }
+ }
 
-    function addMessage(content, isUser = false) {
-        const chatMessages = document.getElementById('chatMessages');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
-        
-        const bubbleDiv = document.createElement('div');
-        bubbleDiv.className = `max-w-xs ${isUser ? 'bg-indigo-500 text-white' : 'bg-blue-500 text-white'} rounded-lg px-3 py-2`;
-        
-        const messageText = document.createElement('p');
-        messageText.className = 'text-sm';
-        messageText.textContent = content;
-        
-        bubbleDiv.appendChild(messageText);
-        messageDiv.appendChild(bubbleDiv);
-        chatMessages.appendChild(messageDiv);
-        
-        // Scroll to bottom
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+ function addMessage(content, isUser = false) {
+ const chatMessages = document.getElementById('chatMessages');
+ const messageDiv = document.createElement('div');
+ messageDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+ 
+ const bubbleDiv = document.createElement('div');
+ bubbleDiv.className = `max-w-xs ${isUser ? 'bg-indigo-500 text-white' : 'bg-blue-500 text-white'} rounded-lg px-3 py-2`;
+ 
+ const messageText = document.createElement('p');
+ messageText.className = 'text-sm';
+ messageText.textContent = content;
+ 
+ bubbleDiv.appendChild(messageText);
+ messageDiv.appendChild(bubbleDiv);
+ chatMessages.appendChild(messageDiv);
+ 
+ // Scroll to bottom
+ chatMessages.scrollTop = chatMessages.scrollHeight;
+ }
 
-    function showTypingIndicator() {
-        document.getElementById('typingIndicator').classList.remove('hidden');
-        const chatMessages = document.getElementById('chatMessages');
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+ function showTypingIndicator() {
+ document.getElementById('typingIndicator').classList.remove('hidden');
+ const chatMessages = document.getElementById('chatMessages');
+ chatMessages.scrollTop = chatMessages.scrollHeight;
+ }
 
-    function hideTypingIndicator() {
-        document.getElementById('typingIndicator').classList.add('hidden');
-    }
+ function hideTypingIndicator() {
+ document.getElementById('typingIndicator').classList.add('hidden');
+ }
 
-    async function sendMessage() {
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const message = messageInput.value.trim();
-        if (!message) return;
+ async function sendMessage() {
+ const messageInput = document.getElementById('messageInput');
+ const sendButton = document.getElementById('sendButton');
+ const message = messageInput.value.trim();
+ if (!message) return;
 
-        // Disable input and button
-        messageInput.disabled = true;
-        sendButton.disabled = true;
+ // Disable input and button
+ messageInput.disabled = true;
+ sendButton.disabled = true;
 
-        // Add user message
-        addMessage(message, true);
-        messageInput.value = '';
+ // Add user message
+ addMessage(message, true);
+ messageInput.value = '';
 
-        // Show typing indicator
-        showTypingIndicator();
+ // Show typing indicator
+ showTypingIndicator();
 
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    message: message,
-                    role: currentRole
-                })
-            });
+ try {
+ const response = await fetch('/api/chat', {
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json',
+ },
+ body: JSON.stringify({ 
+ message: message,
+ role: currentRole
+ })
+ });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+ if (!response.ok) {
+ throw new Error(`HTTP error! status: ${response.status}`);
+ }
 
-            const data = await response.json();
-            
-            // Hide typing indicator
-            hideTypingIndicator();
-            
-            // Add bot response
-            addMessage(data.reply, false);
+ const data = await response.json();
+ 
+ // Hide typing indicator
+ hideTypingIndicator();
+ 
+ // Add bot response
+ addMessage(data.reply, false);
 
-        } catch (error) {
-            console.error('Error:', error);
-            hideTypingIndicator();
-            addMessage('Sorry, I encountered an error. Please try again.', false);
-        } finally {
-            // Re-enable input and button
-            messageInput.disabled = false;
-            sendButton.disabled = false;
-            messageInput.focus();
-        }
-    }
+ } catch (error) {
+ console.error('Error:', error);
+ hideTypingIndicator();
+ addMessage('Sorry, I encountered an error. Please try again.', false);
+ } finally {
+ // Re-enable input and button
+ messageInput.disabled = false;
+ sendButton.disabled = false;
+ messageInput.focus();
+ }
+ }
 
-    function updateRoleButtons() {
-        const memberBtn = document.getElementById('memberBtn');
-        const coachBtn = document.getElementById('coachBtn');
-        
-        if (currentRole === 'member') {
-            memberBtn.className = 'px-4 py-2 rounded-lg border-2 border-blue-500 bg-blue-500 text-white font-medium text-sm transition-colors';
-            coachBtn.className = 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-green-500 hover:text-green-700 transition-colors';
-        } else {
-            memberBtn.className = 'px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-blue-500 hover:text-blue-700 transition-colors';
-            coachBtn.className = 'px-4 py-2 rounded-lg border-2 border-green-500 bg-green-500 text-white font-medium text-sm transition-colors';
-        }
-    }
+ function updateRoleButtons() {
+ const memberBtn = document.getElementById('memberBtn');
+ const coachBtn = document.getElementById('coachBtn');
+ 
+ if (currentRole === 'member') {
+ memberBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-blue-500 bg-blue-500 text-white font-medium text-sm transition-colors';
+ coachBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-green-500 hover:text-green-700 transition-colors';
+ } else {
+ memberBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-blue-500 hover:text-blue-700 transition-colors';
+ coachBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-green-500 bg-green-500 text-white font-medium text-sm transition-colors';
+ }
+ }
 
-    // Load data when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        loadDashboardData();
+ // Load data when page loads
+ document.addEventListener('DOMContentLoaded', function() {
+ loadDashboardData();
 
-        // Chatbot event listeners
-        const toggleChatbot = document.getElementById('toggleChatbot');
-        const chatbotInterface = document.getElementById('chatbotInterface');
-        const memberBtn = document.getElementById('memberBtn');
-        const coachBtn = document.getElementById('coachBtn');
+ // Chatbot event listeners
+ const toggleChatbot = document.getElementById('toggleChatbot');
+ const chatbotInterface = document.getElementById('chatbotInterface');
+ const memberBtn = document.getElementById('memberBtn');
+ const coachBtn = document.getElementById('coachBtn');
 
-        toggleChatbot.addEventListener('click', function() {
-            const isHidden = chatbotInterface.classList.contains('hidden');
-            if (isHidden) {
-                chatbotInterface.classList.remove('hidden');
-                toggleChatbot.innerHTML = '<i class="fas fa-chevron-up mr-1"></i>Hide Chat';
-            } else {
-                chatbotInterface.classList.add('hidden');
-                toggleChatbot.innerHTML = '<i class="fas fa-chevron-down mr-1"></i>Show Chat';
-            }
-        });
+ toggleChatbot.addEventListener('click', function() {
+ const isHidden = chatbotInterface.classList.contains('hidden');
+ if (isHidden) {
+ chatbotInterface.classList.remove('hidden');
+ toggleChatbot.innerHTML = '<i class="fas fa-chevron-up mr-1"></i>Hide Chat';
+ } else {
+ chatbotInterface.classList.add('hidden');
+ toggleChatbot.innerHTML = '<i class="fas fa-chevron-down mr-1"></i>Show Chat';
+ }
+ });
 
-        memberBtn.addEventListener('click', function() {
-            currentRole = 'member';
-            updateRoleButtons();
-        });
+ memberBtn.addEventListener('click', function() {
+ currentRole = 'member';
+ updateRoleButtons();
+ });
 
-        coachBtn.addEventListener('click', function() {
-            currentRole = 'coach';
-            updateRoleButtons();
-        });
+ coachBtn.addEventListener('click', function() {
+ currentRole = 'coach';
+ updateRoleButtons();
+ });
 
-        // Initialize role buttons
-        updateRoleButtons();
-    });
+ // Initialize role buttons
+ updateRoleButtons();
+ });
 </script>
 {% endblock %} 
