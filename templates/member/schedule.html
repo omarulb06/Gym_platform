@@ -2,1179 +2,1187 @@
 
 {% block title %}My Schedule - PowerFit{% endblock %}
 
+{% block content_title %}
+ <div class="mb-4 sm:mb-6 lg:mb-8 animate-fade-in">
+ <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent mb-2">
+ My Schedule 📅
+ </h1>
+ <p class="text-gray-600 text-lg">View and manage your training sessions and preferences</p>
+ </div>
+{% endblock %}
+
 {% block content %}
-    <!-- Welcome Section -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">My Schedule</h3>
-            <p class="mt-1 text-sm text-gray-500">View and manage your training sessions</p>
-        </div>
-    </div>
+ <!-- Welcome Section -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl mb-6 sm:mb-8 border border-white/20 hover:shadow-2xl transition-all duration-300 animate-scale-in">
+ <div class="px-8 py-8 sm:p-10">
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-accent-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
+ <i class="fas fa-calendar-alt text-lg sm:text-xl lg:text-2xl"></i>
+ </div>
+ <div>
+ <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Training Schedule</h3>
+ <p class="text-gray-600 mt-1">Plan and organize your fitness journey</p>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- Preferences and Free Days Section -->
-    <div class="bg-white shadow rounded-lg p-6 mb-6">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-lg font-medium text-gray-900">My Preferences & Availability</h2>
-            <button onclick="togglePreferencesForm()" 
-                    class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                <i class="fas fa-edit mr-2"></i>Edit Preferences
-            </button>
-        </div>
-        
-        <!-- Preferences Display -->
-        <div id="preferencesDisplay" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Preferences will be populated here -->
-        </div>
-        
-        <!-- Preferences Form (Hidden by default) -->
-        <div id="preferencesForm" class="hidden mt-6">
-            <form id="preferencesFormElement" class="space-y-6">
-                <!-- Workout Preferences -->
-                <div>
-                    <h3 class="text-md font-medium text-gray-900 mb-3">Workout Preferences</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Workout Types</label>
-                            <div class="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
-                                <div class="grid grid-cols-1 gap-2">
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Upper Body" class="mr-2">
-                                        Upper Body
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Lower Body" class="mr-2">
-                                        Lower Body
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Full Body" class="mr-2">
-                                        Full Body
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Core" class="mr-2">
-                                        Core
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Push" class="mr-2">
-                                        Push
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Pull" class="mr-2">
-                                        Pull
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Session Duration (minutes)</label>
-                            <select name="duration" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                <option value="30">30 minutes</option>
-                                <option value="45">45 minutes</option>
-                                <option value="60" selected>60 minutes</option>
-                                <option value="90">90 minutes</option>
-                                <option value="120">120 minutes</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Time Preferences -->
-                <div>
-                    <h3 class="text-md font-medium text-gray-900 mb-3">Preferred Time Slots</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="08:00" class="mr-2">
-                            8:00 AM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="09:00" class="mr-2">
-                            9:00 AM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="10:00" class="mr-2">
-                            10:00 AM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="11:00" class="mr-2">
-                            11:00 AM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="12:00" class="mr-2">
-                            12:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="13:00" class="mr-2">
-                            1:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="14:00" class="mr-2">
-                            2:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="15:00" class="mr-2">
-                            3:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="16:00" class="mr-2">
-                            4:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="17:00" class="mr-2">
-                            5:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="18:00" class="mr-2">
-                            6:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="19:00" class="mr-2">
-                            7:00 PM
-                        </label>
-                    </div>
-                </div>
-                
-                <!-- Free Days -->
-                <div>
-                    <h3 class="text-md font-medium text-gray-900 mb-3">Weekly Availability</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="freeDaysContainer">
-                        <!-- Free days will be populated here -->
-                    </div>
-                </div>
-                
-                <!-- Notes -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
-                    <textarea name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Any additional preferences or notes..."></textarea>
-                </div>
-                
-                <!-- Form Actions -->
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="togglePreferencesForm()" 
-                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        Cancel
-                    </button>
-                    <button type="submit" 
-                            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        Save Preferences
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+ <!-- Preferences and Free Days Section -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl mb-6 sm:mb-8 border border-white/20 hover:shadow-2xl transition-all duration-300 animate-bounce-in">
+ <div class="px-8 py-8 sm:p-10">
+ <div class="flex justify-between items-center mb-6 sm:mb-8">
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+ <i class="fas fa-cog text-xl"></i>
+ </div>
+ <div>
+ <h2 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">My Preferences & Availability</h2>
+ <p class="text-gray-600">Customize your training preferences</p>
+ </div>
+ </div>
+ <button onclick="togglePreferencesForm()" 
+ class="bg-gradient-to-r from-primary-500 to-blue-600 text-white px-3 py-2 sm:px-4 sm:px-6 sm:py-3 rounded-xl hover:from-primary-600 hover:to-blue-700 focus:outline-none transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 font-medium">
+ <i class="fas fa-edit mr-2"></i>Edit Preferences
+ </button>
+ </div>
+ 
+ <!-- Preferences Display -->
+ <div id="preferencesDisplay" class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:p-6">
+ <!-- Preferences will be populated here -->
+ </div>
+ 
+ <!-- Preferences Form (Hidden by default) -->
+ <div id="preferencesForm" class="hidden mt-6">
+ <form id="preferencesFormElement" class="space-y-6">
+ <!-- Workout Preferences -->
+ <div>
+ <h3 class="text-md font-medium text-gray-900 mb-3">Workout Preferences</h3>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Workout Types</label>
+ <div class="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+ <div class="grid grid-cols-1 gap-2">
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Upper Body" class="mr-2">
+ Upper Body
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Lower Body" class="mr-2">
+ Lower Body
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Full Body" class="mr-2">
+ Full Body
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Core" class="mr-2">
+ Core
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Push" class="mr-2">
+ Push
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Pull" class="mr-2">
+ Pull
+ </label>
+ </div>
+ </div>
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Session Duration (minutes)</label>
+ <select name="duration" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+ <option value="30">30 minutes</option>
+ <option value="45">45 minutes</option>
+ <option value="60" selected>60 minutes</option>
+ <option value="90">90 minutes</option>
+ <option value="120">120 minutes</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ 
+ <!-- Time Preferences -->
+ <div>
+ <h3 class="text-md font-medium text-gray-900 mb-3">Preferred Time Slots</h3>
+ <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="08:00" class="mr-2">
+ 8:00 AM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="09:00" class="mr-2">
+ 9:00 AM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="10:00" class="mr-2">
+ 10:00 AM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="11:00" class="mr-2">
+ 11:00 AM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="12:00" class="mr-2">
+ 12:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="13:00" class="mr-2">
+ 1:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="14:00" class="mr-2">
+ 2:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="15:00" class="mr-2">
+ 3:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="16:00" class="mr-2">
+ 4:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="17:00" class="mr-2">
+ 5:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="18:00" class="mr-2">
+ 6:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="19:00" class="mr-2">
+ 7:00 PM
+ </label>
+ </div>
+ </div>
+ 
+ <!-- Free Days -->
+ <div>
+ <h3 class="text-md font-medium text-gray-900 mb-3">Weekly Availability</h3>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="freeDaysContainer">
+ <!-- Free days will be populated here -->
+ </div>
+ </div>
+ 
+ <!-- Notes -->
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+ <textarea name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500" placeholder="Any additional preferences or notes..."></textarea>
+ </div>
+ 
+ <!-- Form Actions -->
+ <div class="flex justify-end space-x-3">
+ <button type="button" onclick="togglePreferencesForm()" 
+ class="px-3 py-2 sm:px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:outline-none
+ Cancel
+ </button>
+ <button type="submit" 
+ class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ Save Preferences
+ </button>
+ </div>
+ </form>
+ </div>
+ </div>
 
-    <!-- My Workout Sessions (Custom Interval) -->
-    <div class="bg-white shadow rounded-lg p-6 mb-6">
-        <h2 class="text-lg font-medium text-gray-900 mb-6">My Workout Sessions</h2>
-        <div class="flex items-center space-x-2 mb-4">
-            <input type="date" id="memberStartDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-            <span class="text-gray-500">to</span>
-            <input type="date" id="memberEndDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-            <button id="memberSearchBtn" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                <i class="fas fa-search mr-2"></i>Search
-            </button>
-        </div>
-        <div id="memberSessionsGrid" class="grid grid-cols-1 md:grid-cols-7 gap-4"></div>
-    </div>
+ <!-- My Workout Sessions (Custom Interval) -->
+ <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+ <h2 class="text-lg font-medium text-gray-900 mb-4 sm:mb-6">My Workout Sessions</h2>
+ <div class="flex items-center space-x-2 mb-4">
+ <input type="date" id="memberStartDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+ <span class="text-gray-500">to</span>
+ <input type="date" id="memberEndDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+ <button id="memberSearchBtn" class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ <i class="fas fa-search mr-2"></i>Search
+ </button>
+ </div>
+ <div id="memberSessionsGrid" class="grid grid-cols-1 md:grid-cols-7 gap-4"></div>
+ </div>
 
-    <!-- Weekly Availability Comparison Section -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <h4 class="text-lg font-medium text-gray-900 mb-4">Weekly Availability: Member vs Coach</h4>
-            <div id="weeklyAvailabilityComparison"></div>
-        </div>
-    </div>
+ <!-- Weekly Availability Comparison Section -->
+ <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <h4 class="text-lg font-medium text-gray-900 mb-4">Weekly Availability: Member vs Coach</h4>
+ <div id="weeklyAvailabilityComparison"></div>
+ </div>
+ </div>
 
-    <!-- Coach Preferences Section -->
-    <div class="bg-white shadow rounded-lg mb-6" id="coachPreferences" style="display: none;">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h4 class="text-lg font-medium text-gray-900">My Coach's Preferences & Availability</h4>
-                <button onclick="toggleCoachPreferences()" 
-                        class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
-                    <i class="fas fa-eye-slash mr-1"></i>Hide
-                </button>
-            </div>
-            <div id="coachPreferencesContent"></div>
-        </div>
-    </div>
+ <!-- Coach Preferences Section -->
+ <div class="bg-white shadow rounded-lg mb-4 sm:mb-6" id="coachPreferences" style="display: none;">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="flex justify-between items-center mb-4">
+ <h4 class="text-lg font-medium text-gray-900">My Coach's Preferences & Availability</h4>
+ <button onclick="toggleCoachPreferences()" 
+ class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+ <i class="fas fa-eye-slash mr-1"></i>Hide
+ </button>
+ </div>
+ <div id="coachPreferencesContent"></div>
+ </div>
+ </div>
 
-    <!-- Coach Availability Quick View -->
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6" id="coachAvailabilityQuick">
-        <div class="flex justify-between items-center">
-            <div>
-                <h4 class="text-sm font-medium text-blue-900">Coach Availability</h4>
-                <p class="text-sm text-blue-700">Click to view your coach's full preferences and availability</p>
-            </div>
-            <button onclick="showCoachPreferences()" 
-                    class="bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                <i class="fas fa-eye mr-1"></i>View Details
-            </button>
-        </div>
-    </div>
+ <!-- Coach Availability Quick View -->
+ <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 sm:mb-6" id="coachAvailabilityQuick">
+ <div class="flex justify-between items-center">
+ <div>
+ <h4 class="text-sm font-medium text-blue-900">Coach Availability</h4>
+ <p class="text-sm text-blue-700">Click to view your coach's full preferences and availability</p>
+ </div>
+ <button onclick="showCoachPreferences()" 
+ class="bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700 focus:outline-none focus:outline-none
+ <i class="fas fa-eye mr-1"></i>View Details
+ </button>
+ </div>
+ </div>
 
-    <!-- Selected Session Details -->
-    <div class="bg-white shadow rounded-lg mb-6" id="sessionDetails" style="display: none;">
-        <div class="px-4 py-5 sm:p-6">
-            <h4 class="text-lg font-medium text-gray-900 mb-4">Session Details</h4>
-            <div id="selectedSessionDetails"></div>
-        </div>
-    </div>
+ <!-- Selected Session Details -->
+ <div class="bg-white shadow rounded-lg mb-4 sm:mb-6" id="sessionDetails" style="display: none;">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <h4 class="text-lg font-medium text-gray-900 mb-4">Session Details</h4>
+ <div id="selectedSessionDetails"></div>
+ </div>
+ </div>
 {% endblock %}
 
-{% block sidebar %}
-<a href="/member/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-home mr-2"></i> Dashboard
-</a>
-<a href="/member/schedule" class="block py-2 px-4 bg-indigo-700">
-    <i class="fas fa-calendar mr-2"></i> Schedule
-</a>
-<a href="/member/progress" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-chart-line mr-2"></i> Progress
-</a>
-<a href="/member/preferences" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-cog mr-2"></i> Preferences
-</a>
-<div class="border-t border-indigo-700 my-2"></div>
-<a href="/member/messages" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-envelope mr-2"></i> Messages
-</a>
-{% endblock %}
+
 
 {% block scripts %}
 <script>
-    let currentDate = new Date();
-    let sessions = [];
-    let userPreferences = null;
-    let userFreeDays = [];
+ let currentDate = new Date();
+ let sessions = [];
+ let userPreferences = null;
+ let userFreeDays = [];
 
-    // Get start of week (Monday)
-    function getStartOfWeek(date) {
-        const day = date.getDay();
-        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-        return new Date(date.setDate(diff));
-    }
+ // Get start of week (Monday)
+ function getStartOfWeek(date) {
+ const day = date.getDay();
+ const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+ return new Date(date.setDate(diff));
+ }
 
-    // Format date as YYYY-MM-DD
-    function formatDate(date) {
-        return date.toISOString().split('T')[0];
-    }
+ // Format date as YYYY-MM-DD
+ function formatDate(date) {
+ return date.toISOString().split('T')[0];
+ }
 
-    // Format time as HH:MM
-    function formatTime(time) {
-        // Accepts 'HH:mm', 'HH:mm:ss', or 'H:mm', returns 'HH:mm'
-        if (!time) return '00:00';
-        const parts = time.split(':');
-        let h = parts[0] ? parts[0].padStart(2, '0') : '00';
-        let m = parts[1] ? parts[1].padStart(2, '0') : '00';
-        return `${h}:${m}`;
-    }
+ // Format time as HH:MM
+ function formatTime(time) {
+ // Accepts 'HH:mm', 'HH:mm:ss', or 'H:mm', returns 'HH:mm'
+ if (!time) return '00:00';
+ const parts = time.split(':');
+ let h = parts[0] ? parts[0].padStart(2, '0') : '00';
+ let m = parts[1] ? parts[1].padStart(2, '0') : '00';
+ return `${h}:${m}`;
+ }
 
-    // Generate time slots
-    function generateTimeSlots() {
-        const slots = [];
-        for (let hour = 8; hour <= 20; hour++) {
-            slots.push(`${hour.toString().padStart(2, '0')}:00`);
-        }
-        return slots;
-    }
+ // Generate time slots
+ function generateTimeSlots() {
+ const slots = [];
+ for (let hour = 8; hour <= 20; hour++) {
+ slots.push(`${hour.toString().padStart(2, '0')}:00`);
+ }
+ return slots;
+ }
 
-    // Update week display
-    function updateWeekDisplay(startDate) {
-        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-        days.forEach((day, index) => {
-            const date = new Date(startDate);
-            date.setDate(startDate.getDate() + index);
-            const header = document.getElementById(day);
-            if (header) {
-                header.textContent = `${day.charAt(0).toUpperCase() + day.slice(1)} (${formatDate(date)})`;
-            }
-        });
-    }
+ // Update week display
+ function updateWeekDisplay(startDate) {
+ const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+ days.forEach((day, index) => {
+ const date = new Date(startDate);
+ date.setDate(startDate.getDate() + index);
+ const header = document.getElementById(day);
+ if (header) {
+ header.textContent = `${day.charAt(0).toUpperCase() + day.slice(1)} (${formatDate(date)})`;
+ }
+ });
+ }
 
-    // Generate schedule
-    function generateSchedule() {
-        const startOfWeek = getStartOfWeek(currentDate);
-        updateWeekDisplay(startOfWeek);
-        
-        const timeSlots = generateTimeSlots();
-        const scheduleTable = document.getElementById('scheduleTable');
-        if (!scheduleTable) return;
-        scheduleTable.innerHTML = '';
-        
-        timeSlots.forEach(time => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${time}</td>
-                ${Array(7).fill().map((_, dayIndex) => {
-                    const date = new Date(startOfWeek);
-                    date.setDate(startOfWeek.getDate() + dayIndex);
-                    const dateStr = formatDate(date);
-                    const timeStr = time;
-                    const dayName = getDayName(date);
-                    
-                    const daySessions = sessions.filter(s => 
-                        s.date === dateStr && 
-                        formatTime(s.time) === timeStr
-                    );
-                    
-                    // Check if coach is available at this time
-                    const coachAvailable = isCoachAvailable(dayName, timeStr);
-                    
-                    if (daySessions.length === 0) {
-                        const bgColor = coachAvailable ? 'bg-green-50' : 'bg-gray-50';
-                        const borderColor = coachAvailable ? 'border-green-200' : 'border-gray-200';
-                        return `<td class="px-6 py-4 border ${borderColor} ${bgColor} relative">
-                            ${coachAvailable ? '<div class="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full"></div>' : ''}
-                        </td>`;
-                    }
-                    
-                    return daySessions.map(session => {
-                        const statusColor = session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                                          session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                          'bg-blue-100 text-blue-800';
-                        return `
-                            <td class="px-6 py-4 border border-gray-200">
-                                <div class="cursor-pointer p-2 rounded ${statusColor}" 
-                                     onclick="showSessionDetails('${session.id}')">
-                                    <div class="font-medium">${session.workout.type}</div>
-                                    <div class="text-xs">${session.coach.name}</div>
-                                    <div class="text-xs">${session.duration} min</div>
-                                </div>
-                            </td>
-                        `;
-                    }).join('');
-                }).join('')}
-            `;
-            scheduleTable.appendChild(row);
-        });
-    }
+ // Generate schedule
+ function generateSchedule() {
+ const startOfWeek = getStartOfWeek(currentDate);
+ updateWeekDisplay(startOfWeek);
+ 
+ const timeSlots = generateTimeSlots();
+ const scheduleTable = document.getElementById('scheduleTable');
+ if (!scheduleTable) return;
+ scheduleTable.innerHTML = '';
+ 
+ timeSlots.forEach(time => {
+ const row = document.createElement('tr');
+ row.innerHTML = `
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${time}</td>
+ ${Array(7).fill().map((_, dayIndex) => {
+ const date = new Date(startOfWeek);
+ date.setDate(startOfWeek.getDate() + dayIndex);
+ const dateStr = formatDate(date);
+ const timeStr = time;
+ const dayName = getDayName(date);
+ 
+ const daySessions = sessions.filter(s => 
+ s.date === dateStr && 
+ formatTime(s.time) === timeStr
+ );
+ 
+ // Check if coach is available at this time
+ const coachAvailable = isCoachAvailable(dayName, timeStr);
+ 
+ if (daySessions.length === 0) {
+ const bgColor = coachAvailable ? 'bg-green-50' : 'bg-gray-50';
+ const borderColor = coachAvailable ? 'border-green-200' : 'border-gray-200';
+ return `<td class="px-6 py-4 border ${borderColor} ${bgColor} relative">
+ ${coachAvailable ? '<div class="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full"></div>' : ''}
+ </td>`;
+ }
+ 
+ return daySessions.map(session => {
+ const statusColor = session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+ session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+ 'bg-blue-100 text-blue-800';
+ return `
+ <td class="px-6 py-4 border border-gray-200">
+ <div class="cursor-pointer p-2 rounded ${statusColor}" 
+ onclick="showSessionDetails('${session.id}')">
+ <div class="font-medium">${session.workout.type}</div>
+ <div class="text-xs">${session.coach.name}</div>
+ <div class="text-xs">${session.duration} min</div>
+ </div>
+ </td>
+ `;
+ }).join('');
+ }).join('')}
+ `;
+ scheduleTable.appendChild(row);
+ });
+ }
 
-    // Get day name from date
-    function getDayName(date) {
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        return days[date.getDay()];
-    }
+ // Get day name from date
+ function getDayName(date) {
+ const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+ return days[date.getDay()];
+ }
 
-    // Check if coach is available at specific day and time
-    function isCoachAvailable(dayName, timeStr) {
-        // This will be populated when coach preferences are loaded
-        if (!window.coachFreeDays || window.coachFreeDays.length === 0) return false;
-        
-        const dayData = window.coachFreeDays.find(day => day.day_of_week === dayName);
-        if (!dayData || !dayData.is_available) return false;
-        
-        const time = timeStr + ':00';
-        const startTime = dayData.start_time;
-        const endTime = dayData.end_time;
-        
-        return time >= startTime && time <= endTime;
-    }
+ // Check if coach is available at specific day and time
+ function isCoachAvailable(dayName, timeStr) {
+ // This will be populated when coach preferences are loaded
+ if (!window.coachFreeDays || window.coachFreeDays.length === 0) return false;
+ 
+ const dayData = window.coachFreeDays.find(day => day.day_of_week === dayName);
+ if (!dayData || !dayData.is_available) return false;
+ 
+ const time = timeStr + ':00';
+ const startTime = dayData.start_time;
+ const endTime = dayData.end_time;
+ 
+ return time >= startTime && time <= endTime;
+ }
 
-    // Show session details
-    function showSessionDetails(sessionId) {
-        const session = sessions.find(s => s.id === sessionId);
-        if (!session) return;
+ // Show session details
+ function showSessionDetails(sessionId) {
+ const session = sessions.find(s => s.id === sessionId);
+ if (!session) return;
 
-        const detailsDiv = document.getElementById('selectedSessionDetails');
-        if (!detailsDiv) return;
-        detailsDiv.innerHTML = `
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <h5 class="text-sm font-medium text-gray-500">Date & Time</h5>
-                    <p class="mt-1">${session.date} at ${session.time}</p>
-                </div>
-                <div>
-                    <h5 class="text-sm font-medium text-gray-500">Coach</h5>
-                    <p class="mt-1">${session.coach.name} (${session.coach.specialization})</p>
-                </div>
-                <div>
-                    <h5 class="text-sm font-medium text-gray-500">Workout</h5>
-                    <p class="mt-1">${session.workout.type}</p>
-                    <ul class="mt-1 text-sm text-gray-500">
-                        ${session.workout.exercises.map(ex => `<li>${ex}</li>`).join('')}
-                    </ul>
-                </div>
-                <div>
-                    <h5 class="text-sm font-medium text-gray-500">Status</h5>
-                    <p class="mt-1">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            ${session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 
-                              session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' : 
-                              'bg-yellow-100 text-yellow-800'}">
-                            ${session.status}
-                        </span>
-                    </p>
-                </div>
-            </div>
-        `;
-        const sessionDetails = document.getElementById('sessionDetails');
-        if (sessionDetails) sessionDetails.style.display = 'block';
-    }
+ const detailsDiv = document.getElementById('selectedSessionDetails');
+ if (!detailsDiv) return;
+ detailsDiv.innerHTML = `
+ <div class="grid grid-cols-2 gap-4">
+ <div>
+ <h5 class="text-sm font-medium text-gray-500">Date & Time</h5>
+ <p class="mt-1">${session.date} at ${session.time}</p>
+ </div>
+ <div>
+ <h5 class="text-sm font-medium text-gray-500">Coach</h5>
+ <p class="mt-1">${session.coach.name} (${session.coach.specialization})</p>
+ </div>
+ <div>
+ <h5 class="text-sm font-medium text-gray-500">Workout</h5>
+ <p class="mt-1">${session.workout.type}</p>
+ <ul class="mt-1 text-sm text-gray-500">
+ ${session.workout.exercises.map(ex => `<li>${ex}</li>`).join('')}
+ </ul>
+ </div>
+ <div>
+ <h5 class="text-sm font-medium text-gray-500">Status</h5>
+ <p class="mt-1">
+ <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+ ${session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 
+ session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' : 
+ 'bg-yellow-100 text-yellow-800'}">
+ ${session.status}
+ </span>
+ </p>
+ </div>
+ </div>
+ `;
+ const sessionDetails = document.getElementById('sessionDetails');
+ if (sessionDetails) sessionDetails.style.display = 'block';
+ }
 
-    // Load sessions
-    async function loadSessions() {
-        try {
-            const startOfWeek = getStartOfWeek(currentDate);
-            const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(startOfWeek.getDate() + 6);
-            
-            const response = await fetch(`/api/member/schedule?start_date=${formatDate(startOfWeek)}&end_date=${formatDate(endOfWeek)}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            sessions = data.sessions;
-            
-            // Store coach availability globally
-            window.coachFreeDays = data.coach_availability || [];
-            
-            // Load coach preferences from schedule data
-            await loadCoachPreferencesFromSchedule(data.coach, data.coach_availability);
-            
-            generateSchedule();
-            renderMemberSessionsGrid();
-            renderMemberWeeklySchedule();
-            
-        } catch (error) {
-            console.error('Error loading sessions:', error);
-            const scheduleTable = document.getElementById('scheduleTable');
-            if (scheduleTable) {
-                scheduleTable.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="px-6 py-4 text-center text-red-500">
-                            Failed to load schedule. Please try again.
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-    }
+ // Load sessions
+ async function loadSessions() {
+ try {
+ const startOfWeek = getStartOfWeek(currentDate);
+ const endOfWeek = new Date(startOfWeek);
+ endOfWeek.setDate(startOfWeek.getDate() + 6);
+ 
+ const response = await fetch(`/api/member/schedule?start_date=${formatDate(startOfWeek)}&end_date=${formatDate(endOfWeek)}`);
+ if (!response.ok) {
+ throw new Error(`HTTP error! status: ${response.status}`);
+ }
+ const data = await response.json();
+ sessions = data.sessions;
+ 
+ // Store coach availability globally
+ window.coachFreeDays = data.coach_availability || [];
+ 
+ // Load coach preferences from schedule data
+ await loadCoachPreferencesFromSchedule(data.coach, data.coach_availability);
+ 
+ generateSchedule();
+ renderMemberSessionsGrid();
+ renderMemberWeeklySchedule();
+ 
+ } catch (error) {
+ console.error('Error loading sessions:', error);
+ const scheduleTable = document.getElementById('scheduleTable');
+ if (scheduleTable) {
+ scheduleTable.innerHTML = `
+ <tr>
+ <td colspan="8" class="px-6 py-4 text-center text-red-500">
+ Failed to load schedule. Please try again.
+ </td>
+ </tr>
+ `;
+ }
+ }
+ }
 
-    // Add state for member interval
-    let memberStartDate = null;
-    let memberEndDate = null;
+ // Add state for member interval
+ let memberStartDate = null;
+ let memberEndDate = null;
 
-    function setDefaultMemberDateRange() {
-        // Set to current week (Monday to Sunday)
-        const today = new Date();
-        const start = new Date(today);
-        const day = start.getDay();
-        const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Monday
-        start.setDate(diff);
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        memberStartDate = formatDate(start);
-        memberEndDate = formatDate(end);
-        document.getElementById('memberStartDate').value = memberStartDate;
-        document.getElementById('memberEndDate').value = memberEndDate;
-    }
+ function setDefaultMemberDateRange() {
+ // Set to current week (Monday to Sunday)
+ const today = new Date();
+ const start = new Date(today);
+ const day = start.getDay();
+ const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Monday
+ start.setDate(diff);
+ const end = new Date(start);
+ end.setDate(start.getDate() + 6);
+ memberStartDate = formatDate(start);
+ memberEndDate = formatDate(end);
+ document.getElementById('memberStartDate').value = memberStartDate;
+ document.getElementById('memberEndDate').value = memberEndDate;
+ }
 
-    // Update loadSessions to accept a date range
-    async function loadMemberSessionsForRange() {
-        try {
-            const start = document.getElementById('memberStartDate').value;
-            const end = document.getElementById('memberEndDate').value;
-            if (!start || !end) return;
-            memberStartDate = start;
-            memberEndDate = end;
-            const response = await fetch(`/api/member/schedule?start_date=${start}&end_date=${end}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            sessions = data.sessions;
-            window.coachFreeDays = data.coach_availability || [];
-            await loadCoachPreferencesFromSchedule(data.coach, data.coach_availability);
-            renderMemberSessionsGrid();
-        } catch (error) {
-            console.error('Error loading sessions:', error);
-            const container = document.getElementById('memberSessionsGrid');
-            if (container) {
-                container.innerHTML = `<div class='text-red-600'>Failed to load schedule. Please try again.</div>`;
-            }
-        }
-    }
+ // Update loadSessions to accept a date range
+ async function loadMemberSessionsForRange() {
+ try {
+ const start = document.getElementById('memberStartDate').value;
+ const end = document.getElementById('memberEndDate').value;
+ if (!start || !end) return;
+ memberStartDate = start;
+ memberEndDate = end;
+ const response = await fetch(`/api/member/schedule?start_date=${start}&end_date=${end}`);
+ if (!response.ok) {
+ throw new Error(`HTTP error! status: ${response.status}`);
+ }
+ const data = await response.json();
+ sessions = data.sessions;
+ window.coachFreeDays = data.coach_availability || [];
+ await loadCoachPreferencesFromSchedule(data.coach, data.coach_availability);
+ renderMemberSessionsGrid();
+ } catch (error) {
+ console.error('Error loading sessions:', error);
+ const container = document.getElementById('memberSessionsGrid');
+ if (container) {
+ container.innerHTML = `<div class='text-red-600'>Failed to load schedule. Please try again.</div>`;
+ }
+ }
+ }
 
-    // Initialize page
-    document.addEventListener('DOMContentLoaded', () => {
-        setDefaultMemberDateRange();
-        loadMemberSessionsForRange();
-        loadSessions();
-        loadPreferences();
-        
-        // Add event listeners for week navigation only if elements exist
-        const prevWeekBtn = document.getElementById('prevWeek');
-        if (prevWeekBtn) {
-            prevWeekBtn.addEventListener('click', () => {
-                currentDate.setDate(currentDate.getDate() - 7);
-                loadSessions();
-            });
-        }
-        
-        const nextWeekBtn = document.getElementById('nextWeek');
-        if (nextWeekBtn) {
-            nextWeekBtn.addEventListener('click', () => {
-                currentDate.setDate(currentDate.getDate() + 7);
-                loadSessions();
-            });
-        }
-        // Add event listener for member search
-        const memberSearchBtn = document.getElementById('memberSearchBtn');
-        if (memberSearchBtn) {
-            memberSearchBtn.addEventListener('click', () => {
-                loadMemberSessionsForRange();
-            });
-        }
-    });
+ // Initialize page
+ document.addEventListener('DOMContentLoaded', () => {
+ setDefaultMemberDateRange();
+ loadMemberSessionsForRange();
+ loadSessions();
+ loadPreferences();
+ 
+ // Add event listeners for week navigation only if elements exist
+ const prevWeekBtn = document.getElementById('prevWeek');
+ if (prevWeekBtn) {
+ prevWeekBtn.addEventListener('click', () => {
+ currentDate.setDate(currentDate.getDate() - 7);
+ loadSessions();
+ });
+ }
+ 
+ const nextWeekBtn = document.getElementById('nextWeek');
+ if (nextWeekBtn) {
+ nextWeekBtn.addEventListener('click', () => {
+ currentDate.setDate(currentDate.getDate() + 7);
+ loadSessions();
+ });
+ }
+ // Add event listener for member search
+ const memberSearchBtn = document.getElementById('memberSearchBtn');
+ if (memberSearchBtn) {
+ memberSearchBtn.addEventListener('click', () => {
+ loadMemberSessionsForRange();
+ });
+ }
+ });
 
 
 
-    // Load coach preferences from schedule data
-    async function loadCoachPreferencesFromSchedule(coachData, coachAvailability) {
-        if (coachData && coachAvailability) {
-            // Always fetch the latest preferences for the assigned coach
-            try {
-                const response = await fetch(`/api/member/coach/${coachData.id}/preferences`);
-                if (response.ok) {
-                    const coachPrefData = await response.json();
-                    await displayCoachPreferences(coachPrefData);
-                    return;
-                }
-            } catch (e) {
-                // fallback to schedule data if API fails
-            }
-            const preferences = {
-                preferences: null, // We don't have detailed preferences, just availability
-                free_days: coachAvailability
-            };
-            await displayCoachPreferences(preferences);
-        }
-    }
+ // Load coach preferences from schedule data
+ async function loadCoachPreferencesFromSchedule(coachData, coachAvailability) {
+ if (coachData && coachAvailability) {
+ // Always fetch the latest preferences for the assigned coach
+ try {
+ const response = await fetch(`/api/member/coach/${coachData.id}/preferences`);
+ if (response.ok) {
+ const coachPrefData = await response.json();
+ await displayCoachPreferences(coachPrefData);
+ return;
+ }
+ } catch (e) {
+ // fallback to schedule data if API fails
+ }
+ const preferences = {
+ preferences: null, // We don't have detailed preferences, just availability
+ free_days: coachAvailability
+ };
+ await displayCoachPreferences(preferences);
+ }
+ }
 
-    // Display coach preferences
-    async function displayCoachPreferences(data) {
-        const { preferences, free_days } = data;
-        const container = document.getElementById('coachPreferencesContent');
-        const section = document.getElementById('coachPreferences');
-        const quickView = document.getElementById('coachAvailabilityQuick');
-        
-        if (!preferences && (!free_days || free_days.length === 0)) {
-            container.innerHTML = '<div class="text-center text-gray-500">No preferences set by coach</div>';
-            section.style.display = 'block';
-            quickView.style.display = 'none';
-            return;
-        }
-        
-        const workoutTypes = preferences?.preferred_workout_types || [];
-        const duration = preferences?.preferred_duration || 60;
-        const timeSlots = preferences?.preferred_time_slots || [];
-        const notes = preferences?.notes || '';
-        
-        container.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Workout Preferences</h3>
-                    <div class="space-y-2">
-                        <div>
-                            <span class="text-sm text-gray-600">Preferred Types:</span>
-                            <div class="mt-1">
-                                ${workoutTypes.length > 0 ? 
-                                    workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
-                                    '<span class="text-gray-500 text-sm">None specified</span>'
-                                }
-                            </div>
-                        </div>
-                        <div>
-                            <span class="text-sm text-gray-600">Duration:</span>
-                            <span class="text-sm font-medium">${duration} minutes</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Time Preferences</h3>
-                    <div class="space-y-2">
-                        <div>
-                            <span class="text-sm text-gray-600">Preferred Times:</span>
-                            <div class="mt-1">
-                                ${timeSlots.length > 0 ? 
-                                    timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
-                                    '<span class="text-gray-500 text-sm">None specified</span>'
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Weekly Availability</h3>
-                    <div class="grid grid-cols-2 gap-2">
-                        ${free_days.map(day => {
-                            let start = '08:00', end = '20:00';
-                            // Robustly handle start_time
-                            if (!isNaN(day.start_time) && day.start_time !== null && day.start_time !== undefined && day.start_time !== '') {
-                                const startSeconds = Number(day.start_time);
-                                if (!isNaN(startSeconds) && startSeconds > 1000) {
-                                    start = secondsToHHMM(startSeconds);
-                                } else if (typeof day.start_time === 'string' && day.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
-                                    start = day.start_time.slice(0,5);
-                                }
-                            } else if (typeof day.start_time === 'string' && day.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
-                                start = day.start_time.slice(0,5);
-                            }
-                            // Robustly handle end_time
-                            if (!isNaN(day.end_time) && day.end_time !== null && day.end_time !== undefined && day.end_time !== '') {
-                                const endSeconds = Number(day.end_time);
-                                if (!isNaN(endSeconds) && endSeconds > 1000) {
-                                    end = secondsToHHMM(endSeconds);
-                                } else if (typeof day.end_time === 'string' && day.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
-                                    end = day.end_time.slice(0,5);
-                                }
-                            } else if (typeof day.end_time === 'string' && day.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
-                                end = day.end_time.slice(0,5);
-                            }
-                            return `<div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-600">${day.day_of_week}</span>
-                                <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
-                                    ${day.is_available ? `Available <span class='font-mono'>${start}-${end}</span>` : 'Unavailable'}
-                                </span>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-                
-                ${notes ? `
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Notes</h3>
-                        <p class="text-sm text-gray-600">${notes}</p>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-        
-        // Show quick view and hide detailed view initially
-        quickView.style.display = 'block';
-        section.style.display = 'none';
-    }
+ // Display coach preferences
+ async function displayCoachPreferences(data) {
+ const { preferences, free_days } = data;
+ const container = document.getElementById('coachPreferencesContent');
+ const section = document.getElementById('coachPreferences');
+ const quickView = document.getElementById('coachAvailabilityQuick');
+ 
+ if (!preferences && (!free_days || free_days.length === 0)) {
+ container.innerHTML = '<div class="text-center text-gray-500">No preferences set by coach</div>';
+ section.style.display = 'block';
+ quickView.style.display = 'none';
+ return;
+ }
+ 
+ const workoutTypes = preferences?.preferred_workout_types || [];
+ const duration = preferences?.preferred_duration || 60;
+ const timeSlots = preferences?.preferred_time_slots || [];
+ const notes = preferences?.notes || '';
+ 
+ container.innerHTML = `
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:p-6">
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Workout Preferences</h3>
+ <div class="space-y-2">
+ <div>
+ <span class="text-sm text-gray-600">Preferred Types:</span>
+ <div class="mt-1">
+ ${workoutTypes.length > 0 ? 
+ workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
+ '<span class="text-gray-500 text-sm">None specified</span>'
+ }
+ </div>
+ </div>
+ <div>
+ <span class="text-sm text-gray-600">Duration:</span>
+ <span class="text-sm font-medium">${duration} minutes</span>
+ </div>
+ </div>
+ </div>
+ 
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Time Preferences</h3>
+ <div class="space-y-2">
+ <div>
+ <span class="text-sm text-gray-600">Preferred Times:</span>
+ <div class="mt-1">
+ ${timeSlots.length > 0 ? 
+ timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
+ '<span class="text-gray-500 text-sm">None specified</span>'
+ }
+ </div>
+ </div>
+ </div>
+ </div>
+ 
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Weekly Availability</h3>
+ <div class="grid grid-cols-2 gap-2">
+ ${free_days.map(day => {
+ let start = '08:00', end = '20:00';
+ // Robustly handle start_time
+ if (!isNaN(day.start_time) && day.start_time !== null && day.start_time !== undefined && day.start_time !== '') {
+ const startSeconds = Number(day.start_time);
+ if (!isNaN(startSeconds) && startSeconds > 1000) {
+ start = secondsToHHMM(startSeconds);
+ } else if (typeof day.start_time === 'string' && day.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+ start = day.start_time.slice(0,5);
+ }
+ } else if (typeof day.start_time === 'string' && day.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+ start = day.start_time.slice(0,5);
+ }
+ // Robustly handle end_time
+ if (!isNaN(day.end_time) && day.end_time !== null && day.end_time !== undefined && day.end_time !== '') {
+ const endSeconds = Number(day.end_time);
+ if (!isNaN(endSeconds) && endSeconds > 1000) {
+ end = secondsToHHMM(endSeconds);
+ } else if (typeof day.end_time === 'string' && day.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+ end = day.end_time.slice(0,5);
+ }
+ } else if (typeof day.end_time === 'string' && day.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+ end = day.end_time.slice(0,5);
+ }
+ return `<div class="flex items-center justify-between">
+ <span class="text-sm text-gray-600">${day.day_of_week}</span>
+ <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
+ ${day.is_available ? `Available <span class='font-mono'>${start}-${end}</span>` : 'Unavailable'}
+ </span>
+ </div>`;
+ }).join('')}
+ </div>
+ </div>
+ 
+ ${notes ? `
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Notes</h3>
+ <p class="text-sm text-gray-600">${notes}</p>
+ </div>
+ ` : ''}
+ </div>
+ `;
+ 
+ // Show quick view and hide detailed view initially
+ quickView.style.display = 'block';
+ section.style.display = 'none';
+ }
 
-    // Show coach preferences
-    function showCoachPreferences() {
-        const section = document.getElementById('coachPreferences');
-        const quickView = document.getElementById('coachAvailabilityQuick');
-        section.style.display = 'block';
-        quickView.style.display = 'none';
-    }
+ // Show coach preferences
+ function showCoachPreferences() {
+ const section = document.getElementById('coachPreferences');
+ const quickView = document.getElementById('coachAvailabilityQuick');
+ section.style.display = 'block';
+ quickView.style.display = 'none';
+ }
 
-    // Toggle coach preferences visibility
-    function toggleCoachPreferences() {
-        const section = document.getElementById('coachPreferences');
-        const quickView = document.getElementById('coachAvailabilityQuick');
-        section.style.display = 'none';
-        quickView.style.display = 'block';
-    }
+ // Toggle coach preferences visibility
+ function toggleCoachPreferences() {
+ const section = document.getElementById('coachPreferences');
+ const quickView = document.getElementById('coachAvailabilityQuick');
+ section.style.display = 'none';
+ quickView.style.display = 'block';
+ }
 
-    // Preferences Functions
-    async function loadPreferences() {
-        try {
-            const response = await fetch('/api/preferences');
-            if (!response.ok) {
-                throw new Error('Failed to fetch preferences');
-            }
-            const data = await response.json();
-            userPreferences = data.preferences;
-            userFreeDays = data.free_days;
-            displayPreferences();
-            populatePreferencesForm();
-        } catch (error) {
-            console.error('Error loading preferences:', error);
-        }
-    }
+ // Preferences Functions
+ async function loadPreferences() {
+ try {
+ const response = await fetch('/api/preferences');
+ if (!response.ok) {
+ throw new Error('Failed to fetch preferences');
+ }
+ const data = await response.json();
+ userPreferences = data.preferences;
+ userFreeDays = data.free_days;
+ displayPreferences();
+ populatePreferencesForm();
+ } catch (error) {
+ console.error('Error loading preferences:', error);
+ }
+ }
 
-    function displayPreferences() {
-        const displayDiv = document.getElementById('preferencesDisplay');
-        
-        // Workout preferences
-        const workoutTypes = userPreferences?.preferred_workout_types || [];
-        const duration = userPreferences?.preferred_duration || 60;
-        const timeSlots = userPreferences?.preferred_time_slots || [];
-        const notes = userPreferences?.notes || '';
-        
-        displayDiv.innerHTML = `
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h3 class="text-sm font-medium text-gray-900 mb-3">Workout Preferences</h3>
-                <div class="space-y-2">
-                    <div>
-                        <span class="text-sm text-gray-600">Preferred Types:</span>
-                        <div class="mt-1">
-                            ${workoutTypes.length > 0 ? 
-                                workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
-                                '<span class="text-gray-500 text-sm">None specified</span>'
-                            }
-                        </div>
-                    </div>
-                    <div>
-                        <span class="text-sm text-gray-600">Duration:</span>
-                        <span class="text-sm font-medium">${duration} minutes</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h3 class="text-sm font-medium text-gray-900 mb-3">Time Preferences</h3>
-                <div class="space-y-2">
-                    <div>
-                        <span class="text-sm text-gray-600">Preferred Times:</span>
-                        <div class="mt-1">
-                            ${timeSlots.length > 0 ? 
-                                timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
-                                '<span class="text-gray-500 text-sm">None specified</span>'
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h3 class="text-sm font-medium text-gray-900 mb-3">Weekly Availability</h3>
-                <div class="grid grid-cols-2 gap-2">
-                    ${userFreeDays.map(day => `
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600">${day.day_of_week}</span>
-                            <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
-                                ${day.is_available ? 'Available' : 'Unavailable'}
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            
-            ${notes ? `
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-sm font-medium text-gray-900 mb-3">Notes</h3>
-                    <p class="text-sm text-gray-600">${notes}</p>
-                </div>
-            ` : ''}
-        `;
-    }
+ function displayPreferences() {
+ const displayDiv = document.getElementById('preferencesDisplay');
+ 
+ // Workout preferences
+ const workoutTypes = userPreferences?.preferred_workout_types || [];
+ const duration = userPreferences?.preferred_duration || 60;
+ const timeSlots = userPreferences?.preferred_time_slots || [];
+ const notes = userPreferences?.notes || '';
+ 
+ displayDiv.innerHTML = `
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Workout Preferences</h3>
+ <div class="space-y-2">
+ <div>
+ <span class="text-sm text-gray-600">Preferred Types:</span>
+ <div class="mt-1">
+ ${workoutTypes.length > 0 ? 
+ workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
+ '<span class="text-gray-500 text-sm">None specified</span>'
+ }
+ </div>
+ </div>
+ <div>
+ <span class="text-sm text-gray-600">Duration:</span>
+ <span class="text-sm font-medium">${duration} minutes</span>
+ </div>
+ </div>
+ </div>
+ 
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Time Preferences</h3>
+ <div class="space-y-2">
+ <div>
+ <span class="text-sm text-gray-600">Preferred Times:</span>
+ <div class="mt-1">
+ ${timeSlots.length > 0 ? 
+ timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
+ '<span class="text-gray-500 text-sm">None specified</span>'
+ }
+ </div>
+ </div>
+ </div>
+ </div>
+ 
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Weekly Availability</h3>
+ <div class="grid grid-cols-2 gap-2">
+ ${userFreeDays.map(day => `
+ <div class="flex items-center justify-between">
+ <span class="text-sm text-gray-600">${day.day_of_week}</span>
+ <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
+ ${day.is_available ? 'Available' : 'Unavailable'}
+ </span>
+ </div>
+ `).join('')}
+ </div>
+ </div>
+ 
+ ${notes ? `
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Notes</h3>
+ <p class="text-sm text-gray-600">${notes}</p>
+ </div>
+ ` : ''}
+ `;
+ }
 
-    function populatePreferencesForm() {
-        // Populate workout types
-        const workoutCheckboxes = document.querySelectorAll('input[name="workout_types"]');
-        workoutCheckboxes.forEach(checkbox => {
-            checkbox.checked = userPreferences?.preferred_workout_types?.includes(checkbox.value) || false;
-        });
-        
-        // Populate duration
-        const durationSelect = document.querySelector('select[name="duration"]');
-        if (durationSelect) {
-            durationSelect.value = userPreferences?.preferred_duration || 60;
-        }
-        
-        // Populate time slots
-        const timeCheckboxes = document.querySelectorAll('input[name="time_slots"]');
-        timeCheckboxes.forEach(checkbox => {
-            checkbox.checked = userPreferences?.preferred_time_slots?.includes(checkbox.value) || false;
-        });
-        
-        // Populate notes
-        const notesTextarea = document.querySelector('textarea[name="notes"]');
-        if (notesTextarea) {
-            notesTextarea.value = userPreferences?.notes || '';
-        }
-        
-        // Populate free days
-        populateFreeDaysForm();
-    }
+ function populatePreferencesForm() {
+ // Populate workout types
+ const workoutCheckboxes = document.querySelectorAll('input[name="workout_types"]');
+ workoutCheckboxes.forEach(checkbox => {
+ checkbox.checked = userPreferences?.preferred_workout_types?.includes(checkbox.value) || false;
+ });
+ 
+ // Populate duration
+ const durationSelect = document.querySelector('select[name="duration"]');
+ if (durationSelect) {
+ durationSelect.value = userPreferences?.preferred_duration || 60;
+ }
+ 
+ // Populate time slots
+ const timeCheckboxes = document.querySelectorAll('input[name="time_slots"]');
+ timeCheckboxes.forEach(checkbox => {
+ checkbox.checked = userPreferences?.preferred_time_slots?.includes(checkbox.value) || false;
+ });
+ 
+ // Populate notes
+ const notesTextarea = document.querySelector('textarea[name="notes"]');
+ if (notesTextarea) {
+ notesTextarea.value = userPreferences?.notes || '';
+ }
+ 
+ // Populate free days
+ populateFreeDaysForm();
+ }
 
-    function populateFreeDaysForm() {
-        const container = document.getElementById('freeDaysContainer');
-        container.innerHTML = '';
-        
-        // Ensure userFreeDays exists and has data
-        if (!userFreeDays || userFreeDays.length === 0) {
-            // Create default availability if none exists
-            userFreeDays = [];
-            const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            for (const day of daysOfWeek) {
-                userFreeDays.push({
-                    day_of_week: day,
-                    is_available: true,
-                    start_time: '08:00:00',
-                    end_time: '20:00:00'
-                });
-            }
-        }
-        
-        userFreeDays.forEach(day => {
-            // Ensure start_time and end_time are always 'HH:mm' for input values
-            let startTime = '08:00';
-            let endTime = '20:00';
+ function populateFreeDaysForm() {
+ const container = document.getElementById('freeDaysContainer');
+ container.innerHTML = '';
+ 
+ // Ensure userFreeDays exists and has data
+ if (!userFreeDays || userFreeDays.length === 0) {
+ // Create default availability if none exists
+ userFreeDays = [];
+ const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+ for (const day of daysOfWeek) {
+ userFreeDays.push({
+ day_of_week: day,
+ is_available: true,
+ start_time: '08:00:00',
+ end_time: '20:00:00'
+ });
+ }
+ }
+ 
+ userFreeDays.forEach(day => {
+ // Ensure start_time and end_time are always 'HH:mm' for input values
+ let startTime = '08:00';
+ let endTime = '20:00';
 
-            if (day.start_time) {
-                if (typeof day.start_time === 'string') {
-                    // Only use the first two parts and pad with zeros if needed
-                    const parts = day.start_time.split(':');
-                    let h = parts[0] ? parts[0].padStart(2, '0') : '00';
-                    let m = parts[1] ? parts[1].padStart(2, '0') : '00';
-                    startTime = `${h}:${m}`;
-                } else if (day.start_time.total_seconds) {
-                    // Handle timedelta objects
-                    const hours = Math.floor(day.start_time.total_seconds / 3600);
-                    const minutes = Math.floor((day.start_time.total_seconds % 3600) / 60);
-                    startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                }
-            }
+ if (day.start_time) {
+ if (typeof day.start_time === 'string') {
+ // Only use the first two parts and pad with zeros if needed
+ const parts = day.start_time.split(':');
+ let h = parts[0] ? parts[0].padStart(2, '0') : '00';
+ let m = parts[1] ? parts[1].padStart(2, '0') : '00';
+ startTime = `${h}:${m}`;
+ } else if (day.start_time.total_seconds) {
+ // Handle timedelta objects
+ const hours = Math.floor(day.start_time.total_seconds / 3600);
+ const minutes = Math.floor((day.start_time.total_seconds % 3600) / 60);
+ startTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+ }
+ }
 
-            if (day.end_time) {
-                if (typeof day.end_time === 'string') {
-                    // Only use the first two parts and pad with zeros if needed
-                    const parts = day.end_time.split(':');
-                    let h = parts[0] ? parts[0].padStart(2, '0') : '00';
-                    let m = parts[1] ? parts[1].padStart(2, '0') : '00';
-                    endTime = `${h}:${m}`;
-                } else if (day.end_time.total_seconds) {
-                    // Handle timedelta objects
-                    const hours = Math.floor(day.end_time.total_seconds / 3600);
-                    const minutes = Math.floor((day.end_time.total_seconds % 3600) / 60);
-                    endTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                }
-            }
-            
-            const dayDiv = document.createElement('div');
-            dayDiv.className = 'border border-gray-300 rounded-lg p-4';
-            dayDiv.innerHTML = `
-                <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-sm font-medium text-gray-900">${day.day_of_week}</h4>
-                    <label class="flex items-center">
-                        <input type="checkbox" 
-                               name="available_${day.day_of_week}" 
-                               ${day.is_available ? 'checked' : ''} 
-                               class="mr-2"
-                               onchange="toggleDayAvailability('${day.day_of_week}', this.checked)">
-                        Available
-                    </label>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs text-gray-600 mb-1">Start Time</label>
-                        <input type="time" 
-                               name="start_${day.day_of_week}" 
-                               value="${startTime}" 
-                               class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-600 mb-1">End Time</label>
-                        <input type="time" 
-                               name="end_${day.day_of_week}" 
-                               value="${endTime}" 
-                               class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
-                    </div>
-                </div>
-            `;
-            container.appendChild(dayDiv);
-        });
-    }
+ if (day.end_time) {
+ if (typeof day.end_time === 'string') {
+ // Only use the first two parts and pad with zeros if needed
+ const parts = day.end_time.split(':');
+ let h = parts[0] ? parts[0].padStart(2, '0') : '00';
+ let m = parts[1] ? parts[1].padStart(2, '0') : '00';
+ endTime = `${h}:${m}`;
+ } else if (day.end_time.total_seconds) {
+ // Handle timedelta objects
+ const hours = Math.floor(day.end_time.total_seconds / 3600);
+ const minutes = Math.floor((day.end_time.total_seconds % 3600) / 60);
+ endTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+ }
+ }
+ 
+ const dayDiv = document.createElement('div');
+ dayDiv.className = 'border border-gray-300 rounded-lg p-4';
+ dayDiv.innerHTML = `
+ <div class="flex items-center justify-between mb-3">
+ <h4 class="text-sm font-medium text-gray-900">${day.day_of_week}</h4>
+ <label class="flex items-center">
+ <input type="checkbox" 
+ name="available_${day.day_of_week}" 
+ ${day.is_available ? 'checked' : ''} 
+ class="mr-2"
+ onchange="toggleDayAvailability('${day.day_of_week}', this.checked)">
+ Available
+ </label>
+ </div>
+ <div class="grid grid-cols-2 gap-3">
+ <div>
+ <label class="block text-xs text-gray-600 mb-1">Start Time</label>
+ <input type="time" 
+ name="start_${day.day_of_week}" 
+ value="${startTime}" 
+ class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+ </div>
+ <div>
+ <label class="block text-xs text-gray-600 mb-1">End Time</label>
+ <input type="time" 
+ name="end_${day.day_of_week}" 
+ value="${endTime}" 
+ class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+ </div>
+ </div>
+ `;
+ container.appendChild(dayDiv);
+ });
+ }
 
-    function toggleDayAvailability(dayName, isAvailable) {
-        const day = userFreeDays.find(d => d.day_of_week === dayName);
-        if (day) {
-            day.is_available = isAvailable;
-        }
-    }
+ function toggleDayAvailability(dayName, isAvailable) {
+ const day = userFreeDays.find(d => d.day_of_week === dayName);
+ if (day) {
+ day.is_available = isAvailable;
+ }
+ }
 
-    function togglePreferencesForm() {
-        const form = document.getElementById('preferencesForm');
-        const display = document.getElementById('preferencesDisplay');
-        
-        if (form.classList.contains('hidden')) {
-            form.classList.remove('hidden');
-            display.classList.add('hidden');
-        } else {
-            form.classList.add('hidden');
-            display.classList.remove('hidden');
-        }
-    }
+ function togglePreferencesForm() {
+ const form = document.getElementById('preferencesForm');
+ const display = document.getElementById('preferencesDisplay');
+ 
+ if (form.classList.contains('hidden')) {
+ form.classList.remove('hidden');
+ display.classList.add('hidden');
+ } else {
+ form.classList.add('hidden');
+ display.classList.remove('hidden');
+ }
+ }
 
-    // Handle form submission
-    document.getElementById('preferencesFormElement').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        // Collect form data
-        const workoutTypes = Array.from(document.querySelectorAll('input[name="workout_types"]:checked')).map(cb => cb.value);
-        const duration = parseInt(document.querySelector('select[name="duration"]').value);
-        const timeSlots = Array.from(document.querySelectorAll('input[name="time_slots"]:checked')).map(cb => cb.value);
-        const notes = document.querySelector('textarea[name="notes"]').value;
-        
-        // Update free days data
-        userFreeDays.forEach(day => {
-            const availableCheckbox = document.querySelector(`input[name="available_${day.day_of_week}"]`);
-            const startTime = document.querySelector(`input[name="start_${day.day_of_week}"]`).value;
-            const endTime = document.querySelector(`input[name="end_${day.day_of_week}"]`).value;
-            
-            day.is_available = availableCheckbox.checked;
-            // Fix time format - ensure it's HH:MM:SS format
-            day.start_time = startTime + (startTime.length === 5 ? ':00' : '');
-            day.end_time = endTime + (endTime.length === 5 ? ':00' : '');
-        });
-        
-        // Prepare data for API
-        const data = {
-            preferences: {
-                preferred_workout_types: workoutTypes,
-                preferred_duration: duration,
-                preferred_time_slots: timeSlots,
-                notes: notes
-            },
-            free_days: userFreeDays
-        };
-        
-        try {
-            const response = await fetch('/api/preferences', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to update preferences');
-            }
-            
-            // Update local data
-            userPreferences = data.preferences;
-            
-            // Hide form and show display
-            togglePreferencesForm();
-            
-            // Re-fetch preferences and re-render everything
-            await loadPreferences();
-            renderWeeklyAvailabilityComparison();
-            
-            alert('Preferences updated successfully!');
-        } catch (error) {
-            console.error('Error updating preferences:', error);
-            alert('Failed to update preferences. Please try again.');
-        }
-    });
+ // Handle form submission
+ document.getElementById('preferencesFormElement').addEventListener('submit', async function(e) {
+ e.preventDefault();
+ 
+ // Collect form data
+ const workoutTypes = Array.from(document.querySelectorAll('input[name="workout_types"]:checked')).map(cb => cb.value);
+ const duration = parseInt(document.querySelector('select[name="duration"]').value);
+ const timeSlots = Array.from(document.querySelectorAll('input[name="time_slots"]:checked')).map(cb => cb.value);
+ const notes = document.querySelector('textarea[name="notes"]').value;
+ 
+ // Update free days data
+ userFreeDays.forEach(day => {
+ const availableCheckbox = document.querySelector(`input[name="available_${day.day_of_week}"]`);
+ const startTime = document.querySelector(`input[name="start_${day.day_of_week}"]`).value;
+ const endTime = document.querySelector(`input[name="end_${day.day_of_week}"]`).value;
+ 
+ day.is_available = availableCheckbox.checked;
+ // Fix time format - ensure it's HH:MM:SS format
+ day.start_time = startTime + (startTime.length === 5 ? ':00' : '');
+ day.end_time = endTime + (endTime.length === 5 ? ':00' : '');
+ });
+ 
+ // Prepare data for API
+ const data = {
+ preferences: {
+ preferred_workout_types: workoutTypes,
+ preferred_duration: duration,
+ preferred_time_slots: timeSlots,
+ notes: notes
+ },
+ free_days: userFreeDays
+ };
+ 
+ try {
+ const response = await fetch('/api/preferences', {
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json',
+ },
+ body: JSON.stringify(data)
+ });
+ 
+ if (!response.ok) {
+ throw new Error('Failed to update preferences');
+ }
+ 
+ // Update local data
+ userPreferences = data.preferences;
+ 
+ // Hide form and show display
+ togglePreferencesForm();
+ 
+ // Re-fetch preferences and re-render everything
+ await loadPreferences();
+ renderWeeklyAvailabilityComparison();
+ 
+ alert('Preferences updated successfully!');
+ } catch (error) {
+ console.error('Error updating preferences:', error);
+ alert('Failed to update preferences. Please try again.');
+ }
+ });
 
-    async function renderWeeklyAvailabilityComparison() {
-        fetch('/api/preferences').then(r => r.json()).then(prefData => {
-            fetch('/api/member/coach').then(r => r.json()).then(coachData => {
-                if (!coachData.coach) {
-                    document.getElementById('weeklyAvailabilityComparison').innerHTML = '<div class="text-red-600">No coach assigned</div>';
-                    return;
-                }
-                fetch(`/api/member/coach/${coachData.coach.id}/preferences`).then(r => r.json()).then(coachPrefData => {
-                    const memberFreeDays = prefData.free_days || [];
-                    const coachFreeDays = coachPrefData.free_days || [];
-                    document.getElementById('weeklyAvailabilityComparison').innerHTML = generateElegantWeeklyAvailabilityTable(memberFreeDays, coachFreeDays);
-                }).catch(error => {
-                    document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading coach preferences</div>`;
-                });
-            }).catch(error => {
-                document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading coach info</div>`;
-            });
-        }).catch(error => {
-            document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading member preferences</div>`;
-        });
-    }
-    renderWeeklyAvailabilityComparison();
+ async function renderWeeklyAvailabilityComparison() {
+ fetch('/api/preferences').then(r => r.json()).then(prefData => {
+ fetch('/api/member/coach').then(r => r.json()).then(coachData => {
+ if (!coachData.coach) {
+ document.getElementById('weeklyAvailabilityComparison').innerHTML = '<div class="text-red-600">No coach assigned</div>';
+ return;
+ }
+ fetch(`/api/member/coach/${coachData.coach.id}/preferences`).then(r => r.json()).then(coachPrefData => {
+ const memberFreeDays = prefData.free_days || [];
+ const coachFreeDays = coachPrefData.free_days || [];
+ document.getElementById('weeklyAvailabilityComparison').innerHTML = generateElegantWeeklyAvailabilityTable(memberFreeDays, coachFreeDays);
+ }).catch(error => {
+ document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading coach preferences</div>`;
+ });
+ }).catch(error => {
+ document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading coach info</div>`;
+ });
+ }).catch(error => {
+ document.getElementById('weeklyAvailabilityComparison').innerHTML = `<div class='text-red-600'>Error loading member preferences</div>`;
+ });
+ }
+ renderWeeklyAvailabilityComparison();
 
-    function secondsToHHMM(seconds) {
-        if (typeof seconds !== 'number') seconds = parseInt(seconds, 10);
-        if (isNaN(seconds)) return '';
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    }
+ function secondsToHHMM(seconds) {
+ if (typeof seconds !== 'number') seconds = parseInt(seconds, 10);
+ if (isNaN(seconds)) return '';
+ const hours = Math.floor(seconds / 3600);
+ const minutes = Math.floor((seconds % 3600) / 60);
+ return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+ }
 
-    function generateElegantWeeklyAvailabilityTable(memberFreeDays, coachFreeDays) {
-        const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-        // Map free_days by day_of_week (case-insensitive)
-        const memberMap = {};
-        const coachMap = {};
-        memberFreeDays.forEach(fd => { memberMap[fd.day_of_week.toLowerCase()] = fd; });
-        coachFreeDays.forEach(fd => { coachMap[fd.day_of_week.toLowerCase()] = fd; });
-        let html = `<div class='overflow-x-auto'><table class='min-w-full border border-gray-200 rounded-lg'><thead><tr class='bg-gray-50'>
-            <th class='border border-gray-200 p-2 text-sm font-semibold text-gray-700'>Day</th>
-            <th class='border border-gray-200 p-2 text-sm font-semibold text-gray-700'>Member</th>
-            <th class='border border-gray-200 p-2 text-sm font-semibold text-gray-700'>Coach</th>
-        </tr></thead><tbody>`;
-        for (const day of daysOfWeek) {
-            const memberDay = memberMap[day.toLowerCase()];
-            const coachDay = coachMap[day.toLowerCase()];
-            html += `<tr>`;
-            html += `<td class='border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50'>${day}</td>`;
-            // Member cell
-            if (memberDay && memberDay.is_available) {
-                let start = '00:00', end = '24:00';
-                // Handle start_time
-                if (!isNaN(memberDay.start_time) && memberDay.start_time !== null && memberDay.start_time !== undefined && memberDay.start_time !== '') {
-                    const startSeconds = Number(memberDay.start_time);
-                    if (!isNaN(startSeconds) && startSeconds > 1000) {
-                        start = secondsToHHMM(startSeconds);
-                    } else if (typeof memberDay.start_time === 'string' && memberDay.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
-                        start = memberDay.start_time.slice(0,5);
-                    }
-                } else if (typeof memberDay.start_time === 'string' && memberDay.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
-                    start = memberDay.start_time.slice(0,5);
-                }
-                // Handle end_time
-                if (!isNaN(memberDay.end_time) && memberDay.end_time !== null && memberDay.end_time !== undefined && memberDay.end_time !== '') {
-                    const endSeconds = Number(memberDay.end_time);
-                    if (!isNaN(endSeconds) && endSeconds > 1000) {
-                        end = secondsToHHMM(endSeconds);
-                    } else if (typeof memberDay.end_time === 'string' && memberDay.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
-                        end = memberDay.end_time.slice(0,5);
-                    }
-                } else if (typeof memberDay.end_time === 'string' && memberDay.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
-                    end = memberDay.end_time.slice(0,5);
-                }
-                html += `<td class='border border-gray-200 p-2 text-sm text-green-700'>Available <span class='font-mono'>${start}-${end}</span></td>`;
-            } else {
-                html += `<td class='border border-gray-200 p-2 text-sm text-red-700'>Unavailable</td>`;
-            }
-            // Coach cell
-            if (coachDay && coachDay.is_available) {
-                let start = '00:00', end = '24:00';
-                if (typeof coachDay.start_time === 'number') {
-                    start = secondsToHHMM(coachDay.start_time);
-                } else if (typeof coachDay.start_time === 'string' && coachDay.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
-                    start = coachDay.start_time.slice(0,5);
-                }
-                if (typeof coachDay.end_time === 'number') {
-                    end = secondsToHHMM(coachDay.end_time);
-                } else if (typeof coachDay.end_time === 'string' && coachDay.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
-                    end = coachDay.end_time.slice(0,5);
-                }
-                html += `<td class='border border-gray-200 p-2 text-sm text-green-700'>Available <span class='font-mono'>${start}-${end}</span></td>`;
-            } else {
-                html += `<td class='border border-gray-200 p-2 text-sm text-red-700'>Unavailable</td>`;
-            }
-            html += `</tr>`;
-        }
-        html += '</tbody></table></div>';
-        return html;
-    }
+ function generateElegantWeeklyAvailabilityTable(memberFreeDays, coachFreeDays) {
+ const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+ // Map free_days by day_of_week (case-insensitive)
+ const memberMap = {};
+ const coachMap = {};
+ memberFreeDays.forEach(fd => { memberMap[fd.day_of_week.toLowerCase()] = fd; });
+ coachFreeDays.forEach(fd => { coachMap[fd.day_of_week.toLowerCase()] = fd; });
+ let html = `<div class='overflow-x-auto'><table class='min-w-full border border-gray-200 rounded-lg'><thead><tr class='bg-gray-50'>
+ <th class='border border-gray-200 p-2 text-sm font-semibold text-gray-700'>Day</th>
+ <th class='border border-gray-200 p-2 text-sm font-semibold text-gray-700'>Member</th>
+ <th class='border border-gray-200 p-2 text-sm font-semibold text-gray-700'>Coach</th>
+ </tr></thead><tbody>`;
+ for (const day of daysOfWeek) {
+ const memberDay = memberMap[day.toLowerCase()];
+ const coachDay = coachMap[day.toLowerCase()];
+ html += `<tr>`;
+ html += `<td class='border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50'>${day}</td>`;
+ // Member cell
+ if (memberDay && memberDay.is_available) {
+ let start = '00:00', end = '24:00';
+ // Handle start_time
+ if (!isNaN(memberDay.start_time) && memberDay.start_time !== null && memberDay.start_time !== undefined && memberDay.start_time !== '') {
+ const startSeconds = Number(memberDay.start_time);
+ if (!isNaN(startSeconds) && startSeconds > 1000) {
+ start = secondsToHHMM(startSeconds);
+ } else if (typeof memberDay.start_time === 'string' && memberDay.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+ start = memberDay.start_time.slice(0,5);
+ }
+ } else if (typeof memberDay.start_time === 'string' && memberDay.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+ start = memberDay.start_time.slice(0,5);
+ }
+ // Handle end_time
+ if (!isNaN(memberDay.end_time) && memberDay.end_time !== null && memberDay.end_time !== undefined && memberDay.end_time !== '') {
+ const endSeconds = Number(memberDay.end_time);
+ if (!isNaN(endSeconds) && endSeconds > 1000) {
+ end = secondsToHHMM(endSeconds);
+ } else if (typeof memberDay.end_time === 'string' && memberDay.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+ end = memberDay.end_time.slice(0,5);
+ }
+ } else if (typeof memberDay.end_time === 'string' && memberDay.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+ end = memberDay.end_time.slice(0,5);
+ }
+ html += `<td class='border border-gray-200 p-2 text-sm text-green-700'>Available <span class='font-mono'>${start}-${end}</span></td>`;
+ } else {
+ html += `<td class='border border-gray-200 p-2 text-sm text-red-700'>Unavailable</td>`;
+ }
+ // Coach cell
+ if (coachDay && coachDay.is_available) {
+ let start = '00:00', end = '24:00';
+ if (typeof coachDay.start_time === 'number') {
+ start = secondsToHHMM(coachDay.start_time);
+ } else if (typeof coachDay.start_time === 'string' && coachDay.start_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+ start = coachDay.start_time.slice(0,5);
+ }
+ if (typeof coachDay.end_time === 'number') {
+ end = secondsToHHMM(coachDay.end_time);
+ } else if (typeof coachDay.end_time === 'string' && coachDay.end_time.match(/^[0-9]{2}:[0-9]{2}/)) {
+ end = coachDay.end_time.slice(0,5);
+ }
+ html += `<td class='border border-gray-200 p-2 text-sm text-green-700'>Available <span class='font-mono'>${start}-${end}</span></td>`;
+ } else {
+ html += `<td class='border border-gray-200 p-2 text-sm text-red-700'>Unavailable</td>`;
+ }
+ html += `</tr>`;
+ }
+ html += '</tbody></table></div>';
+ return html;
+ }
 
-    // Remove renderMemberSessionsTable and replace with renderMemberSessionsGrid
-    function renderMemberSessionsGrid() {
-        const container = document.getElementById('memberSessionsGrid');
-        if (!container) return;
-        container.innerHTML = '';
-        if (!memberStartDate || !memberEndDate) return;
-        const start = new Date(memberStartDate);
-        const end = new Date(memberEndDate);
-        let current = new Date(start);
-        while (current <= end) {
-            const dateStr = formatDate(current);
-            const dayName = getDayName(current);
-            // Find member's availability for this day
-            const freeDay = userFreeDays ? userFreeDays.find(fd => fd.day_of_week === dayName) : null;
-            const isAvailable = freeDay ? freeDay.is_available : true;
-            // Find sessions for this day
-            const daySessions = sessions.filter(s => s.date === dateStr);
-            // Create column
-            const dayColumn = document.createElement('div');
-            dayColumn.className = 'space-y-2';
-            // Day header
-            const dayHeader = document.createElement('div');
-            dayHeader.className = `text-center font-medium mb-2 ${isAvailable ? 'text-green-900' : 'text-red-900'}`;
-            dayHeader.innerHTML = `
-                ${current.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                <div class="text-xs ${isAvailable ? 'text-green-600' : 'text-red-600'}">
-                    ${isAvailable ? 'Available' : 'Unavailable'}
-                </div>
-            `;
-            dayColumn.appendChild(dayHeader);
-            // Sessions
-            if (daySessions.length === 0) {
-                const noSessions = document.createElement('div');
-                noSessions.className = `text-center text-sm ${isAvailable ? 'text-gray-500' : 'text-red-400'}`;
-                noSessions.textContent = isAvailable ? 'No sessions' : 'Not available';
-                dayColumn.appendChild(noSessions);
-            } else {
-                daySessions.forEach(session => {
-                    const sessionCard = document.createElement('div');
-                    sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
-                    sessionCard.onclick = () => showSessionDetails(session.id);
-                    sessionCard.innerHTML = `
-                        <div class="text-sm font-medium text-gray-900">${session.time}</div>
-                        <div class="text-xs text-gray-500">${session.coach.name}</div>
-                        <div class="text-xs text-gray-500">${session.duration} min</div>
-                        <div class="mt-1">
-                            <span class="px-2 py-1 text-xs rounded-full ${
-                                session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                                session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                'bg-blue-100 text-blue-800'
-                            }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
-                        </div>
-                        ${session.notes ? `<div class='text-xs text-gray-400 mt-1 whitespace-pre-line'>${session.notes}</div>` : ''}
-                    `;
-                    dayColumn.appendChild(sessionCard);
-                });
-            }
-            container.appendChild(dayColumn);
-            current.setDate(current.getDate() + 1);
-        }
-    }
+ // Remove renderMemberSessionsTable and replace with renderMemberSessionsGrid
+ function renderMemberSessionsGrid() {
+ const container = document.getElementById('memberSessionsGrid');
+ if (!container) return;
+ container.innerHTML = '';
+ if (!memberStartDate || !memberEndDate) return;
+ const start = new Date(memberStartDate);
+ const end = new Date(memberEndDate);
+ let current = new Date(start);
+ while (current <= end) {
+ const dateStr = formatDate(current);
+ const dayName = getDayName(current);
+ // Find member's availability for this day
+ const freeDay = userFreeDays ? userFreeDays.find(fd => fd.day_of_week === dayName) : null;
+ const isAvailable = freeDay ? freeDay.is_available : true;
+ // Find sessions for this day
+ const daySessions = sessions.filter(s => s.date === dateStr);
+ // Create column
+ const dayColumn = document.createElement('div');
+ dayColumn.className = 'space-y-2';
+ // Day header
+ const dayHeader = document.createElement('div');
+ dayHeader.className = `text-center font-medium mb-2 ${isAvailable ? 'text-green-900' : 'text-red-900'}`;
+ dayHeader.innerHTML = `
+ ${current.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+ <div class="text-xs ${isAvailable ? 'text-green-600' : 'text-red-600'}">
+ ${isAvailable ? 'Available' : 'Unavailable'}
+ </div>
+ `;
+ dayColumn.appendChild(dayHeader);
+ // Sessions
+ if (daySessions.length === 0) {
+ const noSessions = document.createElement('div');
+ noSessions.className = `text-center text-sm ${isAvailable ? 'text-gray-500' : 'text-red-400'}`;
+ noSessions.textContent = isAvailable ? 'No sessions' : 'Not available';
+ dayColumn.appendChild(noSessions);
+ } else {
+ daySessions.forEach(session => {
+ const sessionCard = document.createElement('div');
+ sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
+ sessionCard.onclick = () => showSessionDetails(session.id);
+ sessionCard.innerHTML = `
+ <div class="text-sm font-medium text-gray-900">${session.time}</div>
+ <div class="text-xs text-gray-500">${session.coach.name}</div>
+ <div class="text-xs text-gray-500">${session.duration} min</div>
+ <div class="mt-1">
+ <span class="px-2 py-1 text-xs rounded-full ${
+ session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+ session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+ 'bg-blue-100 text-blue-800'
+ }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+ </div>
+ ${session.notes ? `<div class='text-xs text-gray-400 mt-1 whitespace-pre-line'>${session.notes}</div>` : ''}
+ `;
+ dayColumn.appendChild(sessionCard);
+ });
+ }
+ container.appendChild(dayColumn);
+ current.setDate(current.getDate() + 1);
+ }
+ }
 
-    function renderMemberWeeklySchedule() {
-        const container = document.getElementById('memberWeeklySchedule');
-        if (!container) return;
-        container.innerHTML = '';
-        // Get start of week (Monday)
-        const startOfWeek = getStartOfWeek(currentDate);
-        for (let i = 0; i < 7; i++) {
-            const date = new Date(startOfWeek);
-            date.setDate(startOfWeek.getDate() + i);
-            const dateStr = formatDate(date);
-            const dayName = getDayName(date);
-            // Find member's availability for this day
-            const freeDay = userFreeDays ? userFreeDays.find(fd => fd.day_of_week === dayName) : null;
-            const isAvailable = freeDay ? freeDay.is_available : true;
-            // Find sessions for this day
-            const daySessions = sessions.filter(s => s.date === dateStr);
-            // Create column
-            const dayColumn = document.createElement('div');
-            dayColumn.className = 'space-y-2';
-            // Day header
-            const dayHeader = document.createElement('div');
-            dayHeader.className = `text-center font-medium mb-2 ${isAvailable ? 'text-green-900' : 'text-red-900'}`;
-            dayHeader.innerHTML = `
-                ${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                <div class="text-xs ${isAvailable ? 'text-green-600' : 'text-red-600'}">
-                    ${isAvailable ? 'Available' : 'Unavailable'}
-                </div>
-            `;
-            dayColumn.appendChild(dayHeader);
-            // Sessions
-            if (daySessions.length === 0) {
-                const noSessions = document.createElement('div');
-                noSessions.className = `text-center text-sm ${isAvailable ? 'text-gray-500' : 'text-red-400'}`;
-                noSessions.textContent = isAvailable ? 'No sessions' : 'Not available';
-                dayColumn.appendChild(noSessions);
-            } else {
-                daySessions.forEach(session => {
-                    const sessionCard = document.createElement('div');
-                    sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
-                    sessionCard.onclick = () => showSessionDetails(session.id);
-                    sessionCard.innerHTML = `
-                        <div class="text-sm font-medium text-gray-900">${session.time}</div>
-                        <div class="text-xs text-gray-500">${session.coach.name}</div>
-                        <div class="mt-1">
-                            <span class="px-2 py-1 text-xs rounded-full ${
-                                session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                                session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                'bg-blue-100 text-blue-800'
-                            }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
-                        </div>
-                    `;
-                    dayColumn.appendChild(sessionCard);
-                });
-            }
-            container.appendChild(dayColumn);
-        }
-    }
+ function renderMemberWeeklySchedule() {
+ const container = document.getElementById('memberWeeklySchedule');
+ if (!container) return;
+ container.innerHTML = '';
+ // Get start of week (Monday)
+ const startOfWeek = getStartOfWeek(currentDate);
+ for (let i = 0; i < 7; i++) {
+ const date = new Date(startOfWeek);
+ date.setDate(startOfWeek.getDate() + i);
+ const dateStr = formatDate(date);
+ const dayName = getDayName(date);
+ // Find member's availability for this day
+ const freeDay = userFreeDays ? userFreeDays.find(fd => fd.day_of_week === dayName) : null;
+ const isAvailable = freeDay ? freeDay.is_available : true;
+ // Find sessions for this day
+ const daySessions = sessions.filter(s => s.date === dateStr);
+ // Create column
+ const dayColumn = document.createElement('div');
+ dayColumn.className = 'space-y-2';
+ // Day header
+ const dayHeader = document.createElement('div');
+ dayHeader.className = `text-center font-medium mb-2 ${isAvailable ? 'text-green-900' : 'text-red-900'}`;
+ dayHeader.innerHTML = `
+ ${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+ <div class="text-xs ${isAvailable ? 'text-green-600' : 'text-red-600'}">
+ ${isAvailable ? 'Available' : 'Unavailable'}
+ </div>
+ `;
+ dayColumn.appendChild(dayHeader);
+ // Sessions
+ if (daySessions.length === 0) {
+ const noSessions = document.createElement('div');
+ noSessions.className = `text-center text-sm ${isAvailable ? 'text-gray-500' : 'text-red-400'}`;
+ noSessions.textContent = isAvailable ? 'No sessions' : 'Not available';
+ dayColumn.appendChild(noSessions);
+ } else {
+ daySessions.forEach(session => {
+ const sessionCard = document.createElement('div');
+ sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
+ sessionCard.onclick = () => showSessionDetails(session.id);
+ sessionCard.innerHTML = `
+ <div class="text-sm font-medium text-gray-900">${session.time}</div>
+ <div class="text-xs text-gray-500">${session.coach.name}</div>
+ <div class="mt-1">
+ <span class="px-2 py-1 text-xs rounded-full ${
+ session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+ session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+ 'bg-blue-100 text-blue-800'
+ }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+ </div>
+ `;
+ dayColumn.appendChild(sessionCard);
+ });
+ }
+ container.appendChild(dayColumn);
+ }
+ }
 </script>
 {% endblock %} 

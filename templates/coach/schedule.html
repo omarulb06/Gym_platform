@@ -3,838 +3,809 @@
 {% block title %}Schedule - PowerFit{% endblock %}
 
 {% block content %}
-    <!-- Welcome Section -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Schedule</h3>
-            <p class="mt-1 text-sm text-gray-500">View and manage your training sessions</p>
-        </div>
-    </div>
+ <!-- Welcome Section -->
+ <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <h3 class="text-lg leading-6 font-medium text-gray-900">Schedule</h3>
+ <p class="mt-1 text-sm text-gray-500">View and manage your training sessions</p>
+ </div>
+ </div>
 
-    <!-- Preferences and Free Days Section -->
-    <div class="bg-white shadow rounded-lg p-6 mb-6">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-lg font-medium text-gray-900">My Preferences & Availability</h2>
-            <button onclick="togglePreferencesForm()" 
-                    class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                <i class="fas fa-edit mr-2"></i>Edit Preferences
-            </button>
-        </div>
-        
-        <!-- Preferences Display -->
-        <div id="preferencesDisplay" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Preferences will be populated here -->
-        </div>
-        
-        <!-- Preferences Form (Hidden by default) -->
-        <div id="preferencesForm" class="hidden mt-6">
-            <form id="preferencesFormElement" class="space-y-6">
-                <!-- Workout Preferences -->
-                <div>
-                    <h3 class="text-md font-medium text-gray-900 mb-3">Workout Preferences</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Workout Types</label>
-                            <div class="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
-                                <div class="grid grid-cols-1 gap-2">
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Upper Body" class="mr-2">
-                                        Upper Body
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Lower Body" class="mr-2">
-                                        Lower Body
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Full Body" class="mr-2">
-                                        Full Body
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Core" class="mr-2">
-                                        Core
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Push" class="mr-2">
-                                        Push
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" name="workout_types" value="Pull" class="mr-2">
-                                        Pull
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Session Duration (minutes)</label>
-                            <select name="duration" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                <option value="30">30 minutes</option>
-                                <option value="45">45 minutes</option>
-                                <option value="60" selected>60 minutes</option>
-                                <option value="90">90 minutes</option>
-                                <option value="120">120 minutes</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Time Preferences -->
-                <div>
-                    <h3 class="text-md font-medium text-gray-900 mb-3">Preferred Time Slots</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="08:00" class="mr-2">
-                            8:00 AM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="09:00" class="mr-2">
-                            9:00 AM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="10:00" class="mr-2">
-                            10:00 AM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="11:00" class="mr-2">
-                            11:00 AM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="12:00" class="mr-2">
-                            12:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="13:00" class="mr-2">
-                            1:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="14:00" class="mr-2">
-                            2:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="15:00" class="mr-2">
-                            3:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="16:00" class="mr-2">
-                            4:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="17:00" class="mr-2">
-                            5:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="18:00" class="mr-2">
-                            6:00 PM
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="time_slots" value="19:00" class="mr-2">
-                            7:00 PM
-                        </label>
-                    </div>
-                </div>
-                
-                <!-- Free Days -->
-                <div>
-                    <h3 class="text-md font-medium text-gray-900 mb-3">Weekly Availability</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="freeDaysContainer">
-                        <!-- Free days will be populated here -->
-                    </div>
-                </div>
-                
-                <!-- Notes -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
-                    <textarea name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Any additional preferences or notes..."></textarea>
-                </div>
-                
-                <!-- Form Actions -->
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="togglePreferencesForm()" 
-                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        Cancel
-                    </button>
-                    <button type="submit" 
-                            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        Save Preferences
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+ <!-- Preferences and Free Days Section -->
+ <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+ <div class="flex justify-between items-center mb-4 sm:mb-6">
+ <h2 class="text-lg font-medium text-gray-900">My Preferences & Availability</h2>
+ <button onclick="togglePreferencesForm()" 
+ class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ <i class="fas fa-edit mr-2"></i>Edit Preferences
+ </button>
+ </div>
+ 
+ <!-- Preferences Display -->
+ <div id="preferencesDisplay" class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:p-6">
+ <!-- Preferences will be populated here -->
+ </div>
+ 
+ <!-- Preferences Form (Hidden by default) -->
+ <div id="preferencesForm" class="hidden mt-6">
+ <form id="preferencesFormElement" class="space-y-6">
+ <!-- Workout Preferences -->
+ <div>
+ <h3 class="text-md font-medium text-gray-900 mb-3">Workout Preferences</h3>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Workout Types</label>
+ <div class="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+ <div class="grid grid-cols-1 gap-2">
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Upper Body" class="mr-2">
+ Upper Body
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Lower Body" class="mr-2">
+ Lower Body
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Full Body" class="mr-2">
+ Full Body
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Core" class="mr-2">
+ Core
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Push" class="mr-2">
+ Push
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="workout_types" value="Pull" class="mr-2">
+ Pull
+ </label>
+ </div>
+ </div>
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Session Duration (minutes)</label>
+ <select name="duration" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+ <option value="30">30 minutes</option>
+ <option value="45">45 minutes</option>
+ <option value="60" selected>60 minutes</option>
+ <option value="90">90 minutes</option>
+ <option value="120">120 minutes</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ 
+ <!-- Time Preferences -->
+ <div>
+ <h3 class="text-md font-medium text-gray-900 mb-3">Preferred Time Slots</h3>
+ <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="08:00" class="mr-2">
+ 8:00 AM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="09:00" class="mr-2">
+ 9:00 AM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="10:00" class="mr-2">
+ 10:00 AM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="11:00" class="mr-2">
+ 11:00 AM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="12:00" class="mr-2">
+ 12:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="13:00" class="mr-2">
+ 1:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="14:00" class="mr-2">
+ 2:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="15:00" class="mr-2">
+ 3:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="16:00" class="mr-2">
+ 4:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="17:00" class="mr-2">
+ 5:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="18:00" class="mr-2">
+ 6:00 PM
+ </label>
+ <label class="flex items-center">
+ <input type="checkbox" name="time_slots" value="19:00" class="mr-2">
+ 7:00 PM
+ </label>
+ </div>
+ </div>
+ 
+ <!-- Free Days -->
+ <div>
+ <h3 class="text-md font-medium text-gray-900 mb-3">Weekly Availability</h3>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="freeDaysContainer">
+ <!-- Free days will be populated here -->
+ </div>
+ </div>
+ 
+ <!-- Notes -->
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+ <textarea name="notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500" placeholder="Any additional preferences or notes..."></textarea>
+ </div>
+ 
+ <!-- Form Actions -->
+ <div class="flex justify-end space-x-3">
+ <button type="button" onclick="togglePreferencesForm()" 
+ class="px-3 py-2 sm:px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:outline-none
+ Cancel
+ </button>
+ <button type="submit" 
+ class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ Save Preferences
+ </button>
+ </div>
+ </form>
+ </div>
+ </div>
 
-    <!-- Weekly Schedule -->
-    <div class="bg-white shadow rounded-lg p-6 mb-6">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-lg font-medium text-gray-900">Weekly Schedule</h2>
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center space-x-2">
-                    <input type="date" 
-                           id="startDate" 
-                           class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                    <span class="text-gray-500">to</span>
-                    <input type="date" 
-                           id="endDate" 
-                           class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                    <button onclick="loadSchedule()" 
-                            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        <i class="fas fa-search mr-2"></i>Search
-                    </button>
-                </div>
-            </div>
-        </div>
-        
+ <!-- Weekly Schedule -->
+ <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+ <div class="flex justify-between items-center mb-4 sm:mb-6">
+ <h2 class="text-lg font-medium text-gray-900">Weekly Schedule</h2>
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="flex items-center space-x-2">
+ <input type="date" 
+ id="startDate" 
+ class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+ <span class="text-gray-500">to</span>
+ <input type="date" 
+ id="endDate" 
+ class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+ <button onclick="loadSchedule()" 
+ class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ <i class="fas fa-search mr-2"></i>Search
+ </button>
+ </div>
+ </div>
+ </div>
 
-        
-        <div class="grid grid-cols-7 gap-4" id="weeklySchedule">
-            <!-- Days will be populated here -->
-        </div>
-    </div>
+ <div class="grid grid-cols-7 gap-4" id="weeklySchedule">
+ <!-- Days will be populated here -->
+ </div>
+ </div>
 
-    <!-- Sessions Table -->
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
-                        <tr>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200" id="sessions-table">
-                        <!-- Sessions will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+ <!-- Sessions Table -->
+ <div class="bg-white shadow rounded-lg">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+ <table class="min-w-full responsive-table divide-y divide-gray-200">
+ <thead>
+ <tr>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+ </tr>
+ </thead>
+ <tbody class="bg-white divide-y divide-gray-200" id="sessions-table">
+ <!-- Sessions will be populated here -->
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
 
-    <!-- Session Details Modal -->
-    <div id="sessionModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-                <div class="px-4 py-5 sm:p-6">
-                    <div class="flex justify-between items-start">
-                        <h3 class="text-lg font-medium text-gray-900">Session Details</h3>
-                        <button onclick="closeSessionModal()" class="text-gray-400 hover:text-gray-500">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="mt-4 space-y-4">
-                        <div>
-                            <p class="text-sm text-gray-500">Member</p>
-                            <p class="text-base font-medium text-gray-900" id="modalMemberName">-</p>
-                            <p class="text-sm text-gray-500" id="modalMemberEmail">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Date & Time</p>
-                            <p class="text-base font-medium text-gray-900" id="modalDateTime">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Duration</p>
-                            <p class="text-base font-medium text-gray-900" id="modalDuration">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Workout Type</p>
-                            <p class="text-base font-medium text-gray-900" id="modalWorkoutType">-</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Exercises</p>
-                            <ul class="text-sm text-gray-900 list-disc list-inside" id="modalExercises">
-                                <!-- Exercises will be populated here -->
-                            </ul>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Status</p>
-                            <p class="text-base font-medium text-gray-900" id="modalStatus">-</p>
-                        </div>
-                        <div id="modalActions" class="flex space-x-2">
-                            <!-- Action buttons will be populated here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-{% endblock %}
-
-{% block sidebar %}
-<a href="/coach/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-home mr-2"></i> Dashboard
-</a>
-<a href="/coach/members" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-users mr-2"></i> My Members
-</a>
-<a href="/coach/schedule" class="block py-2 px-4 bg-indigo-700">
-    <i class="fas fa-calendar mr-2"></i> Schedule
-</a>
-<a href="/coach/sessions" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-clipboard-list mr-2"></i> Sessions
-</a>
-<a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-chart-line mr-2"></i> Progress
-</a>
-<a href="/coach/preferences" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-cog mr-2"></i> Preferences
-</a>
-<div class="border-t border-indigo-700 my-2"></div>
-<a href="/coach/messages" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-envelope mr-2"></i> Messages
-</a>
+ <!-- Session Details Modal -->
+ <div id="sessionModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
+ <div class="flex items-center justify-center min-h-screen p-4">
+ <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="flex justify-between items-start">
+ <h3 class="text-lg font-medium text-gray-900">Session Details</h3>
+ <button onclick="closeSessionModal()" class="text-gray-400 hover:text-gray-500">
+ <i class="fas fa-times"></i>
+ </button>
+ </div>
+ <div class="mt-4 space-y-4">
+ <div>
+ <p class="text-sm text-gray-500">Member</p>
+ <p class="text-base font-medium text-gray-900" id="modalMemberName">-</p>
+ <p class="text-sm text-gray-500" id="modalMemberEmail">-</p>
+ </div>
+ <div>
+ <p class="text-sm text-gray-500">Date & Time</p>
+ <p class="text-base font-medium text-gray-900" id="modalDateTime">-</p>
+ </div>
+ <div>
+ <p class="text-sm text-gray-500">Duration</p>
+ <p class="text-base font-medium text-gray-900" id="modalDuration">-</p>
+ </div>
+ <div>
+ <p class="text-sm text-gray-500">Workout Type</p>
+ <p class="text-base font-medium text-gray-900" id="modalWorkoutType">-</p>
+ </div>
+ <div>
+ <p class="text-sm text-gray-500">Exercises</p>
+ <ul class="text-sm text-gray-900 list-disc list-inside" id="modalExercises">
+ <!-- Exercises will be populated here -->
+ </ul>
+ </div>
+ <div>
+ <p class="text-sm text-gray-500">Status</p>
+ <p class="text-base font-medium text-gray-900" id="modalStatus">-</p>
+ </div>
+ <div id="modalActions" class="flex space-x-2">
+ <!-- Action buttons will be populated here -->
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    let currentDate = new Date();
-    let sessions = [];
-    let allSessions = []; // Store all sessions for filtering
-    let userPreferences = null;
-    let userFreeDays = [];
+ let currentDate = new Date();
+ let sessions = [];
+ let allSessions = []; // Store all sessions for filtering
+ let userPreferences = null;
+ let userFreeDays = [];
 
-    // Format date as YYYY-MM-DD
-    function formatDate(date) {
-        return date.toISOString().split('T')[0];
-    }
+ // Format date as YYYY-MM-DD
+ function formatDate(date) {
+ return date.toISOString().split('T')[0];
+ }
 
-    // Get week range
-    function getWeekRange(date) {
-        const start = new Date(date);
-        start.setDate(date.getDate() - date.getDay());
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        return { start, end };
-    }
+ // Get week range
+ function getWeekRange(date) {
+ const start = new Date(date);
+ start.setDate(date.getDate() - date.getDay());
+ const end = new Date(start);
+ end.setDate(start.getDate() + 6);
+ return { start, end };
+ }
 
-    // Format week range for display
-    function formatWeekRange(start, end) {
-        const options = { month: 'short', day: 'numeric' };
-        return `${start.toLocaleDateString('default', options)} - ${end.toLocaleDateString('default', options)}`;
-    }
+ // Format week range for display
+ function formatWeekRange(start, end) {
+ const options = { month: 'short', day: 'numeric' };
+ return `${start.toLocaleDateString('default', options)} - ${end.toLocaleDateString('default', options)}`;
+ }
 
-    // Show session details modal
-    function showSessionDetails(session) {
-        const modal = document.getElementById('sessionModal');
-        document.getElementById('modalMemberName').textContent = session.member.name;
-        document.getElementById('modalMemberEmail').textContent = session.member.email;
-        document.getElementById('modalDateTime').textContent = `${session.date} at ${session.time}`;
-        document.getElementById('modalDuration').textContent = `${session.duration} minutes`;
-        document.getElementById('modalWorkoutType').textContent = session.workout.type;
-        document.getElementById('modalStatus').textContent = session.status;
+ // Show session details modal
+ function showSessionDetails(session) {
+ const modal = document.getElementById('sessionModal');
+ document.getElementById('modalMemberName').textContent = session.member.name;
+ document.getElementById('modalMemberEmail').textContent = session.member.email;
+ document.getElementById('modalDateTime').textContent = `${session.date} at ${session.time}`;
+ document.getElementById('modalDuration').textContent = `${session.duration} minutes`;
+ document.getElementById('modalWorkoutType').textContent = session.workout.type;
+ document.getElementById('modalStatus').textContent = session.status;
 
-        // Populate exercises
-        const exercisesList = document.getElementById('modalExercises');
-        exercisesList.innerHTML = '';
-        session.workout.exercises.forEach(exercise => {
-            const li = document.createElement('li');
-            li.textContent = exercise;
-            exercisesList.appendChild(li);
-        });
+ // Populate exercises
+ const exercisesList = document.getElementById('modalExercises');
+ exercisesList.innerHTML = '';
+ session.workout.exercises.forEach(exercise => {
+ const li = document.createElement('li');
+ li.textContent = exercise;
+ exercisesList.appendChild(li);
+ });
 
-        // Set up action buttons
-        const actionsDiv = document.getElementById('modalActions');
-        actionsDiv.innerHTML = '';
-        if (session.status.toLowerCase() === 'scheduled') {
-            actionsDiv.innerHTML = `
-                <button onclick="updateSessionStatus(${session.id}, 'completed')" 
-                        class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
-                    <i class="fas fa-check mr-2"></i> Mark as Completed
-                </button>
-                <button onclick="updateSessionStatus(${session.id}, 'cancelled')"
-                        class="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                    <i class="fas fa-times mr-2"></i> Cancel Session
-                </button>
-            `;
-        }
+ // Set up action buttons
+ const actionsDiv = document.getElementById('modalActions');
+ actionsDiv.innerHTML = '';
+ if (session.status.toLowerCase() === 'scheduled') {
+ actionsDiv.innerHTML = `
+ <button onclick="updateSessionStatus(${session.id}, 'completed')" 
+ class="flex-1 bg-green-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-green-700">
+ <i class="fas fa-check mr-2"></i> Mark as Completed
+ </button>
+ <button onclick="updateSessionStatus(${session.id}, 'cancelled')"
+ class="flex-1 bg-red-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-red-700">
+ <i class="fas fa-times mr-2"></i> Cancel Session
+ </button>
+ `;
+ }
 
-        modal.classList.remove('hidden');
-    }
+ modal.classList.remove('hidden');
+ }
 
-    // Close session details modal
-    function closeSessionModal() {
-        document.getElementById('sessionModal').classList.add('hidden');
-    }
+ // Close session details modal
+ function closeSessionModal() {
+ document.getElementById('sessionModal').classList.add('hidden');
+ }
 
-    // Update session status
-    async function updateSessionStatus(sessionId, status) {
-        try {
-            const response = await fetch(`/api/coach/sessions/${sessionId}/status?status=${status}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-            
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Failed to update session status');
-            }
-            
-            // Close modal if open
-            closeSessionModal();
-            
-            // Reload the schedule
-            await loadSchedule();
-            
-            // Show success message
-            alert(`Session marked as ${status}`);
-        } catch (error) {
-            console.error('Error updating session status:', error);
-            alert(error.message || 'Failed to update session status. Please try again.');
-        }
-    }
+ // Update session status
+ async function updateSessionStatus(sessionId, status) {
+ try {
+ const response = await fetch(`/api/coach/sessions/${sessionId}/status?status=${status}`, {
+ method: 'PUT',
+ headers: {
+ 'Content-Type': 'application/json',
+ }
+ });
+ 
+ if (!response.ok) {
+ const error = await response.json();
+ throw new Error(error.detail || 'Failed to update session status');
+ }
+ 
+ // Close modal if open
+ closeSessionModal();
+ 
+ // Reload the schedule
+ await loadSchedule();
+ 
+ // Show success message
+ alert(`Session marked as ${status}`);
+ } catch (error) {
+ console.error('Error updating session status:', error);
+ alert(error.message || 'Failed to update session status. Please try again.');
+ }
+ }
 
-    // Set default date range (current week)
-    function setDefaultDateRange() {
-        const today = new Date();
-        const startDate = new Date(today);
-        startDate.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
-        
-        const endDate = new Date(today);
-        endDate.setDate(today.getDate() + (6 - today.getDay())); // End of week (Saturday)
-        
-        document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
-        document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
-    }
+ // Set default date range (current week)
+ function setDefaultDateRange() {
+ const today = new Date();
+ const startDate = new Date(today);
+ startDate.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+ 
+ const endDate = new Date(today);
+ endDate.setDate(today.getDate() + (6 - today.getDay())); // End of week (Saturday)
+ 
+ document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+ document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+ }
 
-    // Load schedule with date range
-    async function loadSchedule() {
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-        
-        if (!startDate || !endDate) {
-            alert('Please select both start and end dates');
-            return;
-        }
-        
-        try {
-            const response = await fetch(`/api/coach/schedule?start_date=${startDate}&end_date=${endDate}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch schedule');
-            }
-            const data = await response.json();
-            displaySchedule(data.sessions, data.weekly_availability);
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to load schedule');
-        }
-    }
+ // Load schedule with date range
+ async function loadSchedule() {
+ const startDate = document.getElementById('startDate').value;
+ const endDate = document.getElementById('endDate').value;
+ 
+ if (!startDate || !endDate) {
+ alert('Please select both start and end dates');
+ return;
+ }
+ 
+ try {
+ const response = await fetch(`/api/coach/schedule?start_date=${startDate}&end_date=${endDate}`);
+ if (!response.ok) {
+ throw new Error('Failed to fetch schedule');
+ }
+ const data = await response.json();
+ displaySchedule(data.sessions, data.weekly_availability);
+ } catch (error) {
+ console.error('Error:', error);
+ alert('Failed to load schedule');
+ }
+ }
 
-    // Display schedule
-    function displaySchedule(sessions, weeklyAvailability) {
-        const scheduleContainer = document.getElementById('weeklySchedule');
-        const startDate = new Date(document.getElementById('startDate').value);
-        const endDate = new Date(document.getElementById('endDate').value);
-        
-        // Clear existing schedule
-        scheduleContainer.innerHTML = '';
-        
-        // Create day columns
-        const currentDate = new Date(startDate);
-        while (currentDate <= endDate) {
-            const daySessions = sessions.filter(session => 
-                session.date === currentDate.toISOString().split('T')[0]
-            );
-            
-            // Get day name for availability check
-            const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
-            const dayAvailability = weeklyAvailability.find(day => day.day_of_week === dayName);
-            const isAvailable = dayAvailability ? dayAvailability.is_available : true;
-            
-            const dayColumn = document.createElement('div');
-            dayColumn.className = 'space-y-2';
-            
-            // Day header with availability indicator
-            const dayHeader = document.createElement('div');
-            dayHeader.className = `text-center font-medium mb-2 ${isAvailable ? 'text-green-900' : 'text-red-900'}`;
-            dayHeader.innerHTML = `
-                ${currentDate.toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric' 
-                })}
-                <div class="text-xs ${isAvailable ? 'text-green-600' : 'text-red-600'}">
-                    ${isAvailable ? 'Available' : 'Unavailable'}
-                </div>
-            `;
-            dayColumn.appendChild(dayHeader);
-            
-            // Sessions for this day
-            if (daySessions.length === 0) {
-                const noSessions = document.createElement('div');
-                noSessions.className = `text-center text-sm ${isAvailable ? 'text-gray-500' : 'text-red-400'}`;
-                noSessions.textContent = isAvailable ? 'No sessions' : 'Not available';
-                dayColumn.appendChild(noSessions);
-            } else {
-                daySessions.forEach(session => {
-                    const sessionCard = document.createElement('div');
-                    sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
-                    sessionCard.onclick = () => showSessionDetails(session);
-                    
-                    sessionCard.innerHTML = `
-                        <div class="text-sm font-medium text-gray-900">${session.time}</div>
-                        <div class="text-xs text-gray-500">${session.member.name}</div>
-                        <div class="mt-1">
-                            <span class="px-2 py-1 text-xs rounded-full ${
-                                session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                                session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                'bg-blue-100 text-blue-800'
-                            }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
-                        </div>
-                    `;
-                    
-                    dayColumn.appendChild(sessionCard);
-                });
-            }
-            
-            scheduleContainer.appendChild(dayColumn);
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-        
-        // Update sessions table
-        displaySessionsTable(sessions);
-    }
+ // Display schedule
+ function displaySchedule(sessions, weeklyAvailability) {
+ const scheduleContainer = document.getElementById('weeklySchedule');
+ const startDate = new Date(document.getElementById('startDate').value);
+ const endDate = new Date(document.getElementById('endDate').value);
+ 
+ // Clear existing schedule
+ scheduleContainer.innerHTML = '';
+ 
+ // Create day columns
+ const currentDate = new Date(startDate);
+ while (currentDate <= endDate) {
+ const daySessions = sessions.filter(session => 
+ session.date === currentDate.toISOString().split('T')[0]
+ );
+ 
+ // Get day name for availability check
+ const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
+ const dayAvailability = weeklyAvailability.find(day => day.day_of_week === dayName);
+ const isAvailable = dayAvailability ? dayAvailability.is_available : true;
+ 
+ const dayColumn = document.createElement('div');
+ dayColumn.className = 'space-y-2';
+ 
+ // Day header with availability indicator
+ const dayHeader = document.createElement('div');
+ dayHeader.className = `text-center font-medium mb-2 ${isAvailable ? 'text-green-900' : 'text-red-900'}`;
+ dayHeader.innerHTML = `
+ ${currentDate.toLocaleDateString('en-US', { 
+ weekday: 'short', 
+ month: 'short', 
+ day: 'numeric' 
+ })}
+ <div class="text-xs ${isAvailable ? 'text-green-600' : 'text-red-600'}">
+ ${isAvailable ? 'Available' : 'Unavailable'}
+ </div>
+ `;
+ dayColumn.appendChild(dayHeader);
+ 
+ // Sessions for this day
+ if (daySessions.length === 0) {
+ const noSessions = document.createElement('div');
+ noSessions.className = `text-center text-sm ${isAvailable ? 'text-gray-500' : 'text-red-400'}`;
+ noSessions.textContent = isAvailable ? 'No sessions' : 'Not available';
+ dayColumn.appendChild(noSessions);
+ } else {
+ daySessions.forEach(session => {
+ const sessionCard = document.createElement('div');
+ sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
+ sessionCard.onclick = () => showSessionDetails(session);
+ 
+ sessionCard.innerHTML = `
+ <div class="text-sm font-medium text-gray-900">${session.time}</div>
+ <div class="text-xs text-gray-500">${session.member.name}</div>
+ <div class="mt-1">
+ <span class="px-2 py-1 text-xs rounded-full ${
+ session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+ session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+ 'bg-blue-100 text-blue-800'
+ }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+ </div>
+ `;
+ 
+ dayColumn.appendChild(sessionCard);
+ });
+ }
+ 
+ scheduleContainer.appendChild(dayColumn);
+ currentDate.setDate(currentDate.getDate() + 1);
+ }
+ 
+ // Update sessions table
+ displaySessionsTable(sessions);
+ }
 
-    // Display sessions table
-    function displaySessionsTable(sessions) {
-        const tableBody = document.getElementById('sessions-table');
-        tableBody.innerHTML = '';
-        
-        if (sessions.length === 0) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                        No sessions found for the selected date range
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-        
-        sessions.forEach(session => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50 cursor-pointer';
-            row.onclick = () => showSessionDetails(session);
-            
-            row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900">${session.member.name}</div>
-                    <div class="text-sm text-gray-500">${session.member.email}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${session.date}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${session.time}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${session.workout.type}</div>
-                    <div class="text-sm text-gray-500">${session.duration} min</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                        session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                        'bg-blue-100 text-blue-800'
-                    }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button class="text-indigo-600 hover:text-indigo-900">View Details</button>
-                </td>
-            `;
-            
-            tableBody.appendChild(row);
-        });
-    }
+ // Display sessions table
+ function displaySessionsTable(sessions) {
+ const tableBody = document.getElementById('sessions-table');
+ tableBody.innerHTML = '';
+ 
+ if (sessions.length === 0) {
+ tableBody.innerHTML = `
+ <tr>
+ <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+ No sessions found for the selected date range
+ </td>
+ </tr>
+ `;
+ return;
+ }
+ 
+ sessions.forEach(session => {
+ const row = document.createElement('tr');
+ row.className = 'hover:bg-gray-50 cursor-pointer';
+ row.onclick = () => showSessionDetails(session);
+ 
+ row.innerHTML = `
+ <td class="px-6 py-4 whitespace-nowrap">
+ <div class="text-sm font-medium text-gray-900">${session.member.name}</div>
+ <div class="text-sm text-gray-500">${session.member.email}</div>
+ </td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${session.date}</td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${session.time}</td>
+ <td class="px-6 py-4 whitespace-nowrap">
+ <div class="text-sm text-gray-900">${session.workout.type}</div>
+ <div class="text-sm text-gray-500">${session.duration} min</div>
+ </td>
+ <td class="px-6 py-4 whitespace-nowrap">
+ <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+ session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+ session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+ 'bg-blue-100 text-blue-800'
+ }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+ </td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+ <button class="text-indigo-600 hover:text-indigo-900">View Details</button>
+ </td>
+ `;
+ 
+ tableBody.appendChild(row);
+ });
+ }
 
-    // Initialize date range and load schedule when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-        setDefaultDateRange();
-        loadSchedule();
-        loadPreferences();
-    });
+ // Initialize date range and load schedule when page loads
+ document.addEventListener('DOMContentLoaded', () => {
+ setDefaultDateRange();
+ loadSchedule();
+ loadPreferences();
+ });
 
+ // Preferences Functions
+ async function loadPreferences() {
+ try {
+ const response = await fetch('/api/preferences');
+ if (!response.ok) {
+ throw new Error('Failed to fetch preferences');
+ }
+ const data = await response.json();
+ userPreferences = data.preferences;
+ userFreeDays = data.free_days;
+ displayPreferences();
+ populatePreferencesForm();
+ } catch (error) {
+ console.error('Error loading preferences:', error);
+ }
+ }
 
+ function displayPreferences() {
+ const displayDiv = document.getElementById('preferencesDisplay');
+ 
+ // Workout preferences
+ const workoutTypes = userPreferences?.preferred_workout_types || [];
+ const duration = userPreferences?.preferred_duration || 60;
+ const timeSlots = userPreferences?.preferred_time_slots || [];
+ const notes = userPreferences?.notes || '';
+ 
+ displayDiv.innerHTML = `
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Workout Preferences</h3>
+ <div class="space-y-2">
+ <div>
+ <span class="text-sm text-gray-600">Preferred Types:</span>
+ <div class="mt-1">
+ ${workoutTypes.length > 0 ? 
+ workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
+ '<span class="text-gray-500 text-sm">None specified</span>'
+ }
+ </div>
+ </div>
+ <div>
+ <span class="text-sm text-gray-600">Duration:</span>
+ <span class="text-sm font-medium">${duration} minutes</span>
+ </div>
+ </div>
+ </div>
+ 
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Time Preferences</h3>
+ <div class="space-y-2">
+ <div>
+ <span class="text-sm text-gray-600">Preferred Times:</span>
+ <div class="mt-1">
+ ${timeSlots.length > 0 ? 
+ timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
+ '<span class="text-gray-500 text-sm">None specified</span>'
+ }
+ </div>
+ </div>
+ </div>
+ </div>
+ 
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Weekly Availability</h3>
+ <div class="grid grid-cols-2 gap-2">
+ ${userFreeDays.map(day => `
+ <div class="flex items-center justify-between">
+ <span class="text-sm text-gray-600">${day.day_of_week}</span>
+ <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
+ ${day.is_available ? 'Available' : 'Unavailable'}
+ </span>
+ </div>
+ `).join('')}
+ </div>
+ </div>
+ 
+ ${notes ? `
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-sm font-medium text-gray-900 mb-3">Notes</h3>
+ <p class="text-sm text-gray-600">${notes}</p>
+ </div>
+ ` : ''}
+ `;
+ }
 
-    // Preferences Functions
-    async function loadPreferences() {
-        try {
-            const response = await fetch('/api/preferences');
-            if (!response.ok) {
-                throw new Error('Failed to fetch preferences');
-            }
-            const data = await response.json();
-            userPreferences = data.preferences;
-            userFreeDays = data.free_days;
-            displayPreferences();
-            populatePreferencesForm();
-        } catch (error) {
-            console.error('Error loading preferences:', error);
-        }
-    }
+ function populatePreferencesForm() {
+ // Populate workout types
+ const workoutCheckboxes = document.querySelectorAll('input[name="workout_types"]');
+ workoutCheckboxes.forEach(checkbox => {
+ checkbox.checked = userPreferences?.preferred_workout_types?.includes(checkbox.value) || false;
+ });
+ 
+ // Populate duration
+ const durationSelect = document.querySelector('select[name="duration"]');
+ if (durationSelect) {
+ durationSelect.value = userPreferences?.preferred_duration || 60;
+ }
+ 
+ // Populate time slots
+ const timeCheckboxes = document.querySelectorAll('input[name="time_slots"]');
+ timeCheckboxes.forEach(checkbox => {
+ checkbox.checked = userPreferences?.preferred_time_slots?.includes(checkbox.value) || false;
+ });
+ 
+ // Populate notes
+ const notesTextarea = document.querySelector('textarea[name="notes"]');
+ if (notesTextarea) {
+ notesTextarea.value = userPreferences?.notes || '';
+ }
+ 
+ // Populate free days
+ populateFreeDaysForm();
+ }
 
-    function displayPreferences() {
-        const displayDiv = document.getElementById('preferencesDisplay');
-        
-        // Workout preferences
-        const workoutTypes = userPreferences?.preferred_workout_types || [];
-        const duration = userPreferences?.preferred_duration || 60;
-        const timeSlots = userPreferences?.preferred_time_slots || [];
-        const notes = userPreferences?.notes || '';
-        
-        displayDiv.innerHTML = `
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h3 class="text-sm font-medium text-gray-900 mb-3">Workout Preferences</h3>
-                <div class="space-y-2">
-                    <div>
-                        <span class="text-sm text-gray-600">Preferred Types:</span>
-                        <div class="mt-1">
-                            ${workoutTypes.length > 0 ? 
-                                workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
-                                '<span class="text-gray-500 text-sm">None specified</span>'
-                            }
-                        </div>
-                    </div>
-                    <div>
-                        <span class="text-sm text-gray-600">Duration:</span>
-                        <span class="text-sm font-medium">${duration} minutes</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h3 class="text-sm font-medium text-gray-900 mb-3">Time Preferences</h3>
-                <div class="space-y-2">
-                    <div>
-                        <span class="text-sm text-gray-600">Preferred Times:</span>
-                        <div class="mt-1">
-                            ${timeSlots.length > 0 ? 
-                                timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
-                                '<span class="text-gray-500 text-sm">None specified</span>'
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h3 class="text-sm font-medium text-gray-900 mb-3">Weekly Availability</h3>
-                <div class="grid grid-cols-2 gap-2">
-                    ${userFreeDays.map(day => `
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600">${day.day_of_week}</span>
-                            <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
-                                ${day.is_available ? 'Available' : 'Unavailable'}
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            
-            ${notes ? `
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-sm font-medium text-gray-900 mb-3">Notes</h3>
-                    <p class="text-sm text-gray-600">${notes}</p>
-                </div>
-            ` : ''}
-        `;
-    }
+ function populateFreeDaysForm() {
+ const container = document.getElementById('freeDaysContainer');
+ container.innerHTML = '';
+ 
+ // Ensure userFreeDays exists and has data
+ if (!userFreeDays || userFreeDays.length === 0) {
+ // Create default availability if none exists
+ userFreeDays = [];
+ const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+ for (const day of daysOfWeek) {
+ userFreeDays.push({
+ day_of_week: day,
+ is_available: true,
+ start_time: '08:00:00',
+ end_time: '20:00:00'
+ });
+ }
+ }
+ 
+ userFreeDays.forEach(day => {
+ // Ensure start_time and end_time are strings and handle different formats
+ let startTime = '08:00';
+ let endTime = '20:00';
+ 
+ if (day.start_time) {
+ if (typeof day.start_time === 'string') {
+ // Ensure always HH:mm (with leading zero)
+ const parts = day.start_time.split(':');
+ if (parts.length >= 2) {
+ startTime = parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+ }
+ } else if (day.start_time.total_seconds) {
+ // Handle timedelta objects
+ const hours = Math.floor(day.start_time.total_seconds / 3600);
+ const minutes = Math.floor((day.start_time.total_seconds % 3600) / 60);
+ startTime = hours.toString().padStart(2, '0') + ':' + minutes.toString().padStart(2, '0');
+ }
+ }
+ 
+ if (day.end_time) {
+ if (typeof day.end_time === 'string') {
+ const parts = day.end_time.split(':');
+ if (parts.length >= 2) {
+ endTime = parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+ }
+ } else if (day.end_time.total_seconds) {
+ // Handle timedelta objects
+ const hours = Math.floor(day.end_time.total_seconds / 3600);
+ const minutes = Math.floor((day.end_time.total_seconds % 3600) / 60);
+ endTime = hours.toString().padStart(2, '0') + ':' + minutes.toString().padStart(2, '0');
+ }
+ }
+ 
+ const dayDiv = document.createElement('div');
+ dayDiv.className = 'border border-gray-300 rounded-lg p-4';
+ dayDiv.innerHTML = `
+ <div class="flex items-center justify-between mb-3">
+ <h4 class="text-sm font-medium text-gray-900">${day.day_of_week}</h4>
+ <label class="flex items-center">
+ <input type="checkbox" 
+ name="available_${day.day_of_week}" 
+ ${day.is_available ? 'checked' : ''} 
+ class="mr-2"
+ onchange="toggleDayAvailability('${day.day_of_week}', this.checked)">
+ Available
+ </label>
+ </div>
+ <div class="grid grid-cols-2 gap-3">
+ <div>
+ <label class="block text-xs text-gray-600 mb-1">Start Time</label>
+ <input type="time" 
+ name="start_${day.day_of_week}" 
+ value="${startTime}" 
+ class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+ </div>
+ <div>
+ <label class="block text-xs text-gray-600 mb-1">End Time</label>
+ <input type="time" 
+ name="end_${day.day_of_week}" 
+ value="${endTime}" 
+ class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+ </div>
+ </div>
+ `;
+ container.appendChild(dayDiv);
+ });
+ }
 
-    function populatePreferencesForm() {
-        // Populate workout types
-        const workoutCheckboxes = document.querySelectorAll('input[name="workout_types"]');
-        workoutCheckboxes.forEach(checkbox => {
-            checkbox.checked = userPreferences?.preferred_workout_types?.includes(checkbox.value) || false;
-        });
-        
-        // Populate duration
-        const durationSelect = document.querySelector('select[name="duration"]');
-        if (durationSelect) {
-            durationSelect.value = userPreferences?.preferred_duration || 60;
-        }
-        
-        // Populate time slots
-        const timeCheckboxes = document.querySelectorAll('input[name="time_slots"]');
-        timeCheckboxes.forEach(checkbox => {
-            checkbox.checked = userPreferences?.preferred_time_slots?.includes(checkbox.value) || false;
-        });
-        
-        // Populate notes
-        const notesTextarea = document.querySelector('textarea[name="notes"]');
-        if (notesTextarea) {
-            notesTextarea.value = userPreferences?.notes || '';
-        }
-        
-        // Populate free days
-        populateFreeDaysForm();
-    }
+ function toggleDayAvailability(dayName, isAvailable) {
+ const day = userFreeDays.find(d => d.day_of_week === dayName);
+ if (day) {
+ day.is_available = isAvailable;
+ }
+ }
 
-    function populateFreeDaysForm() {
-        const container = document.getElementById('freeDaysContainer');
-        container.innerHTML = '';
-        
-        // Ensure userFreeDays exists and has data
-        if (!userFreeDays || userFreeDays.length === 0) {
-            // Create default availability if none exists
-            userFreeDays = [];
-            const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            for (const day of daysOfWeek) {
-                userFreeDays.push({
-                    day_of_week: day,
-                    is_available: true,
-                    start_time: '08:00:00',
-                    end_time: '20:00:00'
-                });
-            }
-        }
-        
-        userFreeDays.forEach(day => {
-            // Ensure start_time and end_time are strings and handle different formats
-            let startTime = '08:00';
-            let endTime = '20:00';
-            
-            if (day.start_time) {
-                if (typeof day.start_time === 'string') {
-                    // Ensure always HH:mm (with leading zero)
-                    const parts = day.start_time.split(':');
-                    if (parts.length >= 2) {
-                        startTime = parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
-                    }
-                } else if (day.start_time.total_seconds) {
-                    // Handle timedelta objects
-                    const hours = Math.floor(day.start_time.total_seconds / 3600);
-                    const minutes = Math.floor((day.start_time.total_seconds % 3600) / 60);
-                    startTime = hours.toString().padStart(2, '0') + ':' + minutes.toString().padStart(2, '0');
-                }
-            }
-            
-            if (day.end_time) {
-                if (typeof day.end_time === 'string') {
-                    const parts = day.end_time.split(':');
-                    if (parts.length >= 2) {
-                        endTime = parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
-                    }
-                } else if (day.end_time.total_seconds) {
-                    // Handle timedelta objects
-                    const hours = Math.floor(day.end_time.total_seconds / 3600);
-                    const minutes = Math.floor((day.end_time.total_seconds % 3600) / 60);
-                    endTime = hours.toString().padStart(2, '0') + ':' + minutes.toString().padStart(2, '0');
-                }
-            }
-            
-            const dayDiv = document.createElement('div');
-            dayDiv.className = 'border border-gray-300 rounded-lg p-4';
-            dayDiv.innerHTML = `
-                <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-sm font-medium text-gray-900">${day.day_of_week}</h4>
-                    <label class="flex items-center">
-                        <input type="checkbox" 
-                               name="available_${day.day_of_week}" 
-                               ${day.is_available ? 'checked' : ''} 
-                               class="mr-2"
-                               onchange="toggleDayAvailability('${day.day_of_week}', this.checked)">
-                        Available
-                    </label>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs text-gray-600 mb-1">Start Time</label>
-                        <input type="time" 
-                               name="start_${day.day_of_week}" 
-                               value="${startTime}" 
-                               class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-600 mb-1">End Time</label>
-                        <input type="time" 
-                               name="end_${day.day_of_week}" 
-                               value="${endTime}" 
-                               class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
-                    </div>
-                </div>
-            `;
-            container.appendChild(dayDiv);
-        });
-    }
+ function togglePreferencesForm() {
+ const form = document.getElementById('preferencesForm');
+ const display = document.getElementById('preferencesDisplay');
+ 
+ if (form.classList.contains('hidden')) {
+ form.classList.remove('hidden');
+ display.classList.add('hidden');
+ } else {
+ form.classList.add('hidden');
+ display.classList.remove('hidden');
+ }
+ }
 
-    function toggleDayAvailability(dayName, isAvailable) {
-        const day = userFreeDays.find(d => d.day_of_week === dayName);
-        if (day) {
-            day.is_available = isAvailable;
-        }
-    }
-
-    function togglePreferencesForm() {
-        const form = document.getElementById('preferencesForm');
-        const display = document.getElementById('preferencesDisplay');
-        
-        if (form.classList.contains('hidden')) {
-            form.classList.remove('hidden');
-            display.classList.add('hidden');
-        } else {
-            form.classList.add('hidden');
-            display.classList.remove('hidden');
-        }
-    }
-
-    // Handle form submission
-    document.getElementById('preferencesFormElement').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        // Collect form data
-        const workoutTypes = Array.from(document.querySelectorAll('input[name="workout_types"]:checked')).map(cb => cb.value);
-        const duration = parseInt(document.querySelector('select[name="duration"]').value);
-        const timeSlots = Array.from(document.querySelectorAll('input[name="time_slots"]:checked')).map(cb => cb.value);
-        const notes = document.querySelector('textarea[name="notes"]').value;
-        
-        // Update free days data
-        userFreeDays.forEach(day => {
-            const availableCheckbox = document.querySelector(`input[name="available_${day.day_of_week}"]`);
-            const startTime = document.querySelector(`input[name="start_${day.day_of_week}"]`).value;
-            const endTime = document.querySelector(`input[name="end_${day.day_of_week}"]`).value;
-            
-            day.is_available = availableCheckbox.checked;
-            // Fix time format - ensure it's HH:MM:SS format
-            day.start_time = startTime + (startTime.length === 5 ? ':00' : '');
-            day.end_time = endTime + (endTime.length === 5 ? ':00' : '');
-        });
-        
-        // Prepare data for API
-        const data = {
-            preferences: {
-                preferred_workout_types: workoutTypes,
-                preferred_duration: duration,
-                preferred_time_slots: timeSlots,
-                notes: notes
-            },
-            free_days: userFreeDays
-        };
-        
-        try {
-            const response = await fetch('/api/preferences', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to update preferences');
-            }
-            
-            // Update local data
-            userPreferences = data.preferences;
-            
-            // Hide form and show display
-            togglePreferencesForm();
-            
-            // Re-fetch preferences and re-render everything
-            await loadPreferences();
-            
-            alert('Preferences updated successfully!');
-        } catch (error) {
-            console.error('Error updating preferences:', error);
-            alert('Failed to update preferences. Please try again.');
-        }
-    });
+ // Handle form submission
+ document.getElementById('preferencesFormElement').addEventListener('submit', async function(e) {
+ e.preventDefault();
+ 
+ // Collect form data
+ const workoutTypes = Array.from(document.querySelectorAll('input[name="workout_types"]:checked')).map(cb => cb.value);
+ const duration = parseInt(document.querySelector('select[name="duration"]').value);
+ const timeSlots = Array.from(document.querySelectorAll('input[name="time_slots"]:checked')).map(cb => cb.value);
+ const notes = document.querySelector('textarea[name="notes"]').value;
+ 
+ // Update free days data
+ userFreeDays.forEach(day => {
+ const availableCheckbox = document.querySelector(`input[name="available_${day.day_of_week}"]`);
+ const startTime = document.querySelector(`input[name="start_${day.day_of_week}"]`).value;
+ const endTime = document.querySelector(`input[name="end_${day.day_of_week}"]`).value;
+ 
+ day.is_available = availableCheckbox.checked;
+ // Fix time format - ensure it's HH:MM:SS format
+ day.start_time = startTime + (startTime.length === 5 ? ':00' : '');
+ day.end_time = endTime + (endTime.length === 5 ? ':00' : '');
+ });
+ 
+ // Prepare data for API
+ const data = {
+ preferences: {
+ preferred_workout_types: workoutTypes,
+ preferred_duration: duration,
+ preferred_time_slots: timeSlots,
+ notes: notes
+ },
+ free_days: userFreeDays
+ };
+ 
+ try {
+ const response = await fetch('/api/preferences', {
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json',
+ },
+ body: JSON.stringify(data)
+ });
+ 
+ if (!response.ok) {
+ throw new Error('Failed to update preferences');
+ }
+ 
+ // Update local data
+ userPreferences = data.preferences;
+ 
+ // Hide form and show display
+ togglePreferencesForm();
+ 
+ // Re-fetch preferences and re-render everything
+ await loadPreferences();
+ 
+ alert('Preferences updated successfully!');
+ } catch (error) {
+ console.error('Error updating preferences:', error);
+ alert('Failed to update preferences. Please try again.');
+ }
+ });
 </script>
 {% endblock %} 

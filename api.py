@@ -4,6 +4,7 @@ import pymysql
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from datetime import datetime, timedelta, time as dt_time
+import time
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from typing import Optional, Dict, Tuple, List, Union
 import secrets
@@ -246,6 +247,116 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (gym_id) REFERENCES gyms(id),
                 FOREIGN KEY (coach_id) REFERENCES coaches(id),
+                FOREIGN KEY (member_id) REFERENCES members(id)
+            )
+        """)
+
+        # Create AI Calorie Tracker tables
+        
+        # Food items database
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS food_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                brand VARCHAR(100),
+                barcode VARCHAR(50),
+                calories_per_100g DECIMAL(7,2) NOT NULL,
+                protein_per_100g DECIMAL(7,2) DEFAULT 0,
+                carbs_per_100g DECIMAL(7,2) DEFAULT 0,
+                fat_per_100g DECIMAL(7,2) DEFAULT 0,
+                fiber_per_100g DECIMAL(7,2) DEFAULT 0,
+                sugar_per_100g DECIMAL(7,2) DEFAULT 0,
+                sodium_per_100g DECIMAL(7,2) DEFAULT 0,
+                category VARCHAR(100),
+                source ENUM('OpenFoodFacts', 'Manual', 'AI_Generated') DEFAULT 'Manual',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_name (name),
+                INDEX idx_barcode (barcode)
+            )
+        """)
+        
+        # Nutrition logs for tracking meals
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS nutrition_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_id INT NOT NULL,
+                log_date DATE NOT NULL,
+                meal_type ENUM('Breakfast', 'Lunch', 'Dinner', 'Snack') NOT NULL,
+                food_item_id INT,
+                custom_food_name VARCHAR(200),
+                quantity DECIMAL(7,2) NOT NULL,
+                unit ENUM('grams', 'ml', 'pieces', 'cups', 'tablespoons') DEFAULT 'grams',
+                total_calories DECIMAL(7,2) NOT NULL,
+                total_protein DECIMAL(7,2) DEFAULT 0,
+                total_carbs DECIMAL(7,2) DEFAULT 0,
+                total_fat DECIMAL(7,2) DEFAULT 0,
+                photo_url VARCHAR(500),
+                ai_confidence DECIMAL(3,2),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (member_id) REFERENCES members(id),
+                FOREIGN KEY (food_item_id) REFERENCES food_items(id),
+                INDEX idx_member_date (member_id, log_date)
+            )
+        """)
+        
+        # AI meal analysis and suggestions
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS meal_analysis (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_id INT NOT NULL,
+                analysis_date DATE NOT NULL,
+                total_calories DECIMAL(7,2) NOT NULL,
+                total_protein DECIMAL(7,2) NOT NULL,
+                total_carbs DECIMAL(7,2) NOT NULL,
+                total_fat DECIMAL(7,2) NOT NULL,
+                calorie_goal DECIMAL(7,2),
+                protein_goal DECIMAL(7,2),
+                carbs_goal DECIMAL(7,2),
+                fat_goal DECIMAL(7,2),
+                ai_feedback TEXT,
+                suggestions TEXT,
+                health_score DECIMAL(3,1),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (member_id) REFERENCES members(id),
+                INDEX idx_member_date (member_id, analysis_date)
+            )
+        """)
+        
+        # Coach nutrition comments
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS nutrition_comments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_id INT NOT NULL,
+                coach_id INT NOT NULL,
+                comment_date DATE NOT NULL,
+                comment TEXT NOT NULL,
+                nutrition_log_id INT,
+                meal_analysis_id INT,
+                comment_type ENUM('General', 'Meal_Specific', 'Goal_Adjustment') DEFAULT 'General',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (member_id) REFERENCES members(id),
+                FOREIGN KEY (coach_id) REFERENCES coaches(id),
+                FOREIGN KEY (nutrition_log_id) REFERENCES nutrition_logs(id),
+                FOREIGN KEY (meal_analysis_id) REFERENCES meal_analysis(id),
+                INDEX idx_member_date (member_id, comment_date)
+            )
+        """)
+        
+        # Member nutrition goals and preferences
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS nutrition_goals (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_id INT NOT NULL UNIQUE,
+                daily_calorie_goal DECIMAL(7,2) DEFAULT 2000,
+                daily_protein_goal DECIMAL(7,2) DEFAULT 150,
+                daily_carbs_goal DECIMAL(7,2) DEFAULT 250,
+                daily_fat_goal DECIMAL(7,2) DEFAULT 70,
+                goal_type ENUM('Weight_Loss', 'Weight_Gain', 'Maintenance', 'Muscle_Gain') DEFAULT 'Maintenance',
+                dietary_restrictions TEXT,
+                allergies TEXT,
+                preferred_cuisines TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (member_id) REFERENCES members(id)
             )
         """)
@@ -1245,6 +1356,30 @@ async def get_member_dashboard_page(request: Request):
     finally:
         cursor.close()
         conn.close()
+
+@app.get("/member/nutrition", response_class=HTMLResponse)
+async def get_member_nutrition_page(request: Request):
+    """Serve the AI Calorie Tracker page for VIP and Premium members"""
+    user = get_current_user(request)
+    if not user or user["user_type"] != "member":
+        return RedirectResponse(url="/")
+    
+    # Check VIP or Premium membership
+    membership_type = user.get('membership_type', 'Basic')
+    print(f"DEBUG: User {user.get('name')} has membership type: {membership_type}")
+    
+    if membership_type not in ['VIP', 'Premium']:
+        print(f"DEBUG: Access denied for membership type: {membership_type}")
+        return RedirectResponse(url="/member/dashboard")
+    
+    print(f"DEBUG: Access granted for {membership_type} member")
+    return templates.TemplateResponse(
+        "member/nutrition.html",
+        {
+            "request": request,
+            "user": user
+        }
+    )
 
 @app.get("/api/member/dashboard")
 async def get_member_dashboard(request: Request):
@@ -5299,6 +5434,528 @@ async def get_coach_preferences(request: Request):
     finally:
         cursor.close()
         conn.close()
+
+# ============================================
+# AI CALORIE TRACKER ENDPOINTS
+# ============================================
+
+import base64
+import io
+from PIL import Image
+# Free AI Calorie Tracker - No OpenAI API needed!
+
+# AI Calorie Tracker - Photo Analysis (Free TensorFlow.js Version)
+@app.post("/api/nutrition/analyze-photo")
+async def analyze_food_photo(
+    request: Request,
+    file: UploadFile = File(...),
+    meal_type: str = Form(...),
+    detected_foods: str = Form("[]"),
+    notes: str = Form("")
+):
+    """Process food photo analysis results from TensorFlow.js frontend"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    # Check VIP or Premium membership
+    if user.get('membership_type') not in ['VIP', 'Premium']:
+        raise HTTPException(status_code=403, detail="VIP or Premium membership required for AI Calorie Tracker")
+    
+    try:
+        # Parse detected foods from frontend TensorFlow.js analysis
+        try:
+            foods_data = json.loads(detected_foods)
+        except json.JSONDecodeError:
+            foods_data = []
+        
+        if not foods_data:
+            # If no foods detected, create a default entry
+            foods_data = [{
+                "name": "Unknown Food Item",
+                "quantity": 100,
+                "calories": 200,
+                "protein": 8,
+                "carbs": 25,
+                "fat": 8,
+                "confidence": 0.3
+            }]
+        
+        # Save to database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        total_calories = 0
+        total_protein = 0
+        total_carbs = 0
+        total_fat = 0
+        
+        # Save photo file (optional - for basic tracking)
+        photo_filename = f"nutrition_{user['id']}_{int(time.time())}.jpg"
+        
+        for food in foods_data:
+            # Save each food item to nutrition_logs
+            cursor.execute("""
+                INSERT INTO nutrition_logs 
+                (member_id, log_date, meal_type, custom_food_name, quantity, unit,
+                 total_calories, total_protein, total_carbs, total_fat, 
+                 photo_url, ai_confidence, notes)
+                VALUES (%s, CURDATE(), %s, %s, %s, 'grams', %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                user['id'],
+                meal_type,
+                food['name'],
+                food['quantity'],
+                food['calories'],
+                food['protein'],
+                food['carbs'],
+                food['fat'],
+                photo_filename,
+                food['confidence'],
+                notes
+            ))
+            
+            total_calories += float(food['calories'])
+            total_protein += float(food['protein'])
+            total_carbs += float(food['carbs'])
+            total_fat += float(food['fat'])
+        
+        # Generate free AI feedback and save meal analysis
+        ai_feedback = generate_free_nutrition_feedback(user['id'], total_calories, total_protein, total_carbs, total_fat)
+        suggestions = "Great job tracking your nutrition! Keep logging your meals for better insights."
+        
+        cursor.execute("""
+            INSERT INTO meal_analysis 
+            (member_id, analysis_date, total_calories, total_protein, total_carbs, total_fat,
+             ai_feedback, suggestions, health_score)
+            VALUES (%s, CURDATE(), %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            total_calories = total_calories + VALUES(total_calories),
+            total_protein = total_protein + VALUES(total_protein),
+            total_carbs = total_carbs + VALUES(total_carbs),
+            total_fat = total_fat + VALUES(total_fat),
+            ai_feedback = VALUES(ai_feedback),
+            suggestions = VALUES(suggestions),
+            health_score = VALUES(health_score)
+        """, (
+            user['id'],
+            total_calories,
+            total_protein,
+            total_carbs,
+            total_fat,
+            ai_feedback,
+            suggestions,
+            calculate_health_score(total_calories, total_protein, total_carbs, total_fat)
+        ))
+        
+        conn.commit()
+        
+        return {
+            "success": True,
+            "detected_foods": foods_data,
+            "total_nutrition": {
+                "calories": total_calories,
+                "protein": total_protein,
+                "carbs": total_carbs,
+                "fat": total_fat
+            },
+            "ai_feedback": ai_feedback,
+            "suggestions": suggestions
+        }
+        
+    except Exception as e:
+        print(f"Error analyzing food photo: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+# Food Search using Open Food Facts API
+@app.get("/api/nutrition/search-food")
+async def search_food(
+    request: Request,
+    query: str = Query(..., description="Food name or barcode"),
+    limit: int = Query(10, description="Number of results to return")
+):
+    """Search for food items using Open Food Facts API"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    try:
+        # Check if query is a barcode (numeric)
+        if query.isdigit():
+            # Barcode lookup
+            url = f"https://world.openfoodfacts.org/api/v2/product/{query}"
+        else:
+            # Text search
+            url = f"https://world.openfoodfacts.org/cgi/search.pl"
+            params = {
+                "search_terms": query,
+                "page_size": limit,
+                "json": 1,
+                "fields": "product_name,nutriments,brands,categories,image_url"
+            }
+        
+        # Make request to Open Food Facts API
+        response = requests.get(url, params=params if not query.isdigit() else None, timeout=10)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        if query.isdigit():
+            # Single product response
+            if data.get('status') == 1:
+                product = data['product']
+                foods = [{
+                    "name": product.get('product_name', 'Unknown'),
+                    "brand": product.get('brands', ''),
+                    "calories_per_100g": product.get('nutriments', {}).get('energy-kcal_100g', 0),
+                    "protein_per_100g": product.get('nutriments', {}).get('proteins_100g', 0),
+                    "carbs_per_100g": product.get('nutriments', {}).get('carbohydrates_100g', 0),
+                    "fat_per_100g": product.get('nutriments', {}).get('fat_100g', 0),
+                    "image_url": product.get('image_url', ''),
+                    "barcode": query,
+                    "source": "OpenFoodFacts"
+                }]
+            else:
+                foods = []
+        else:
+            # Search results
+            foods = []
+            for product in data.get('products', []):
+                foods.append({
+                    "name": product.get('product_name', 'Unknown'),
+                    "brand": product.get('brands', ''),
+                    "calories_per_100g": product.get('nutriments', {}).get('energy-kcal_100g', 0),
+                    "protein_per_100g": product.get('nutriments', {}).get('proteins_100g', 0),
+                    "carbs_per_100g": product.get('nutriments', {}).get('carbohydrates_100g', 0),
+                    "fat_per_100g": product.get('nutriments', {}).get('fat_100g', 0),
+                    "image_url": product.get('image_url', ''),
+                    "barcode": product.get('code', ''),
+                    "source": "OpenFoodFacts"
+                })
+        
+        return {
+            "success": True,
+            "foods": foods,
+            "count": len(foods)
+        }
+        
+    except Exception as e:
+        print(f"Error searching food: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Add food manually
+@app.post("/api/nutrition/add-food")
+async def add_food_manually(
+    request: Request,
+    meal_type: str = Form(...),
+    food_name: str = Form(...),
+    quantity: float = Form(...),
+    unit: str = Form("grams"),
+    calories: float = Form(...),
+    protein: float = Form(0),
+    carbs: float = Form(0),
+    fat: float = Form(0),
+    notes: str = Form("")
+):
+    """Add food item manually"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    # Check VIP or Premium membership
+    if user.get('membership_type') not in ['VIP', 'Premium']:
+        raise HTTPException(status_code=403, detail="VIP or Premium membership required for AI Calorie Tracker")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Save to nutrition_logs
+        cursor.execute("""
+            INSERT INTO nutrition_logs 
+            (member_id, log_date, meal_type, custom_food_name, quantity, unit,
+             total_calories, total_protein, total_carbs, total_fat, notes)
+            VALUES (%s, CURDATE(), %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            user['id'],
+            meal_type,
+            food_name,
+            quantity,
+            unit,
+            calories,
+            protein,
+            carbs,
+            fat,
+            notes
+        ))
+        
+        # Update daily meal analysis
+        ai_feedback = generate_free_nutrition_feedback(user['id'], calories, protein, carbs, fat)
+        
+        cursor.execute("""
+            INSERT INTO meal_analysis 
+            (member_id, analysis_date, total_calories, total_protein, total_carbs, total_fat,
+             ai_feedback, health_score)
+            VALUES (%s, CURDATE(), %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            total_calories = total_calories + VALUES(total_calories),
+            total_protein = total_protein + VALUES(total_protein),
+            total_carbs = total_carbs + VALUES(total_carbs),
+            total_fat = total_fat + VALUES(total_fat),
+            ai_feedback = VALUES(ai_feedback),
+            health_score = VALUES(health_score)
+        """, (
+            user['id'],
+            calories,
+            protein,
+            carbs,
+            fat,
+            ai_feedback,
+            calculate_health_score(calories, protein, carbs, fat)
+        ))
+        
+        conn.commit()
+        
+        return {
+            "success": True,
+            "message": "Food logged successfully",
+            "nutrition": {
+                "calories": calories,
+                "protein": protein,
+                "carbs": carbs,
+                "fat": fat
+            }
+        }
+        
+    except Exception as e:
+        print(f"Error adding food manually: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+# Get nutrition dashboard data
+@app.get("/api/nutrition/dashboard/{member_id}")
+async def get_nutrition_dashboard(request: Request, member_id: int):
+    """Get nutrition dashboard data for member"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    # Check access permissions
+    if user['user_type'] == 'member' and user['id'] != member_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get today's nutrition
+        cursor.execute("""
+            SELECT meal_type, 
+                   SUM(total_calories) as calories,
+                   SUM(total_protein) as protein,
+                   SUM(total_carbs) as carbs,
+                   SUM(total_fat) as fat
+            FROM nutrition_logs 
+            WHERE member_id = %s AND log_date = CURDATE()
+            GROUP BY meal_type
+        """, (member_id,))
+        today_meals = cursor.fetchall()
+        
+        # Get nutrition goals
+        cursor.execute("""
+            SELECT daily_calorie_goal, daily_protein_goal, daily_carbs_goal, daily_fat_goal,
+                   goal_type, dietary_restrictions, allergies
+            FROM nutrition_goals 
+            WHERE member_id = %s
+        """, (member_id,))
+        goals = cursor.fetchone() or {
+            'daily_calorie_goal': 2000,
+            'daily_protein_goal': 150,
+            'daily_carbs_goal': 250,
+            'daily_fat_goal': 70,
+            'goal_type': 'Maintenance'
+        }
+        
+        # Get recent meal analysis
+        cursor.execute("""
+            SELECT * FROM meal_analysis 
+            WHERE member_id = %s 
+            ORDER BY analysis_date DESC 
+            LIMIT 7
+        """, (member_id,))
+        weekly_analysis = cursor.fetchall()
+        
+        # Calculate totals for today
+        total_calories = sum(meal['calories'] or 0 for meal in today_meals)
+        total_protein = sum(meal['protein'] or 0 for meal in today_meals)
+        total_carbs = sum(meal['carbs'] or 0 for meal in today_meals)
+        total_fat = sum(meal['fat'] or 0 for meal in today_meals)
+        
+        return {
+            "success": True,
+            "today": {
+                "meals": today_meals,
+                "totals": {
+                    "calories": total_calories,
+                    "protein": total_protein,
+                    "carbs": total_carbs,
+                    "fat": total_fat
+                },
+                "goals": goals,
+                "progress": {
+                    "calories": (total_calories / goals['daily_calorie_goal']) * 100,
+                    "protein": (total_protein / goals['daily_protein_goal']) * 100,
+                    "carbs": (total_carbs / goals['daily_carbs_goal']) * 100,
+                    "fat": (total_fat / goals['daily_fat_goal']) * 100
+                }
+            },
+            "weekly_analysis": weekly_analysis
+        }
+        
+    except Exception as e:
+        print(f"Error getting nutrition dashboard: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+# Helper functions - FREE VERSION
+def generate_free_nutrition_feedback(member_id: int, calories: float, protein: float, carbs: float, fat: float) -> str:
+    """Generate free nutrition feedback using rule-based logic"""
+    try:
+        # Get member goals
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT daily_calorie_goal, daily_protein_goal, daily_carbs_goal, daily_fat_goal,
+                   goal_type FROM nutrition_goals WHERE member_id = %s
+        """, (member_id,))
+        goals = cursor.fetchone()
+        
+        if not goals:
+            goals = {
+                'daily_calorie_goal': 2000,
+                'daily_protein_goal': 150,
+                'daily_carbs_goal': 250,
+                'daily_fat_goal': 70,
+                'goal_type': 'Maintenance'
+            }
+        
+        # Calculate percentages
+        calorie_percentage = (calories / goals['daily_calorie_goal']) * 100
+        protein_percentage = (protein / goals['daily_protein_goal']) * 100
+        
+        # Generate rule-based feedback
+        feedback_parts = []
+        
+        # Calorie feedback
+        if calorie_percentage < 30:
+            feedback_parts.append("You're off to a good start today!")
+        elif calorie_percentage < 70:
+            feedback_parts.append("You're making great progress toward your daily goals!")
+        elif calorie_percentage < 100:
+            feedback_parts.append("You're almost at your calorie target for today!")
+        else:
+            feedback_parts.append("You've reached your calorie goal - well done!")
+        
+        # Protein feedback
+        if protein_percentage < 50:
+            feedback_parts.append("Consider adding more protein-rich foods to your next meal.")
+        elif protein_percentage > 80:
+            feedback_parts.append("Excellent protein intake today!")
+        
+        # Goal-based advice
+        goal_advice = {
+            'Weight_Loss': "Stay hydrated and focus on whole foods for sustainable weight loss.",
+            'Weight_Gain': "Don't forget to include healthy fats and complex carbs for quality weight gain.",
+            'Muscle_Gain': "Your protein intake is key for muscle development - keep it consistent!",
+            'Maintenance': "Maintaining a balanced approach to nutrition - you're doing great!"
+        }
+        
+        if goals['goal_type'] in goal_advice:
+            feedback_parts.append(goal_advice[goals['goal_type']])
+        
+        return " ".join(feedback_parts)
+        
+    except Exception as e:
+        print(f"Error generating feedback: {str(e)}")
+        return "Keep up the great work with your nutrition tracking!"
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+def calculate_health_score(calories: float, protein: float, carbs: float, fat: float) -> float:
+    """Calculate a simple health score based on macronutrient balance"""
+    try:
+        # Simple scoring based on balanced macronutrient ratios
+        total_macros = protein + carbs + fat
+        if total_macros == 0:
+            return 5.0
+        
+        protein_percent = (protein * 4) / calories * 100  # 4 calories per gram protein
+        carbs_percent = (carbs * 4) / calories * 100      # 4 calories per gram carbs  
+        fat_percent = (fat * 9) / calories * 100          # 9 calories per gram fat
+        
+        # Ideal ranges: Protein 20-30%, Carbs 45-65%, Fat 20-35%
+        protein_score = max(0, 10 - abs(25 - protein_percent) / 2.5)
+        carbs_score = max(0, 10 - abs(55 - carbs_percent) / 5)
+        fat_score = max(0, 10 - abs(27.5 - fat_percent) / 2.75)
+        
+        return round((protein_score + carbs_score + fat_score) / 3, 1)
+        
+    except:
+        return 5.0
+
+# Coach nutrition endpoints
+@app.get("/api/coach/nutrition/members")
+async def get_coach_nutrition_members(request: Request):
+    """Get list of coach's members with nutrition data"""
+    user = get_current_user(request)
+    if not user or user['user_type'] != 'coach':
+        raise HTTPException(status_code=403, detail="Coach access required")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get coach's members with recent nutrition data
+        cursor.execute("""
+            SELECT m.id, m.name, m.email, m.membership_type,
+                   ma.analysis_date, ma.total_calories, ma.health_score,
+                   COUNT(nl.id) as entries_today
+            FROM members m
+            JOIN member_coach mc ON m.id = mc.member_id
+            LEFT JOIN meal_analysis ma ON m.id = ma.member_id AND ma.analysis_date = CURDATE()
+            LEFT JOIN nutrition_logs nl ON m.id = nl.member_id AND nl.log_date = CURDATE()
+            WHERE mc.coach_id = %s AND m.membership_type IN ('VIP', 'Premium')
+            GROUP BY m.id, m.name, m.email, m.membership_type, ma.analysis_date, ma.total_calories, ma.health_score
+            ORDER BY m.name
+        """, (user['id'],))
+        
+        members = cursor.fetchall()
+        
+        return {
+            "success": True,
+            "members": members
+        }
+        
+    except Exception as e:
+        print(f"Error getting coach nutrition members: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
 
 if __name__ == "__main__":
     import uvicorn

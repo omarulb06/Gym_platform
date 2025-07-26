@@ -2,369 +2,364 @@
 
 {% block title %}Coaches - PowerFit{% endblock %}
 
+{% block content_title %}
+ <div class="mb-4 sm:mb-6 lg:mb-8 animate-fade-in">
+ <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent mb-2">
+ Coaches Management 👨‍🏋️
+ </h1>
+ <p class="text-gray-600 text-lg">Manage your gym's coaching staff and performance</p>
+ </div>
+{% endblock %}
+
 {% block content %}
-    <!-- Coaches Overview -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h3 class="text-lg leading-6 font-medium text-gray-900">Coaches</h3>
-                    <p class="mt-1 text-sm text-gray-500">Manage your gym's coaches</p>
-                </div>
-                <button onclick="openAddCoachModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
-                    <i class="fas fa-plus mr-2"></i> Add Coach
-                </button>
-            </div>
-        </div>
-    </div>
+ <!-- Coaches Overview -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl mb-6 sm:mb-8 border border-white/20 hover:shadow-2xl transition-all duration-300 animate-scale-in">
+ <div class="px-8 py-8 sm:p-10">
+ <div class="flex justify-between items-center">
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+ <i class="fas fa-user-tie text-lg sm:text-xl lg:text-2xl"></i>
+ </div>
+ <div>
+ <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Coaching Team</h3>
+ <p class="text-gray-600 mt-1">Manage your gym's coaching staff</p>
+ </div>
+ </div>
+ <button onclick="openAddCoachModal()" class="bg-gradient-to-r from-primary-500 to-blue-600 text-white px-3 py-2 sm:px-4 sm:px-6 sm:py-3 rounded-xl hover:from-primary-600 hover:to-blue-700 focus:outline-none transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 font-medium">
+ <i class="fas fa-plus mr-2"></i> Add Coach
+ </button>
+ </div>
+ </div>
+ </div>
 
-    <!-- Search and Filters -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="flex flex-wrap gap-4 mb-4">
-                <div class="flex-1 min-w-[200px]">
-                    <input type="text" id="searchInput" placeholder="Search coaches..." 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
-                </div>
-                <div class="flex-1 min-w-[200px]">
-                    <input type="text" id="specializationInput" placeholder="Filter by specialization..." 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
-                </div>
-                <div class="flex-1 min-w-[200px]">
-                    <select id="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
-                        <option value="all">All Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Search and Filters -->
+ <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="flex flex-wrap gap-4 mb-4">
+ <div class="flex-1 min-w-[200px]">
+ <input type="text" id="searchInput" placeholder="Search coaches..." 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
+ </div>
+ <div class="flex-1 min-w-[200px]">
+ <input type="text" id="specializationInput" placeholder="Filter by specialization..." 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
+ </div>
+ <div class="flex-1 min-w-[200px]">
+ <select id="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
+ <option value="all">All Status</option>
+ <option value="Active">Active</option>
+ <option value="Inactive">Inactive</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- Coaches List -->
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-4 py-5 sm:p-6">
-            <div id="coachesList" class="space-y-4">
-                <!-- Coaches will be loaded here -->
-            </div>
-        </div>
-    </div>
+ <!-- Coaches List -->
+ <div class="bg-white shadow rounded-lg">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div id="coachesList" class="space-y-4">
+ <!-- Coaches will be loaded here -->
+ </div>
+ </div>
+ </div>
 
-    <!-- Add Coach Modal -->
-    <div id="addCoachModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-                <div class="px-4 py-5 sm:p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Add New Coach</h3>
-                    <form id="addCoachForm" class="space-y-4">
-                        <div>
-                            <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
-                            <input type="text" id="name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                            <input type="email" id="email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label for="phone" class="block text-sm font-medium text-gray-700">Phone</label>
-                            <input type="tel" id="phone" name="phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label for="specialization" class="block text-sm font-medium text-gray-700">Specialization</label>
-                            <select id="specialization" name="specialization" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">Select Specialization</option>
-                                <option value="Fitness Training">Fitness Training</option>
-                                <option value="Yoga">Yoga</option>
-                                <option value="CrossFit">CrossFit</option>
-                                <option value="Nutrition">Nutrition</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="experience" class="block text-sm font-medium text-gray-700">Experience (years)</label>
-                            <input type="number" id="experience" name="experience" required min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
-                        <div class="flex justify-end space-x-3">
-                            <button type="button" onclick="closeAddCoachModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">
-                                Cancel
-                            </button>
-                            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
-                                Add Coach
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Add Coach Modal -->
+ <div id="addCoachModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
+ <div class="flex items-center justify-center min-h-screen p-4">
+ <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <h3 class="text-lg font-medium text-gray-900 mb-4">Add New Coach</h3>
+ <form id="addCoachForm" class="space-y-4">
+ <div>
+ <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+ <input type="text" id="name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
+ <div>
+ <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+ <input type="email" id="email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
+ <div>
+ <label for="phone" class="block text-sm font-medium text-gray-700">Phone</label>
+ <input type="tel" id="phone" name="phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
+ <div>
+ <label for="specialization" class="block text-sm font-medium text-gray-700">Specialization</label>
+ <select id="specialization" name="specialization" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <option value="">Select Specialization</option>
+ <option value="Fitness Training">Fitness Training</option>
+ <option value="Yoga">Yoga</option>
+ <option value="CrossFit">CrossFit</option>
+ <option value="Nutrition">Nutrition</option>
+ </select>
+ </div>
+ <div>
+ <label for="experience" class="block text-sm font-medium text-gray-700">Experience (years)</label>
+ <input type="number" id="experience" name="experience" required min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
+ <div class="flex justify-end space-x-3">
+ <button type="button" onclick="closeAddCoachModal()" class="bg-gray-200 text-gray-700 px-3 py-2 sm:px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:outline-none
+ Cancel
+ </button>
+ <button type="submit" class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ Add Coach
+ </button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- Edit Coach Modal -->
-    <div id="editCoachModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
-                <div class="px-4 py-5 sm:p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Edit Coach</h3>
-                    <form id="editCoachForm" class="space-y-4">
-                        <input type="hidden" id="edit_coach_id">
-                        <div>
-                            <label for="edit_name" class="block text-sm font-medium text-gray-700">Name</label>
-                            <input type="text" id="edit_name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label for="edit_email" class="block text-sm font-medium text-gray-700">Email</label>
-                            <input type="email" id="edit_email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label for="edit_phone" class="block text-sm font-medium text-gray-700">Phone</label>
-                            <input type="tel" id="edit_phone" name="phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label for="edit_specialization" class="block text-sm font-medium text-gray-700">Specialization</label>
-                            <select id="edit_specialization" name="specialization" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="Fitness Training">Fitness Training</option>
-                                <option value="Yoga">Yoga</option>
-                                <option value="CrossFit">CrossFit</option>
-                                <option value="Nutrition">Nutrition</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label for="edit_experience" class="block text-sm font-medium text-gray-700">Experience (years)</label>
-                            <input type="number" id="edit_experience" name="experience" required min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label for="edit_status" class="block text-sm font-medium text-gray-700">Status</label>
-                            <select id="edit_status" name="status" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                            </select>
-                        </div>
-                        <div class="flex justify-end space-x-3">
-                            <button type="button" onclick="closeEditCoachModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50">
-                                Cancel
-                            </button>
-                            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
-                                Save Changes
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Edit Coach Modal -->
+ <div id="editCoachModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
+ <div class="flex items-center justify-center min-h-screen p-4">
+ <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <h3 class="text-lg font-medium text-gray-900 mb-4">Edit Coach</h3>
+ <form id="editCoachForm" class="space-y-4">
+ <input type="hidden" id="edit_coach_id">
+ <div>
+ <label for="edit_name" class="block text-sm font-medium text-gray-700">Name</label>
+ <input type="text" id="edit_name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
+ <div>
+ <label for="edit_email" class="block text-sm font-medium text-gray-700">Email</label>
+ <input type="email" id="edit_email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
+ <div>
+ <label for="edit_phone" class="block text-sm font-medium text-gray-700">Phone</label>
+ <input type="tel" id="edit_phone" name="phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
+ <div>
+ <label for="edit_specialization" class="block text-sm font-medium text-gray-700">Specialization</label>
+ <select id="edit_specialization" name="specialization" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <option value="Fitness Training">Fitness Training</option>
+ <option value="Yoga">Yoga</option>
+ <option value="CrossFit">CrossFit</option>
+ <option value="Nutrition">Nutrition</option>
+ </select>
+ </div>
+ <div>
+ <label for="edit_experience" class="block text-sm font-medium text-gray-700">Experience (years)</label>
+ <input type="number" id="edit_experience" name="experience" required min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
+ <div>
+ <label for="edit_status" class="block text-sm font-medium text-gray-700">Status</label>
+ <select id="edit_status" name="status" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <option value="Active">Active</option>
+ <option value="Inactive">Inactive</option>
+ </select>
+ </div>
+ <div class="flex justify-end space-x-3">
+ <button type="button" onclick="closeEditCoachModal()" class="bg-gray-200 text-gray-700 px-3 py-2 sm:px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:outline-none
+ Cancel
+ </button>
+ <button type="submit" class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ Save Changes
+ </button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
+ </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    let coaches = [];
-    let filteredCoaches = [];
+ let coaches = [];
+ let filteredCoaches = [];
 
-    // Load coaches data
-    async function loadCoaches() {
-        try {
-            const response = await fetch('/api/gym/coaches');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            coaches = await response.json();
-            filteredCoaches = [...coaches];
-            updateCoachesTable();
-        } catch (error) {
-            console.error('Error loading coaches:', error);
-        }
-    }
+ // Load coaches data
+ async function loadCoaches() {
+ try {
+ const response = await fetch('/api/gym/coaches');
+ if (!response.ok) {
+ throw new Error(`HTTP error! status: ${response.status}`);
+ }
+ coaches = await response.json();
+ filteredCoaches = [...coaches];
+ updateCoachesTable();
+ } catch (error) {
+ console.error('Error loading coaches:', error);
+ }
+ }
 
-    // Filter coaches
-    function filterCoaches() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        const specializationTerm = document.getElementById('specializationInput').value.toLowerCase();
-        const statusFilter = document.getElementById('statusFilter').value;
+ // Filter coaches
+ function filterCoaches() {
+ const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+ const specializationTerm = document.getElementById('specializationInput').value.toLowerCase();
+ const statusFilter = document.getElementById('statusFilter').value;
 
-        filteredCoaches = coaches.filter(coach => {
-            const matchesSearch = coach.name.toLowerCase().includes(searchTerm) || 
-                                coach.email.toLowerCase().includes(searchTerm);
-            const matchesSpecialization = coach.specialization.toLowerCase().includes(specializationTerm);
-            const matchesStatus = statusFilter === 'all' || coach.status === statusFilter;
+ filteredCoaches = coaches.filter(coach => {
+ const matchesSearch = coach.name.toLowerCase().includes(searchTerm) || 
+ coach.email.toLowerCase().includes(searchTerm);
+ const matchesSpecialization = coach.specialization.toLowerCase().includes(specializationTerm);
+ const matchesStatus = statusFilter === 'all' || coach.status === statusFilter;
 
-            return matchesSearch && matchesSpecialization && matchesStatus;
-        });
+ return matchesSearch && matchesSpecialization && matchesStatus;
+ });
 
-        updateCoachesTable();
-    }
+ updateCoachesTable();
+ }
 
-    // Add event listeners
-    document.addEventListener('DOMContentLoaded', () => {
-        loadCoaches();
-        
-        document.getElementById('searchInput').addEventListener('input', filterCoaches);
-        document.getElementById('specializationInput').addEventListener('input', filterCoaches);
-        document.getElementById('statusFilter').addEventListener('change', filterCoaches);
-    });
+ // Add event listeners
+ document.addEventListener('DOMContentLoaded', () => {
+ loadCoaches();
+ 
+ document.getElementById('searchInput').addEventListener('input', filterCoaches);
+ document.getElementById('specializationInput').addEventListener('input', filterCoaches);
+ document.getElementById('statusFilter').addEventListener('change', filterCoaches);
+ });
 
-    // Modal functions
-    function openAddCoachModal() {
-        document.getElementById('addCoachModal').classList.remove('hidden');
-    }
+ // Modal functions
+ function openAddCoachModal() {
+ document.getElementById('addCoachModal').classList.remove('hidden');
+ }
 
-    function closeAddCoachModal() {
-        document.getElementById('addCoachModal').classList.add('hidden');
-    }
+ function closeAddCoachModal() {
+ document.getElementById('addCoachModal').classList.add('hidden');
+ }
 
-    // Add coach form submission
-    document.getElementById('addCoachForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const formData = {
-            name: document.getElementById('name').value,
-            email: document.getElementById('email').value,
-            phone: document.getElementById('phone').value,
-            specialization: document.getElementById('specialization').value,
-            experience: document.getElementById('experience').value
-        };
-        
-        try {
-            const response = await fetch('/api/gym/coaches', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-            
-            if (response.ok) {
-                closeAddCoachModal();
-                loadCoaches();
-            } else {
-                const error = await response.json();
-                alert(error.detail || 'Error adding coach');
-            }
-        } catch (error) {
-            console.error('Error adding coach:', error);
-            alert('Error adding coach');
-        }
-    });
+ // Add coach form submission
+ document.getElementById('addCoachForm').addEventListener('submit', async (e) => {
+ e.preventDefault();
+ 
+ const formData = {
+ name: document.getElementById('name').value,
+ email: document.getElementById('email').value,
+ phone: document.getElementById('phone').value,
+ specialization: document.getElementById('specialization').value,
+ experience: document.getElementById('experience').value
+ };
+ 
+ try {
+ const response = await fetch('/api/gym/coaches', {
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json'
+ },
+ body: JSON.stringify(formData)
+ });
+ 
+ if (response.ok) {
+ closeAddCoachModal();
+ loadCoaches();
+ } else {
+ const error = await response.json();
+ alert(error.detail || 'Error adding coach');
+ }
+ } catch (error) {
+ console.error('Error adding coach:', error);
+ alert('Error adding coach');
+ }
+ });
 
-    // Update coaches table
-    function updateCoachesTable() {
-        const coachesListDiv = document.getElementById('coachesList');
-        if (filteredCoaches.length === 0) {
-            coachesListDiv.innerHTML = '<p class="text-gray-500">No coaches found.</p>';
-        } else {
-            coachesListDiv.innerHTML = filteredCoaches.map(coach => `
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                        <h4 class="font-medium text-gray-900">${coach.name}</h4>
-                        <p class="text-sm text-gray-500">${coach.email}</p>
-                        <p class="text-xs text-gray-400">${coach.specialization}</p>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${coach.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                            ${coach.status}
-                        </span>
-                        <button onclick="openEditCoachModal(${JSON.stringify(coach).replace(/"/g, '&quot;')})" class="text-indigo-600 hover:text-indigo-900">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="deleteCoach(${coach.id})" class="text-red-600 hover:text-red-900">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-    }
+ // Update coaches table
+ function updateCoachesTable() {
+ const coachesListDiv = document.getElementById('coachesList');
+ if (filteredCoaches.length === 0) {
+ coachesListDiv.innerHTML = '<p class="text-gray-500">No coaches found.</p>';
+ } else {
+ coachesListDiv.innerHTML = filteredCoaches.map(coach => `
+ <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+ <div>
+ <h4 class="font-medium text-gray-900">${coach.name}</h4>
+ <p class="text-sm text-gray-500">${coach.email}</p>
+ <p class="text-xs text-gray-400">${coach.specialization}</p>
+ </div>
+ <div class="flex items-center space-x-2">
+ <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${coach.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+ ${coach.status}
+ </span>
+ <button onclick="openEditCoachModal(${JSON.stringify(coach).replace(/"/g, '&quot;')})" class="text-indigo-600 hover:text-indigo-900">
+ <i class="fas fa-edit"></i>
+ </button>
+ <button onclick="deleteCoach(${coach.id})" class="text-red-600 hover:text-red-900">
+ <i class="fas fa-trash"></i>
+ </button>
+ </div>
+ </div>
+ `).join('');
+ }
+ }
 
-    // Edit coach functions
-    function openEditCoachModal(coach) {
-        document.getElementById('edit_coach_id').value = coach.id;
-        document.getElementById('edit_name').value = coach.name;
-        document.getElementById('edit_email').value = coach.email;
-        document.getElementById('edit_phone').value = coach.phone;
-        document.getElementById('edit_specialization').value = coach.specialization;
-        document.getElementById('edit_experience').value = coach.experience;
-        document.getElementById('edit_status').value = coach.status;
-        document.getElementById('editCoachModal').classList.remove('hidden');
-    }
+ // Edit coach functions
+ function openEditCoachModal(coach) {
+ document.getElementById('edit_coach_id').value = coach.id;
+ document.getElementById('edit_name').value = coach.name;
+ document.getElementById('edit_email').value = coach.email;
+ document.getElementById('edit_phone').value = coach.phone;
+ document.getElementById('edit_specialization').value = coach.specialization;
+ document.getElementById('edit_experience').value = coach.experience;
+ document.getElementById('edit_status').value = coach.status;
+ document.getElementById('editCoachModal').classList.remove('hidden');
+ }
 
-    function closeEditCoachModal() {
-        document.getElementById('editCoachModal').classList.add('hidden');
-    }
+ function closeEditCoachModal() {
+ document.getElementById('editCoachModal').classList.add('hidden');
+ }
 
-    // Edit coach form submission
-    document.getElementById('editCoachForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const coachId = document.getElementById('edit_coach_id').value;
-        const formData = {
-            name: document.getElementById('edit_name').value,
-            email: document.getElementById('edit_email').value,
-            phone: document.getElementById('edit_phone').value,
-            specialization: document.getElementById('edit_specialization').value,
-            experience: document.getElementById('edit_experience').value,
-            status: document.getElementById('edit_status').value
-        };
-        
-        try {
-            const response = await fetch(`/api/gym/coaches/${coachId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-            
-            if (response.ok) {
-                closeEditCoachModal();
-                loadCoaches();
-            } else {
-                const error = await response.json();
-                alert(error.detail || 'Error updating coach');
-            }
-        } catch (error) {
-            console.error('Error updating coach:', error);
-            alert('Error updating coach');
-        }
-    });
+ // Edit coach form submission
+ document.getElementById('editCoachForm').addEventListener('submit', async (e) => {
+ e.preventDefault();
+ 
+ const coachId = document.getElementById('edit_coach_id').value;
+ const formData = {
+ name: document.getElementById('edit_name').value,
+ email: document.getElementById('edit_email').value,
+ phone: document.getElementById('edit_phone').value,
+ specialization: document.getElementById('edit_specialization').value,
+ experience: document.getElementById('edit_experience').value,
+ status: document.getElementById('edit_status').value
+ };
+ 
+ try {
+ const response = await fetch(`/api/gym/coaches/${coachId}`, {
+ method: 'PUT',
+ headers: {
+ 'Content-Type': 'application/json'
+ },
+ body: JSON.stringify(formData)
+ });
+ 
+ if (response.ok) {
+ closeEditCoachModal();
+ loadCoaches();
+ } else {
+ const error = await response.json();
+ alert(error.detail || 'Error updating coach');
+ }
+ } catch (error) {
+ console.error('Error updating coach:', error);
+ alert('Error updating coach');
+ }
+ });
 
-    // Delete coach function
-    async function deleteCoach(coachId) {
-        if (!confirm('Are you sure you want to delete this coach?')) {
-            return;
-        }
-        
-        try {
-            const response = await fetch(`/api/gym/coaches/${coachId}`, {
-                method: 'DELETE'
-            });
-            
-            if (response.ok) {
-                loadCoaches();
-            } else {
-                const error = await response.json();
-                alert(error.detail || 'Error deleting coach');
-            }
-        } catch (error) {
-            console.error('Error deleting coach:', error);
-            alert('Error deleting coach');
-        }
-    }
+ // Delete coach function
+ async function deleteCoach(coachId) {
+ if (!confirm('Are you sure you want to delete this coach?')) {
+ return;
+ }
+ 
+ try {
+ const response = await fetch(`/api/gym/coaches/${coachId}`, {
+ method: 'DELETE'
+ });
+ 
+ if (response.ok) {
+ loadCoaches();
+ } else {
+ const error = await response.json();
+ alert(error.detail || 'Error deleting coach');
+ }
+ } catch (error) {
+ console.error('Error deleting coach:', error);
+ alert('Error deleting coach');
+ }
+ }
 </script>
 {% endblock %}
 
-{% block sidebar %}
-<a href="/gym/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-home mr-2"></i> Dashboard
-</a>
-<a href="/gym/members" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-users mr-2"></i> Members
-</a>
-<a href="/gym/coaches" class="block py-2 px-4 bg-indigo-700">
-    <i class="fas fa-user-tie mr-2"></i> Coaches
-</a>
-<a href="/gym/sessions" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-calendar mr-2"></i> Sessions
-</a>
-<a href="/gym/reports" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-chart-bar mr-2"></i> Reports
-</a>
-<a href="/gym/messages" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-envelope mr-2"></i> Messages
-</a>
-{% endblock %} 
+ 

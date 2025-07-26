@@ -2,164 +2,169 @@
 
 {% block title %}My Members - PowerFit{% endblock %}
 
+{% block content_title %}
+ <div class="mb-4 sm:mb-6 lg:mb-8 animate-fade-in">
+ <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent mb-2">
+ My Members 👥
+ </h1>
+ <p class="text-gray-600 text-lg">View and manage your assigned members</p>
+ </div>
+{% endblock %}
+
 {% block content %}
-    <!-- Welcome Section -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">My Members</h3>
-            <p class="mt-1 text-sm text-gray-500">View and manage your assigned members</p>
-        </div>
-    </div>
+ <!-- Welcome Section -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl mb-6 sm:mb-8 border border-white/20 hover:shadow-2xl transition-all duration-300 animate-scale-in">
+ <div class="px-8 py-8 sm:p-10">
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+ <i class="fas fa-users text-lg sm:text-xl lg:text-2xl"></i>
+ </div>
+ <div>
+ <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Member Management</h3>
+ <p class="text-gray-600 mt-1">Track progress and manage your coaching clients</p>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- Search and Filter -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0 md:space-x-4">
-                <div class="flex-1 min-w-0">
-                    <div class="relative rounded-md shadow-sm">
-                        <input type="text" id="searchInput" 
-                               class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-4 pr-12 sm:text-sm border-gray-300 rounded-md"
-                               placeholder="Search members...">
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <select id="membershipFilter" 
-                            class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md sm:text-sm">
-                        <option value="all">All Memberships</option>
-                        <option value="Basic">Basic</option>
-                        <option value="Premium">Premium</option>
-                        <option value="VIP">VIP</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </div>
+ <!-- Search and Filter -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl mb-6 sm:mb-8 border border-white/20 hover:shadow-2xl transition-all duration-300 animate-bounce-in">
+ <div class="px-8 py-8 sm:p-10">
+ <div class="flex items-center space-x-2 sm:space-x-4 mb-4 sm:mb-6">
+ <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center text-white shadow-lg">
+ <i class="fas fa-filter text-xl"></i>
+ </div>
+ <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Search & Filter</h3>
+ </div>
+             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 sm:space-x-3 sm:space-x-6">
+ <div class="flex-1 min-w-0">
+ <div class="relative">
+ <input type="text" id="searchInput" 
+ class="focus:border-primary-500 block w-full pl-12 pr-4 py-4 text-lg border-gray-300 rounded-xl shadow-lg transition-all duration-200 bg-white/80 backdrop-blur-sm"
+ placeholder="Search members...">
+ <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+ <i class="fas fa-search text-primary-500 text-xl"></i>
+ </div>
+ </div>
+ </div>
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <select id="membershipFilter" 
+ class="focus:border-primary-500 block w-full pl-4 pr-10 py-4 text-lg border-gray-300 rounded-xl shadow-lg bg-white/80 backdrop-blur-sm transition-all duration-200">
+ <option value="all">All Memberships</option>
+ <option value="Basic">Basic</option>
+ <option value="Premium">Premium</option>
+ <option value="VIP">VIP</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    <!-- Members List -->
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-4 py-5 sm:p-6">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
-                        <tr>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Sessions</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Session</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200" id="members-table">
-                        <!-- Members will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+ <!-- Members List -->
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl border border-white/20 hover:shadow-2xl transition-all duration-300 animate-fade-in">
+ <div class="px-8 py-8 sm:p-10">
+ <div class="flex items-center space-x-2 sm:space-x-4 mb-4 sm:mb-6">
+ <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+ <i class="fas fa-list text-xl"></i>
+ </div>
+ <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Members Directory</h3>
+ </div>
+ <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+ <table class="min-w-full responsive-table divide-y divide-gray-200/50">
+ <thead>
+ <tr>
+ <th class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 text-left text-sm font-bold text-gray-700 uppercase tracking-wider rounded-l-xl">Member</th>
+ <th class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Membership</th>
+ <th class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Total Sessions</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Session</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+ </tr>
+ </thead>
+ <tbody class="bg-white divide-y divide-gray-200" id="members-table">
+ <!-- Members will be populated here -->
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
 {% endblock %}
 
-{% block sidebar %}
-<a href="/coach/dashboard" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-home mr-2"></i> Dashboard
-</a>
-<a href="/coach/members" class="block py-2 px-4 bg-indigo-700">
-    <i class="fas fa-users mr-2"></i> My Members
-</a>
-<a href="/coach/schedule" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-calendar mr-2"></i> Schedule
-</a>
-<a href="/coach/sessions" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-clipboard-list mr-2"></i> Sessions
-</a>
-<a href="/coach/progress" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-chart-line mr-2"></i> Progress
-</a>
-<a href="/coach/preferences" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-cog mr-2"></i> Preferences
-</a>
-<div class="border-t border-indigo-700 my-2"></div>
-<a href="/coach/messages" class="block py-2 px-4 hover:bg-indigo-700">
-    <i class="fas fa-envelope mr-2"></i> Messages
-</a>
-{% endblock %}
+
 
 {% block scripts %}
 <script>
-    // Load members data
-    async function loadMembersData(search = '', membershipType = 'all') {
-        try {
-            const response = await fetch(`/api/coach/members?search=${search}&membership_type=${membershipType}`);
-            const members = await response.json();
-            
-            // Update members table
-            const membersTable = document.getElementById('members-table');
-            membersTable.innerHTML = '';
-            
-            members.forEach(member => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">${member.name}</div>
-                        <div class="text-sm text-gray-500">${member.email}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            ${member.membership_type === 'VIP' ? 'bg-purple-100 text-purple-800' : 
-                              member.membership_type === 'Premium' ? 'bg-blue-100 text-blue-800' : 
-                              'bg-gray-100 text-gray-800'}">
-                            ${member.membership_type}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${member.total_sessions}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${member.completed_sessions}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${member.last_session || 'No sessions yet'}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button onclick="viewMemberDetails(${member.id})" 
-                                class="text-indigo-600 hover:text-indigo-900 mr-2">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                `;
-                membersTable.appendChild(row);
-            });
-        } catch (error) {
-            console.error('Error loading members data:', error);
-        }
-    }
+ // Load members data
+ async function loadMembersData(search = '', membershipType = 'all') {
+ try {
+ const response = await fetch(`/api/coach/members?search=${search}&membership_type=${membershipType}`);
+ const members = await response.json();
+ 
+ // Update members table
+ const membersTable = document.getElementById('members-table');
+ membersTable.innerHTML = '';
+ 
+ members.forEach(member => {
+ const row = document.createElement('tr');
+ row.innerHTML = `
+ <td class="px-6 py-4 whitespace-nowrap">
+ <div class="text-sm font-medium text-gray-900">${member.name}</div>
+ <div class="text-sm text-gray-500">${member.email}</div>
+ </td>
+ <td class="px-6 py-4 whitespace-nowrap">
+ <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+ ${member.membership_type === 'VIP' ? 'bg-purple-100 text-purple-800' : 
+ member.membership_type === 'Premium' ? 'bg-blue-100 text-blue-800' : 
+ 'bg-gray-100 text-gray-800'}">
+ ${member.membership_type}
+ </span>
+ </td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${member.total_sessions}</td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${member.completed_sessions}</td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${member.last_session || 'No sessions yet'}</td>
+ <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+ <button onclick="viewMemberDetails(${member.id})" 
+ class="text-indigo-600 hover:text-indigo-900 mr-2">
+ <i class="fas fa-eye"></i>
+ </button>
+ </td>
+ `;
+ membersTable.appendChild(row);
+ });
+ } catch (error) {
+ console.error('Error loading members data:', error);
+ }
+ }
 
-    // View member details
-    function viewMemberDetails(memberId) {
-        window.location.href = `/coach/members/${memberId}`;
-    }
+ // View member details
+ function viewMemberDetails(memberId) {
+ window.location.href = `/coach/members/${memberId}`;
+ }
 
-    // Schedule session
-    function scheduleSession(memberId) {
-        window.location.href = `/coach/schedule?member=${memberId}`;
-    }
+ // Schedule session
+ function scheduleSession(memberId) {
+ window.location.href = `/coach/schedule?member=${memberId}`;
+ }
 
-    // Handle search input
-    let searchTimeout;
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const search = e.target.value;
-            const membershipType = document.getElementById('membershipFilter').value;
-            loadMembersData(search, membershipType);
-        }, 300);
-    });
+ // Handle search input
+ let searchTimeout;
+ document.getElementById('searchInput').addEventListener('input', (e) => {
+ clearTimeout(searchTimeout);
+ searchTimeout = setTimeout(() => {
+ const search = e.target.value;
+ const membershipType = document.getElementById('membershipFilter').value;
+ loadMembersData(search, membershipType);
+ }, 300);
+ });
 
-    // Handle membership filter
-    document.getElementById('membershipFilter').addEventListener('change', (e) => {
-        const search = document.getElementById('searchInput').value;
-        const membershipType = e.target.value;
-        loadMembersData(search, membershipType);
-    });
+ // Handle membership filter
+ document.getElementById('membershipFilter').addEventListener('change', (e) => {
+ const search = document.getElementById('searchInput').value;
+ const membershipType = e.target.value;
+ loadMembersData(search, membershipType);
+ });
 
-    // Load data when page loads
-    document.addEventListener('DOMContentLoaded', () => loadMembersData());
+ // Load data when page loads
+ document.addEventListener('DOMContentLoaded', () => loadMembersData());
 </script>
 {% endblock %} 

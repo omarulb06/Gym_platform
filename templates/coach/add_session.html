@@ -1,218 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Session - PowerFit</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Add Session - PowerFit</title>
+ <script src="https://cdn.tailwindcss.com"></script>
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Navigation -->
-        <nav class="bg-white shadow-lg">
-            <div class="max-w-7xl mx-auto px-4">
-                <div class="flex justify-between h-16">
-                    <div class="flex">
-                        <div class="flex-shrink-0 flex items-center">
-                            <i class="fas fa-dumbbell text-indigo-600 text-2xl"></i>
-                            <span class="ml-2 text-xl font-bold text-gray-800">PowerFit</span>
-                        </div>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="text-gray-600">{{ user.name }}</span>
-                    </div>
-                </div>
-            </div>
-        </nav>
+ <div class="min-h-screen">
+ <!-- Navigation -->
+ <nav class="bg-white shadow-lg">
+ <div class="max-w-7xl mx-auto px-4">
+ <div class="flex justify-between h-16">
+ <div class="flex">
+ <div class="flex-shrink-0 flex items-center">
+ <i class="fas fa-dumbbell text-indigo-600 text-lg sm:text-xl lg:text-2xl"></i>
+ <span class="ml-2 text-xl font-bold text-gray-800">PowerFit</span>
+ </div>
+ </div>
+ <div class="flex items-center">
+ <span class="text-gray-600">{{ user.name }}</span>
+ </div>
+ </div>
+ </div>
+ </nav>
 
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <!-- Back Button -->
-            <div class="mb-6">
-                <button onclick="window.close()" class="text-indigo-600 hover:text-indigo-800">
-                    <i class="fas fa-times"></i> Close Window
-                </button>
-            </div>
+ <!-- Main Content -->
+ <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+ <!-- Back Button -->
+ <div class="mb-4 sm:mb-6">
+ <button onclick="window.close()" class="text-indigo-600 hover:text-indigo-800">
+ <i class="fas fa-times"></i> Close Window
+ </button>
+ </div>
 
-            <!-- Add Session Form -->
-            <div class="bg-white shadow rounded-lg p-6">
-                <h1 class="text-2xl font-bold text-gray-900 mb-6">Add Session for {{ member.name }}</h1>
-                
-                <form id="addSessionForm" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Date -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Date</label>
-                            <input type="date" id="sessionDate" name="sessionDate" required
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
+ <!-- Add Session Form -->
+ <div class="bg-white shadow rounded-lg p-4 sm:p-6">
+ <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Add Session for {{ member.name }}</h1>
+ 
+ <form id="addSessionForm" class="space-y-6">
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:p-6">
+ <!-- Date -->
+ <div>
+ <label class="block text-sm font-medium text-gray-700">Date</label>
+ <input type="date" id="sessionDate" name="sessionDate" required
+ class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
 
-                        <!-- Time -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Time</label>
-                            <input type="time" id="sessionTime" name="sessionTime" required
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
+ <!-- Time -->
+ <div>
+ <label class="block text-sm font-medium text-gray-700">Time</label>
+ <input type="time" id="sessionTime" name="sessionTime" required
+ class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
 
-                        <!-- Duration -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Duration (minutes)</label>
-                            <input type="number" id="duration" name="duration" min="15" max="180" value="60" required
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        </div>
+ <!-- Duration -->
+ <div>
+ <label class="block text-sm font-medium text-gray-700">Duration (minutes)</label>
+ <input type="number" id="duration" name="duration" min="15" max="180" value="60" required
+ class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
 
-                        <!-- Workout Type -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Workout Type</label>
-                            <select id="workoutType" name="workoutType" required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">Select Workout Type</option>
-                                <option value="Upper Body">Upper Body</option>
-                                <option value="Lower Body">Lower Body</option>
-                                <option value="Full Body">Full Body</option>
-                                <option value="Core">Core</option>
-                                <option value="Push">Push</option>
-                                <option value="Pull">Pull</option>
-                                <option value="Custom">Custom</option>
-                            </select>
-                        </div>
-                    </div>
+ <!-- Workout Type -->
+ <div>
+ <label class="block text-sm font-medium text-gray-700">Workout Type</label>
+ <select id="workoutType" name="workoutType" required
+ class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <option value="">Select Workout Type</option>
+ <option value="Upper Body">Upper Body</option>
+ <option value="Lower Body">Lower Body</option>
+ <option value="Full Body">Full Body</option>
+ <option value="Core">Core</option>
+ <option value="Push">Push</option>
+ <option value="Pull">Pull</option>
+ <option value="Custom">Custom</option>
+ </select>
+ </div>
+ </div>
 
-                    <!-- Exercises -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Exercises</label>
-                        <div id="exercisesContainer" class="mt-2 space-y-2">
-                            <div class="flex items-center space-x-2">
-                                <input type="text" name="exercises[]" placeholder="Exercise name"
-                                       class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <button type="button" onclick="removeExercise(this)" class="text-red-600 hover:text-red-800">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <button type="button" onclick="addExercise()" class="mt-2 text-indigo-600 hover:text-indigo-800">
-                            <i class="fas fa-plus"></i> Add Exercise
-                        </button>
-                    </div>
+ <!-- Exercises -->
+ <div>
+ <label class="block text-sm font-medium text-gray-700">Exercises</label>
+ <div id="exercisesContainer" class="mt-2 space-y-2">
+ <div class="flex items-center space-x-2">
+ <input type="text" name="exercises[]" placeholder="Exercise name"
+ class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <button type="button" onclick="removeExercise(this)" class="text-red-600 hover:text-red-800">
+ <i class="fas fa-times"></i>
+ </button>
+ </div>
+ </div>
+ <button type="button" onclick="addExercise()" class="mt-2 text-indigo-600 hover:text-indigo-800">
+ <i class="fas fa-plus"></i> Add Exercise
+ </button>
+ </div>
 
-                    <!-- Notes -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Additional Notes</label>
-                        <textarea id="notes" name="notes" rows="3"
-                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
-                    </div>
+ <!-- Notes -->
+ <div>
+ <label class="block text-sm font-medium text-gray-700">Additional Notes</label>
+ <textarea id="notes" name="notes" rows="3"
+ class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ </div>
 
-                    <!-- Submit Button -->
-                    <div class="flex justify-end">
-                        <button type="submit"
-                                class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                            Schedule Session
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </main>
-    </div>
+ <!-- Submit Button -->
+ <div class="flex justify-end">
+ <button type="submit"
+ class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ Schedule Session
+ </button>
+ </div>
+ </form>
+ </div>
+ </main>
+ </div>
 
-    <script>
-        // Get member ID from URL
-        const memberId = window.location.pathname.split('/')[3]; // Get the member ID from the URL path
+ <script>
+ // Get member ID from URL
+ const memberId = window.location.pathname.split('/')[3]; // Get the member ID from the URL path
 
-        // Add exercise field
-        function addExercise() {
-            const container = document.getElementById('exercisesContainer');
-            const exerciseDiv = document.createElement('div');
-            exerciseDiv.className = 'flex items-center space-x-2';
-            exerciseDiv.innerHTML = `
-                <input type="text" name="exercises[]" placeholder="Exercise name"
-                       class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                <button type="button" onclick="removeExercise(this)" class="text-red-600 hover:text-red-800">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-            container.appendChild(exerciseDiv);
-        }
+ // Add exercise field
+ function addExercise() {
+ const container = document.getElementById('exercisesContainer');
+ const exerciseDiv = document.createElement('div');
+ exerciseDiv.className = 'flex items-center space-x-2';
+ exerciseDiv.innerHTML = `
+ <input type="text" name="exercises[]" placeholder="Exercise name"
+ class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <button type="button" onclick="removeExercise(this)" class="text-red-600 hover:text-red-800">
+ <i class="fas fa-times"></i>
+ </button>
+ `;
+ container.appendChild(exerciseDiv);
+ }
 
-        // Remove exercise field
-        function removeExercise(button) {
-            button.parentElement.remove();
-        }
+ // Remove exercise field
+ function removeExercise(button) {
+ button.parentElement.remove();
+ }
 
-        // Handle form submission
-        document.getElementById('addSessionForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+ // Handle form submission
+ document.getElementById('addSessionForm').addEventListener('submit', async (e) => {
+ e.preventDefault();
 
-            // Validate member ID
-            if (!memberId || isNaN(memberId)) {
-                alert('Invalid member ID');
-                return;
-            }
+ // Validate member ID
+ if (!memberId || isNaN(memberId)) {
+ alert('Invalid member ID');
+ return;
+ }
 
-            // Get all exercises
-            const exercises = Array.from(document.getElementsByName('exercises[]'))
-                .map(input => input.value)
-                .filter(value => value.trim() !== '');
+ // Get all exercises
+ const exercises = Array.from(document.getElementsByName('exercises[]'))
+ .map(input => input.value)
+ .filter(value => value.trim() !== '');
 
-            // Validate required fields
-            const sessionDate = document.getElementById('sessionDate').value;
-            const sessionTime = document.getElementById('sessionTime').value;
-            const duration = document.getElementById('duration').value;
-            const workoutType = document.getElementById('workoutType').value;
+ // Validate required fields
+ const sessionDate = document.getElementById('sessionDate').value;
+ const sessionTime = document.getElementById('sessionTime').value;
+ const duration = document.getElementById('duration').value;
+ const workoutType = document.getElementById('workoutType').value;
 
-            if (!sessionDate || !sessionTime || !duration || !workoutType) {
-                alert('Please fill in all required fields');
-                return;
-            }
+ if (!sessionDate || !sessionTime || !duration || !workoutType) {
+ alert('Please fill in all required fields');
+ return;
+ }
 
-            // Create workout notes
-            let notes = `Workout Type: ${workoutType}\n`;
-            exercises.forEach((exercise, index) => {
-                notes += `${index + 1}. ${exercise}\n`;
-            });
-            const additionalNotes = document.getElementById('notes').value;
-            if (additionalNotes) {
-                notes += `\nAdditional Notes:\n${additionalNotes}`;
-            }
+ // Create workout notes
+ let notes = `Workout Type: ${workoutType}\n`;
+ exercises.forEach((exercise, index) => {
+ notes += `${index + 1}. ${exercise}\n`;
+ });
+ const additionalNotes = document.getElementById('notes').value;
+ if (additionalNotes) {
+ notes += `\nAdditional Notes:\n${additionalNotes}`;
+ }
 
-            // Prepare session data
-            const sessionData = {
-                member_id: parseInt(memberId),
-                session_date: sessionDate,
-                session_time: sessionTime,
-                duration: parseInt(duration),
-                notes: notes
-            };
+ // Prepare session data
+ const sessionData = {
+ member_id: parseInt(memberId),
+ session_date: sessionDate,
+ session_time: sessionTime,
+ duration: parseInt(duration),
+ notes: notes
+ };
 
-            try {
-                const response = await fetch('/api/coach/sessions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(sessionData)
-                });
+ try {
+ const response = await fetch('/api/coach/sessions', {
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json',
+ },
+ body: JSON.stringify(sessionData)
+ });
 
-                const result = await response.json();
+ const result = await response.json();
 
-                if (!response.ok) {
-                    throw new Error(result.detail || 'Failed to create session');
-                }
+ if (!response.ok) {
+ throw new Error(result.detail || 'Failed to create session');
+ }
 
-                alert('Session created successfully!');
-                window.close();
-            } catch (error) {
-                console.error('Error:', error);
-                alert(error.message || 'Failed to create session. Please try again.');
-            }
-        });
+ alert('Session created successfully!');
+ window.close();
+ } catch (error) {
+ console.error('Error:', error);
+ alert(error.message || 'Failed to create session. Please try again.');
+ }
+ });
 
-        // Logout function
-        function logout() {
-            fetch('/api/logout', { method: 'POST' })
-                .then(() => window.location.href = '/')
-                .catch(error => console.error('Error:', error));
-        }
-    </script>
+ // Logout function
+ function logout() {
+ fetch('/api/logout', { method: 'POST' })
+ .then(() => window.location.href = '/')
+ .catch(error => console.error('Error:', error));
+ }
+ </script>
 </body>
 </html> 

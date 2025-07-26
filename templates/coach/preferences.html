@@ -6,769 +6,769 @@
 
 {% block content %}
 <div class="space-y-6">
-    <!-- Search and Selection Section -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Search and Select Assigned Members</h2>
-        
-        <!-- Search Bar -->
-        <div class="mb-4">
-            <div class="relative">
-                <input type="text" id="memberSearch" placeholder="Search members by name or email..." 
-                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                       autocomplete="off">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400"></i>
-                </div>
-                <!-- Search Suggestions Dropdown -->
-                <div id="searchSuggestions" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
-                    <!-- Suggestions will be populated here -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- Selected Members -->
-        <div class="mb-4">
-            <h3 class="text-sm font-medium text-gray-700 mb-2">Selected Members:</h3>
-            <div id="selectedMembers" class="flex flex-wrap gap-2">
-                <!-- Selected members will be displayed here -->
-            </div>
-        </div>
-        
-        <!-- Members List -->
-        <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
-            <div id="membersList" class="divide-y divide-gray-200">
-                <!-- Members will be loaded here -->
-            </div>
-        </div>
-        
-        <!-- Action Buttons -->
-        <div class="mt-6 flex space-x-4">
-            <button id="showPreferences" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                <i class="fas fa-eye mr-2"></i>Show Preferences
-            </button>
-            <button id="clearSelection" class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
-                <i class="fas fa-times mr-2"></i>Clear Selection
-            </button>
-        </div>
-    </div>
+ <!-- Search and Selection Section -->
+ <div class="bg-white rounded-lg shadow p-4 sm:p-6">
+ <h2 class="text-lg font-semibold text-gray-900 mb-4">Search and Select Assigned Members</h2>
+ 
+ <!-- Search Bar -->
+ <div class="mb-4">
+ <div class="relative">
+ <input type="text" id="memberSearch" placeholder="Search members by name or email..." 
+ class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+ autocomplete="off">
+ <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+ <i class="fas fa-search text-gray-400"></i>
+ </div>
+ <!-- Search Suggestions Dropdown -->
+ <div id="searchSuggestions" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto">
+ <!-- Suggestions will be populated here -->
+ </div>
+ </div>
+ </div>
+ 
+ <!-- Selected Members -->
+ <div class="mb-4">
+ <h3 class="text-sm font-medium text-gray-700 mb-2">Selected Members:</h3>
+ <div id="selectedMembers" class="flex flex-wrap gap-2">
+ <!-- Selected members will be displayed here -->
+ </div>
+ </div>
+ 
+ <!-- Members List -->
+ <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+ <div id="membersList" class="divide-y divide-gray-200">
+ <!-- Members will be loaded here -->
+ </div>
+ </div>
+ 
+ <!-- Action Buttons -->
+ <div class="mt-6 flex space-x-2 sm:space-x-4">
+ <button id="showPreferences" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+ <i class="fas fa-eye mr-2"></i>Show Preferences
+ </button>
+ <button id="clearSelection" class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+ <i class="fas fa-times mr-2"></i>Clear Selection
+ </button>
+ </div>
+ </div>
 </div>
 
 <!-- Preferences Popup Modal -->
 <div id="preferencesPopup" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
-            <!-- Modal Header -->
-            <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                <h2 class="text-xl font-semibold text-gray-900">Selected Members' Preferences</h2>
-                <button onclick="closePreferencesPopup()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <!-- Modal Content -->
-            <div class="p-6 overflow-auto max-h-[calc(90vh-120px)]">
-                <div id="preferencesContent">
-                    <!-- Preferences content will be displayed here -->
-                </div>
-            </div>
-        </div>
-    </div>
+ <div class="flex items-center justify-center min-h-screen p-4">
+ <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
+ <!-- Modal Header -->
+ <div class="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200">
+ <h2 class="text-xl font-semibold text-gray-900">Selected Members' Preferences</h2>
+ <button onclick="closePreferencesPopup()" class="text-gray-400 hover:text-gray-600">
+ <i class="fas fa-times text-xl"></i>
+ </button>
+ </div>
+ 
+ <!-- Modal Content -->
+ <div class="p-4 sm:p-6 overflow-auto max-h-[calc(90vh-120px)]">
+ <div id="preferencesContent">
+ <!-- Preferences content will be displayed here -->
+ </div>
+ </div>
+ </div>
+ </div>
 </div>
 
 <!-- Individual Member Preferences Modal -->
 <div id="memberPreferencesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <!-- Modal Header -->
-            <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                <h2 id="memberModalTitle" class="text-xl font-semibold text-gray-900">Member Preferences</h2>
-                <button onclick="closeMemberPreferencesModal()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <!-- Modal Content -->
-            <div class="p-6 overflow-auto max-h-[calc(90vh-120px)]">
-                <div id="memberPreferencesContent">
-                    <!-- Member preferences will be displayed here -->
-                </div>
-            </div>
-        </div>
-    </div>
+ <div class="flex items-center justify-center min-h-screen p-4">
+ <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+ <!-- Modal Header -->
+ <div class="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200">
+ <h2 id="memberModalTitle" class="text-xl font-semibold text-gray-900">Member Preferences</h2>
+ <button onclick="closeMemberPreferencesModal()" class="text-gray-400 hover:text-gray-600">
+ <i class="fas fa-times text-xl"></i>
+ </button>
+ </div>
+ 
+ <!-- Modal Content -->
+ <div class="p-4 sm:p-6 overflow-auto max-h-[calc(90vh-120px)]">
+ <div id="memberPreferencesContent">
+ <!-- Member preferences will be displayed here -->
+ </div>
+ </div>
+ </div>
+ </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    let selectedMembers = new Set();
-    let allMembers = [];
-    let currentDate = new Date();
-    
-    // Add global for group schedule range
-    let groupScheduleDays = 7;
+ let selectedMembers = new Set();
+ let allMembers = [];
+ let currentDate = new Date();
+ 
+ // Add global for group schedule range
+ let groupScheduleDays = 7;
 
-    // Initialize the page
-    document.addEventListener('DOMContentLoaded', function() {
-        loadMembers();
-        
-        // Event listeners
-        document.getElementById('memberSearch').addEventListener('input', filterMembers);
-        document.getElementById('clearSelection').addEventListener('click', clearSelection);
-        document.getElementById('showPreferences').addEventListener('click', showPreferences);
-        
-        // Close suggestions when clicking outside
-        document.addEventListener('click', function(event) {
-            const searchContainer = document.getElementById('memberSearch').parentElement;
-            const suggestionsContainer = document.getElementById('searchSuggestions');
-            
-            if (!searchContainer.contains(event.target)) {
-                suggestionsContainer.classList.add('hidden');
-            }
-        });
-        
-        // Handle keyboard navigation
-        document.getElementById('memberSearch').addEventListener('keydown', function(event) {
-            const suggestionsContainer = document.getElementById('searchSuggestions');
-            const suggestions = suggestionsContainer.querySelectorAll('div[onclick]');
-            
-            if (event.key === 'Escape') {
-                suggestionsContainer.classList.add('hidden');
-            } else if (event.key === 'Enter' && suggestions.length > 0) {
-                event.preventDefault();
-                const firstSuggestion = suggestions[0];
-                const memberName = firstSuggestion.querySelector('.font-medium').textContent;
-                selectSuggestion(memberName);
-            }
-        });
-    });
-    
-    // Load all members
-    async function loadMembers() {
-        try {
-            const response = await fetch('/api/coach/all-members');
-            if (!response.ok) {
-                throw new Error('Failed to fetch members');
-            }
-            const data = await response.json();
-            allMembers = data.members;
-            console.log('Loaded members:', allMembers);
-            displayMembers(allMembers);
-        } catch (error) {
-            console.error('Error loading members:', error);
-        }
-    }
-    
-    // Display members in the list
-    function displayMembers(members) {
-        const container = document.getElementById('membersList');
-        container.innerHTML = '';
-        
-        members.forEach(member => {
-            const memberDiv = document.createElement('div');
-            memberDiv.className = 'p-3 hover:bg-gray-50 cursor-pointer';
-            memberDiv.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <input type="checkbox" id="member_${member.id}" 
-                               class="member-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                               data-member-id="${member.id}">
-                        <div>
-                            <div class="font-medium text-gray-900">${member.name}</div>
-                            <div class="text-sm text-gray-500">${member.email}</div>
-                            <div class="text-xs text-gray-400">${member.membership_type}</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                        <div class="text-sm text-gray-500">
-                            ${member.preferred_workout_types?.length > 0 ? 
-                                member.preferred_workout_types.slice(0, 2).join(', ') + 
-                                (member.preferred_workout_types.length > 2 ? '...' : '') : 
-                                'No preferences'}
-                        </div>
-                        <button onclick="showMemberPreferences(${member.id})" 
-                                class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
-                            <i class="fas fa-eye mr-1"></i>View Details
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            // Add event listener to checkbox
-            const checkbox = memberDiv.querySelector('.member-checkbox');
-            checkbox.addEventListener('change', function() {
-                if (this.checked) {
-                    selectedMembers.add(member.id);
-                } else {
-                    selectedMembers.delete(member.id);
-                }
-                updateSelectedMembersDisplay();
-                updateShowPreferencesButton();
-            });
-            
-            container.appendChild(memberDiv);
-        });
-    }
-    
-    // Filter members based on search
-    function filterMembers() {
-        const searchTerm = document.getElementById('memberSearch').value.toLowerCase();
-        const filtered = allMembers.filter(member => 
-            member.name.toLowerCase().includes(searchTerm) ||
-            member.email.toLowerCase().includes(searchTerm)
-        );
-        displayMembers(filtered);
-        
-        // Show search suggestions
-        showSearchSuggestions(searchTerm);
-    }
-    
-    // Show search suggestions
-    function showSearchSuggestions(searchTerm) {
-        const suggestionsContainer = document.getElementById('searchSuggestions');
-        
-        if (!searchTerm || searchTerm.length < 2) {
-            suggestionsContainer.classList.add('hidden');
-            return;
-        }
-        
-        const suggestions = allMembers.filter(member => 
-            member.name.toLowerCase().includes(searchTerm) ||
-            member.email.toLowerCase().includes(searchTerm)
-        ).slice(0, 5); // Limit to 5 suggestions
-        
-        if (suggestions.length === 0) {
-            suggestionsContainer.classList.add('hidden');
-            return;
-        }
-        
-        suggestionsContainer.innerHTML = suggestions.map(member => `
-            <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
-                 onclick="selectSuggestion('${member.name}')">
-                <div class="font-medium text-gray-900">${member.name}</div>
-                <div class="text-sm text-gray-500">${member.email}</div>
-            </div>
-        `).join('');
-        
-        suggestionsContainer.classList.remove('hidden');
-    }
-    
-    // Select a search suggestion
-    function selectSuggestion(memberName) {
-        document.getElementById('memberSearch').value = memberName;
-        document.getElementById('searchSuggestions').classList.add('hidden');
-        filterMembers();
-    }
-    
-    // Update selected members display
-    function updateSelectedMembersDisplay() {
-        const container = document.getElementById('selectedMembers');
-        container.innerHTML = '';
-        
-        selectedMembers.forEach(memberId => {
-            const member = allMembers.find(m => m.id === memberId);
-            if (member) {
-                const tag = document.createElement('span');
-                tag.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-800';
-                tag.innerHTML = `
-                    ${member.name}
-                    <button onclick="removeMember(${memberId})" class="ml-2 text-indigo-600 hover:text-indigo-800">
-                        <i class="fas fa-times"></i>
-                    </button>
-                `;
-                container.appendChild(tag);
-            }
-        });
-    }
-    
-    // Update show preferences button state
-    function updateShowPreferencesButton() {
-        const button = document.getElementById('showPreferences');
-        if (selectedMembers.size === 0) {
-            button.disabled = true;
-        } else {
-            button.disabled = false;
-        }
-    }
-    
-    // Remove member from selection
-    function removeMember(memberId) {
-        selectedMembers.delete(memberId);
-        const checkbox = document.getElementById(`member_${memberId}`);
-        if (checkbox) checkbox.checked = false;
-        updateSelectedMembersDisplay();
-        updateShowPreferencesButton();
-    }
-    
-    // Clear all selections
-    function clearSelection() {
-        selectedMembers.clear();
-        document.querySelectorAll('.member-checkbox').forEach(cb => cb.checked = false);
-        updateSelectedMembersDisplay();
-        updateShowPreferencesButton();
-    }
-    
-    // Show preferences popup
-    async function showPreferences() {
-        if (selectedMembers.size === 0) {
-            alert('Please select at least one member to view their preferences.');
-            return;
-        }
-        
-        const popup = document.getElementById('preferencesPopup');
-        const content = document.getElementById('preferencesContent');
-        
-        const selectedMembersData = allMembers.filter(m => selectedMembers.has(m.id));
-        console.log('Selected members data:', selectedMembersData);
-        
-        // Get availability data for selected members
-        const memberIds = Array.from(selectedMembers);
-        console.log('Member IDs:', memberIds);
-        
-        try {
-            const availabilityResponse = await fetch(`/api/availability/bulk?user_ids=${memberIds.join(',')}`);
-            console.log('Availability response status:', availabilityResponse.status);
-            
-            if (!availabilityResponse.ok) {
-                const errorText = await availabilityResponse.text();
-                throw new Error(`HTTP ${availabilityResponse.status}: ${availabilityResponse.statusText}\n${errorText}`);
-            }
-            
-            const availabilityData = await availabilityResponse.json();
-            console.log('Availability data:', availabilityData);
-            
-                        // Generate schedule HTML
-            const scheduleHtml = generateDateBasedScheduleHtml(selectedMembersData, availabilityData.availability);
-            
-            // Generate member buttons HTML
-            const memberButtonsHtml = generateMemberButtonsHtml(selectedMembersData);
-            
-            let html = `
-                <div class="space-y-6">
-                    <!-- Schedule Section -->
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Date-Based Schedule - All Selected Members</h3>
-                        ${scheduleHtml}
-                    </div>
-                    
-                    <!-- Member Buttons Section -->
-                    <div class="border-t border-gray-200 pt-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">View Individual Member Preferences</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            ${memberButtonsHtml}
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            content.innerHTML = html;
-            popup.classList.remove('hidden');
-            setupGroupScheduleRangeListener(selectedMembersData, availabilityData);
-            
-        } catch (error) {
-            console.error('Error fetching availability data:', error);
-            alert('Error loading availability data. ' + error.message);
-        }
-    }
-    
-    // Generate date-based schedule HTML
-    function generateDateBasedScheduleHtml(members, availabilityData, startDateStr, endDateStr) {
-        // If startDateStr and endDateStr are provided, use them; otherwise, default to today + groupScheduleDays
-        let dateList = [];
-        if (startDateStr && endDateStr) {
-            let current = new Date(startDateStr);
-            const end = new Date(endDateStr);
-            while (current <= end) {
-                dateList.push(new Date(current));
-                current.setDate(current.getDate() + 1);
-            }
-        } else {
-            for (let i = 0; i < groupScheduleDays; i++) {
-                const date = new Date();
-                date.setDate(date.getDate() + i);
-                dateList.push(date);
-            }
-        }
-        const hours = Array.from({length: 14}, (_, i) => i + 8); // 8 AM to 9 PM
-        let html = `
-            <div class="overflow-x-auto">
-                <table class="min-w-full border border-gray-200">
-                    <thead>
-                        <tr class="bg-gray-50">
-                            <th class="border border-gray-200 p-2 text-sm font-medium text-gray-700">Time</th>
-        `;
-        // Generate date headers
-        for (let i = 0; i < dateList.length; i++) {
-            const date = dateList[i];
-            const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-            html += `<th class="border border-gray-200 p-2 text-sm font-medium text-gray-700">${dateStr}</th>`;
-        }
-        html += '</tr></thead><tbody>';
-        // Generate time rows
-        hours.forEach(hour => {
-            html += '<tr>';
-            html += `<td class="border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50">${hour}:00</td>`;
-            // Generate cells for each day
-            for (let i = 0; i < dateList.length; i++) {
-                const date = dateList[i];
-                const dateIso = date.toISOString().split('T')[0];
-                const availableMembers = getAvailableMembersAtDateTime(members, availabilityData, dateIso, hour);
-                let cellClass = '';
-                let cellContent = '';
-                if (availableMembers.length > 0) {
-                    cellClass = 'bg-green-50';
-                    cellContent = `<div class="text-xs bg-green-100 text-green-800 p-1 rounded">${availableMembers.length} member${availableMembers.length > 1 ? 's' : ''}</div>`;
-                } else {
-                    cellClass = 'bg-red-50';
-                    cellContent = `<div class="text-xs bg-red-100 text-red-800 p-1 rounded">Unavailable</div>`;
-                }
-                html += `<td class="border border-gray-200 p-2 text-xs min-h-[60px] ${cellClass}" title="${availableMembers.length > 0 ? availableMembers.map(m => m.name).join(', ') : 'No members available'}">${cellContent}</td>`;
-            }
-            html += '</tr>';
-        })
-        html += '</tbody></table>';
-        // Add legend
-        html += `
-            <div class="mt-4 p-3 bg-gray-50 rounded-lg">
-                <h4 class="text-sm font-medium text-gray-700 mb-2">Legend:</h4>
-                <div class="flex items-center space-x-4 text-xs">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
-                        <span class="text-gray-600">Members Available</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <div class="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
-                        <span class="text-gray-600">Unavailable</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
-                        <span class="text-gray-600">No Data</span>
-                    </div>
-                </div>
-            </div>
-        `;
-        return html;
-    }
-    
-    // Listen for range change
-    function setupGroupScheduleRangeListener(selectedMembersData, availabilityData) {
-        setTimeout(() => {
-            const rangeSelect = document.getElementById('groupScheduleRange');
-            if (rangeSelect) {
-                rangeSelect.value = groupScheduleDays;
-                rangeSelect.onchange = function() {
-                    groupScheduleDays = parseInt(this.value, 10);
-                    const content = document.getElementById('preferencesContent');
-                    content.innerHTML = generateDateBasedScheduleHtml(selectedMembersData, availabilityData) + content.innerHTML.split('</div>')[1];
-                    setupGroupScheduleRangeListener(selectedMembersData, availabilityData);
-                };
-            }
-        }, 0);
-    }
-    
-    // Get members available at a specific date and time
-    function getAvailableMembersAtDateTime(members, availabilityData, dateStr, hour) {
-        if (!availabilityData || typeof availabilityData !== 'object') {
-            return members;
-        }
-        return members.filter(member => {
-            if (!member || !member.id) return false;
-            const memberAvailability = availabilityData[member.id];
-            // 1. Check date-based override
-            if (memberAvailability && memberAvailability[dateStr] && typeof memberAvailability[dateStr][hour] !== 'undefined') {
-                return memberAvailability[dateStr][hour] === true;
-            }
-            // 2. Fallback to weekly pattern
-            const weekday = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' });
-            const freeDay = member.free_days ? member.free_days.find(fd => fd.day_of_week === weekday) : null;
-            if (!freeDay) return false; // If no info, treat as unavailable
-            if (!freeDay.is_available) return false;
-            // Check if hour is within allowed range
-            let startHour = 8;
-            let endHour = 20;
-            if (typeof freeDay.start_time === 'string' && freeDay.start_time.includes(':')) {
-                startHour = parseInt(freeDay.start_time.split(':')[0], 10);
-            } else if (!isNaN(freeDay.start_time)) {
-                startHour = Math.floor(Number(freeDay.start_time) / 3600);
-            }
-            if (typeof freeDay.end_time === 'string' && freeDay.end_time.includes(':')) {
-                endHour = parseInt(freeDay.end_time.split(':')[0], 10);
-            } else if (!isNaN(freeDay.end_time)) {
-                endHour = Math.floor(Number(freeDay.end_time) / 3600);
-            }
-            return hour >= startHour && hour < endHour;
-        });
-    }
-    
-    // Generate member buttons HTML
-    function generateMemberButtonsHtml(members) {
-        return members.map(member => `
-            <button onclick="showMemberPreferences(${member.id})" 
-                    class="p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
-                <div class="font-medium text-gray-900 mb-1">${member.name}</div>
-                <div class="text-sm text-gray-500 mb-2">${member.email}</div>
-                <div class="text-xs text-gray-400 mb-3">${member.membership_type}</div>
-                <div class="flex items-center text-indigo-600 text-sm">
-                    <i class="fas fa-eye mr-2"></i>
-                    View Full Preferences
-                </div>
-            </button>
-        `).join('');
-    }
-    
-    // Close preferences popup
-    function closePreferencesPopup() {
-        const popup = document.getElementById('preferencesPopup');
-        popup.classList.add('hidden');
-    }
-    
-    // Show individual member preferences
-    function showMemberPreferences(memberId) {
-        const member = allMembers.find(m => m.id === memberId);
-        if (!member) {
-            alert('Member not found');
-            return;
-        }
-        
-        const modal = document.getElementById('memberPreferencesModal');
-        const title = document.getElementById('memberModalTitle');
-        const content = document.getElementById('memberPreferencesContent');
-        
-        title.textContent = `${member.name}'s Preferences`;
-        
-        let html = `
-            <div class="space-y-6">
-                <!-- Member Info -->
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">${member.name}</h3>
-                    <div class="text-sm text-gray-600">
-                        <p><strong>Email:</strong> ${member.email}</p>
-                        <p><strong>Membership:</strong> ${member.membership_type}</p>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Workout Preferences -->
-                    <div class="bg-white border border-gray-200 rounded-lg p-4">
-                        <h4 class="text-lg font-medium text-gray-900 mb-3">Workout Preferences</h4>
-                        <div class="space-y-3">
-                            <div>
-                                <span class="text-sm font-medium text-gray-700">Preferred Types:</span>
-                                <div class="mt-2">
-                                    ${member.preferred_workout_types?.length > 0 ? 
-                                        member.preferred_workout_types.map(type => 
-                                            `<span class="inline-block bg-indigo-100 text-indigo-800 text-sm px-3 py-1 rounded mr-2 mb-2">${type}</span>`
-                                        ).join('') :
-                                        '<span class="text-gray-500 text-sm">None specified</span>'
-                                    }
-                                </div>
-                            </div>
-                            <div>
-                                <span class="text-sm font-medium text-gray-700">Duration:</span>
-                                <span class="text-sm text-gray-900 ml-2">${member.preferred_duration || 60} minutes</span>
-                            </div>
-                            <div>
-                                <span class="text-sm font-medium text-gray-700">Preferred Times:</span>
-                                <div class="mt-2">
-                                    ${member.preferred_time_slots?.length > 0 ? 
-                                        member.preferred_time_slots.map(time => 
-                                            `<span class="inline-block bg-green-100 text-green-800 text-sm px-3 py-1 rounded mr-2 mb-2">${time}</span>`
-                                        ).join('') :
-                                        '<span class="text-gray-500 text-sm">None specified</span>'
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Availability Info -->
-                    <div class="bg-white border border-gray-200 rounded-lg p-4">
-                        <h4 class="text-lg font-medium text-gray-900 mb-3">Availability System</h4>
-                        <div class="space-y-2">
-                            <p class="text-sm text-gray-600">
-                                This member uses a date and hour-based availability system. 
-                                They can mark specific dates and hours as unavailable.
-                            </p>
-                            <p class="text-sm text-gray-600">
-                                All times are available by default unless marked as unavailable.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Weekly Availability Section -->
-                ${member.free_days && member.free_days.length > 0 ? `
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
-                        <h4 class="text-lg font-medium text-gray-900 mb-2">Weekly Availability</h4>
-                        <ul class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            ${member.free_days.map(day => `
-                                <li>
-                                    <span class="font-semibold">${day.day_of_week}:</span>
-                                    ${day.is_available
-                                        ? `<span class="text-green-600 font-medium">Available</span>
-                                           <span class="text-gray-700 ml-2">${(day.start_time ? secondsToHHMM(day.start_time) : '08:00')} - ${(day.end_time ? secondsToHHMM(day.end_time) : '20:00')}</span>`
-                                        : '<span class="text-red-600 font-medium">Unavailable</span>'}
-                                </li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-                
-                ${member.notes ? `
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <h4 class="text-lg font-medium text-gray-900 mb-2">Notes</h4>
-                        <p class="text-sm text-gray-700">${member.notes}</p>
-                    </div>
-                ` : ''}
-                
-                <div class="mt-6">
-                    <div id="memberDateBasedSchedule"></div>
-                </div>
-            </div>
-        `;
-        
-        content.innerHTML = html;
-        modal.classList.remove('hidden');
-        // Render the member's date-based schedule (always 7 days)
-        const scheduleDiv = document.getElementById('memberDateBasedSchedule');
-        renderMemberDateBasedSchedule(member, scheduleDiv, 7);
-    }
-    
-    // Edit member preferences with calendar interface
-    function editMemberPreferences(memberId) {
-        const member = allMembers.find(m => m.id === memberId);
-        if (!member) {
-            alert('Member not found');
-            return;
-        }
-        
-        // Create calendar modal
-        const memberName = member.name.replace(/'/g, "\\'");
-        const timeOptions = Array.from({length: 14}, (_, i) => i + 8).map(hour => 
-            `<option value="${hour}">${hour}:00</option>`
-        ).join('');
-        
-        const calendarModalHtml = `
-            <div id="calendarModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-                        <!-- Modal Header -->
-                        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                            <h2 class="text-xl font-semibold text-gray-900">Edit ${memberName} Availability</h2>
-                            <button onclick="closeCalendarModal()" class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
-                        </div>
-                        
-                        <!-- Modal Content -->
-                        <div class="p-6 overflow-auto max-h-[calc(90vh-120px)]">
-                            <div class="space-y-6">
-                                <!-- Calendar Navigation -->
-                                <div class="flex items-center justify-between">
-                                    <button onclick="previousMonth()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                                        <i class="fas fa-chevron-left mr-2"></i>Previous
-                                    </button>
-                                    <h3 id="calendarTitle" class="text-lg font-semibold text-gray-900">December 2024</h3>
-                                    <button onclick="nextMonth()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                                        Next<i class="fas fa-chevron-right ml-2"></i>
-                                    </button>
-                                </div>
-                                
-                                <!-- Calendar Grid -->
-                                <div id="calendarGrid" class="grid grid-cols-7 gap-1">
-                                    <!-- Calendar will be generated here -->
-                                </div>
-                                
-                                <!-- Time Range Selection -->
-                                <div class="bg-gray-50 rounded-lg p-4">
-                                    <h4 class="text-lg font-medium text-gray-900 mb-3">Time Range Selection</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
-                                            <select id="startHour" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                                ${timeOptions}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">End Time</label>
-                                            <select id="endHour" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                                ${timeOptions}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="mt-4 flex space-x-4">
-                                        <button onclick="markSelectedAsUnavailable()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                                            <i class="fas fa-times mr-2"></i>Mark as Unavailable
-                                        </button>
-                                        <button onclick="markSelectedAsAvailable()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                            <i class="fas fa-check mr-2"></i>Mark as Available
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <!-- Legend -->
-                                <div class="bg-gray-50 rounded-lg p-4">
-                                    <h4 class="text-sm font-medium text-gray-700 mb-2">Legend:</h4>
-                                    <div class="flex items-center space-x-4 text-xs">
-                                        <div class="flex items-center space-x-2">
-                                            <div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
-                                            <span class="text-gray-600">Available</span>
-                                        </div>
-                                        <div class="flex items-center space-x-2">
-                                            <div class="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
-                                            <span class="text-gray-600">Unavailable</span>
-                                        </div>
-                                        <div class="flex items-center space-x-2">
-                                            <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
-                                            <span class="text-gray-600">No Data</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
+ // Initialize the page
+ document.addEventListener('DOMContentLoaded', function() {
+ loadMembers();
+ 
+ // Event listeners
+ document.getElementById('memberSearch').addEventListener('input', filterMembers);
+ document.getElementById('clearSelection').addEventListener('click', clearSelection);
+ document.getElementById('showPreferences').addEventListener('click', showPreferences);
+ 
+ // Close suggestions when clicking outside
+ document.addEventListener('click', function(event) {
+ const searchContainer = document.getElementById('memberSearch').parentElement;
+ const suggestionsContainer = document.getElementById('searchSuggestions');
+ 
+ if (!searchContainer.contains(event.target)) {
+ suggestionsContainer.classList.add('hidden');
+ }
+ });
+ 
+ // Handle keyboard navigation
+ document.getElementById('memberSearch').addEventListener('keydown', function(event) {
+ const suggestionsContainer = document.getElementById('searchSuggestions');
+ const suggestions = suggestionsContainer.querySelectorAll('div[onclick]');
+ 
+ if (event.key === 'Escape') {
+ suggestionsContainer.classList.add('hidden');
+ } else if (event.key === 'Enter' && suggestions.length > 0) {
+ event.preventDefault();
+ const firstSuggestion = suggestions[0];
+ const memberName = firstSuggestion.querySelector('.font-medium').textContent;
+ selectSuggestion(memberName);
+ }
+ });
+ });
+ 
+ // Load all members
+ async function loadMembers() {
+ try {
+ const response = await fetch('/api/coach/all-members');
+ if (!response.ok) {
+ throw new Error('Failed to fetch members');
+ }
+ const data = await response.json();
+ allMembers = data.members;
+ console.log('Loaded members:', allMembers);
+ displayMembers(allMembers);
+ } catch (error) {
+ console.error('Error loading members:', error);
+ }
+ }
+ 
+ // Display members in the list
+ function displayMembers(members) {
+ const container = document.getElementById('membersList');
+ container.innerHTML = '';
+ 
+ members.forEach(member => {
+ const memberDiv = document.createElement('div');
+ memberDiv.className = 'p-3 hover:bg-gray-50 cursor-pointer';
+ memberDiv.innerHTML = `
+ <div class="flex items-center justify-between">
+ <div class="flex items-center space-x-3">
+ <input type="checkbox" id="member_${member.id}" 
+ class="member-checkbox rounded border-gray-300 text-indigo-600 focus:outline-none
+ data-member-id="${member.id}">
+ <div>
+ <div class="font-medium text-gray-900">${member.name}</div>
+ <div class="text-sm text-gray-500">${member.email}</div>
+ <div class="text-xs text-gray-400">${member.membership_type}</div>
+ </div>
+ </div>
+ <div class="flex items-center space-x-3">
+ <div class="text-sm text-gray-500">
+ ${member.preferred_workout_types?.length > 0 ? 
+ member.preferred_workout_types.slice(0, 2).join(', ') + 
+ (member.preferred_workout_types.length > 2 ? '...' : '') : 
+ 'No preferences'}
+ </div>
+ <button onclick="showMemberPreferences(${member.id})" 
+ class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+ <i class="fas fa-eye mr-1"></i>View Details
+ </button>
+ </div>
+ </div>
+ `;
+ 
+ // Add event listener to checkbox
+ const checkbox = memberDiv.querySelector('.member-checkbox');
+ checkbox.addEventListener('change', function() {
+ if (this.checked) {
+ selectedMembers.add(member.id);
+ } else {
+ selectedMembers.delete(member.id);
+ }
+ updateSelectedMembersDisplay();
+ updateShowPreferencesButton();
+ });
+ 
+ container.appendChild(memberDiv);
+ });
+ }
+ 
+ // Filter members based on search
+ function filterMembers() {
+ const searchTerm = document.getElementById('memberSearch').value.toLowerCase();
+ const filtered = allMembers.filter(member => 
+ member.name.toLowerCase().includes(searchTerm) ||
+ member.email.toLowerCase().includes(searchTerm)
+ );
+ displayMembers(filtered);
+ 
+ // Show search suggestions
+ showSearchSuggestions(searchTerm);
+ }
+ 
+ // Show search suggestions
+ function showSearchSuggestions(searchTerm) {
+ const suggestionsContainer = document.getElementById('searchSuggestions');
+ 
+ if (!searchTerm || searchTerm.length < 2) {
+ suggestionsContainer.classList.add('hidden');
+ return;
+ }
+ 
+ const suggestions = allMembers.filter(member => 
+ member.name.toLowerCase().includes(searchTerm) ||
+ member.email.toLowerCase().includes(searchTerm)
+ ).slice(0, 5); // Limit to 5 suggestions
+ 
+ if (suggestions.length === 0) {
+ suggestionsContainer.classList.add('hidden');
+ return;
+ }
+ 
+ suggestionsContainer.innerHTML = suggestions.map(member => `
+ <div class="px-3 py-2 sm:px-4 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
+ onclick="selectSuggestion('${member.name}')">
+ <div class="font-medium text-gray-900">${member.name}</div>
+ <div class="text-sm text-gray-500">${member.email}</div>
+ </div>
+ `).join('');
+ 
+ suggestionsContainer.classList.remove('hidden');
+ }
+ 
+ // Select a search suggestion
+ function selectSuggestion(memberName) {
+ document.getElementById('memberSearch').value = memberName;
+ document.getElementById('searchSuggestions').classList.add('hidden');
+ filterMembers();
+ }
+ 
+ // Update selected members display
+ function updateSelectedMembersDisplay() {
+ const container = document.getElementById('selectedMembers');
+ container.innerHTML = '';
+ 
+ selectedMembers.forEach(memberId => {
+ const member = allMembers.find(m => m.id === memberId);
+ if (member) {
+ const tag = document.createElement('span');
+ tag.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-800';
+ tag.innerHTML = `
+ ${member.name}
+ <button onclick="removeMember(${memberId})" class="ml-2 text-indigo-600 hover:text-indigo-800">
+ <i class="fas fa-times"></i>
+ </button>
+ `;
+ container.appendChild(tag);
+ }
+ });
+ }
+ 
+ // Update show preferences button state
+ function updateShowPreferencesButton() {
+ const button = document.getElementById('showPreferences');
+ if (selectedMembers.size === 0) {
+ button.disabled = true;
+ } else {
+ button.disabled = false;
+ }
+ }
+ 
+ // Remove member from selection
+ function removeMember(memberId) {
+ selectedMembers.delete(memberId);
+ const checkbox = document.getElementById(`member_${memberId}`);
+ if (checkbox) checkbox.checked = false;
+ updateSelectedMembersDisplay();
+ updateShowPreferencesButton();
+ }
+ 
+ // Clear all selections
+ function clearSelection() {
+ selectedMembers.clear();
+ document.querySelectorAll('.member-checkbox').forEach(cb => cb.checked = false);
+ updateSelectedMembersDisplay();
+ updateShowPreferencesButton();
+ }
+ 
+ // Show preferences popup
+ async function showPreferences() {
+ if (selectedMembers.size === 0) {
+ alert('Please select at least one member to view their preferences.');
+ return;
+ }
+ 
+ const popup = document.getElementById('preferencesPopup');
+ const content = document.getElementById('preferencesContent');
+ 
+ const selectedMembersData = allMembers.filter(m => selectedMembers.has(m.id));
+ console.log('Selected members data:', selectedMembersData);
+ 
+ // Get availability data for selected members
+ const memberIds = Array.from(selectedMembers);
+ console.log('Member IDs:', memberIds);
+ 
+ try {
+ const availabilityResponse = await fetch(`/api/availability/bulk?user_ids=${memberIds.join(',')}`);
+ console.log('Availability response status:', availabilityResponse.status);
+ 
+ if (!availabilityResponse.ok) {
+ const errorText = await availabilityResponse.text();
+ throw new Error(`HTTP ${availabilityResponse.status}: ${availabilityResponse.statusText}\n${errorText}`);
+ }
+ 
+ const availabilityData = await availabilityResponse.json();
+ console.log('Availability data:', availabilityData);
+ 
+ // Generate schedule HTML
+ const scheduleHtml = generateDateBasedScheduleHtml(selectedMembersData, availabilityData.availability);
+ 
+ // Generate member buttons HTML
+ const memberButtonsHtml = generateMemberButtonsHtml(selectedMembersData);
+ 
+ let html = `
+ <div class="space-y-6">
+ <!-- Schedule Section -->
+ <div>
+ <h3 class="text-lg font-semibold text-gray-900 mb-4">Date-Based Schedule - All Selected Members</h3>
+ ${scheduleHtml}
+ </div>
+ 
+ <!-- Member Buttons Section -->
+ <div class="border-t border-gray-200 pt-6">
+ <h3 class="text-lg font-semibold text-gray-900 mb-4">View Individual Member Preferences</h3>
+ <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+ ${memberButtonsHtml}
+ </div>
+ </div>
+ </div>
+ `;
+ 
+ content.innerHTML = html;
+ popup.classList.remove('hidden');
+ setupGroupScheduleRangeListener(selectedMembersData, availabilityData);
+ 
+ } catch (error) {
+ console.error('Error fetching availability data:', error);
+ alert('Error loading availability data. ' + error.message);
+ }
+ }
+ 
+ // Generate date-based schedule HTML
+ function generateDateBasedScheduleHtml(members, availabilityData, startDateStr, endDateStr) {
+ // If startDateStr and endDateStr are provided, use them; otherwise, default to today + groupScheduleDays
+ let dateList = [];
+ if (startDateStr && endDateStr) {
+ let current = new Date(startDateStr);
+ const end = new Date(endDateStr);
+ while (current <= end) {
+ dateList.push(new Date(current));
+ current.setDate(current.getDate() + 1);
+ }
+ } else {
+ for (let i = 0; i < groupScheduleDays; i++) {
+ const date = new Date();
+ date.setDate(date.getDate() + i);
+ dateList.push(date);
+ }
+ }
+ const hours = Array.from({length: 14}, (_, i) => i + 8); // 8 AM to 9 PM
+ let html = `
+ <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+ <table class="min-w-full responsive-table border border-gray-200">
+ <thead>
+ <tr class="bg-gray-50">
+ <th class="border border-gray-200 p-2 text-sm font-medium text-gray-700">Time</th>
+ `;
+ // Generate date headers
+ for (let i = 0; i < dateList.length; i++) {
+ const date = dateList[i];
+ const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+ html += `<th class="border border-gray-200 p-2 text-sm font-medium text-gray-700">${dateStr}</th>`;
+ }
+ html += '</tr></thead><tbody>';
+ // Generate time rows
+ hours.forEach(hour => {
+ html += '<tr>';
+ html += `<td class="border border-gray-200 p-2 text-sm font-medium text-gray-700 bg-gray-50">${hour}:00</td>`;
+ // Generate cells for each day
+ for (let i = 0; i < dateList.length; i++) {
+ const date = dateList[i];
+ const dateIso = date.toISOString().split('T')[0];
+ const availableMembers = getAvailableMembersAtDateTime(members, availabilityData, dateIso, hour);
+ let cellClass = '';
+ let cellContent = '';
+ if (availableMembers.length > 0) {
+ cellClass = 'bg-green-50';
+ cellContent = `<div class="text-xs bg-green-100 text-green-800 p-1 rounded">${availableMembers.length} member${availableMembers.length > 1 ? 's' : ''}</div>`;
+ } else {
+ cellClass = 'bg-red-50';
+ cellContent = `<div class="text-xs bg-red-100 text-red-800 p-1 rounded">Unavailable</div>`;
+ }
+ html += `<td class="border border-gray-200 p-2 text-xs min-h-[60px] ${cellClass}" title="${availableMembers.length > 0 ? availableMembers.map(m => m.name).join(', ') : 'No members available'}">${cellContent}</td>`;
+ }
+ html += '</tr>';
+ })
+ html += '</tbody></table>';
+ // Add legend
+ html += `
+ <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+ <h4 class="text-sm font-medium text-gray-700 mb-2">Legend:</h4>
+ <div class="flex items-center space-x-2 sm:space-x-4 text-xs">
+ <div class="flex items-center space-x-2">
+ <div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+ <span class="text-gray-600">Members Available</span>
+ </div>
+ <div class="flex items-center space-x-2">
+ <div class="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+ <span class="text-gray-600">Unavailable</span>
+ </div>
+ <div class="flex items-center space-x-2">
+ <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
+ <span class="text-gray-600">No Data</span>
+ </div>
+ </div>
+ </div>
+ `;
+ return html;
+ }
+ 
+ // Listen for range change
+ function setupGroupScheduleRangeListener(selectedMembersData, availabilityData) {
+ setTimeout(() => {
+ const rangeSelect = document.getElementById('groupScheduleRange');
+ if (rangeSelect) {
+ rangeSelect.value = groupScheduleDays;
+ rangeSelect.onchange = function() {
+ groupScheduleDays = parseInt(this.value, 10);
+ const content = document.getElementById('preferencesContent');
+ content.innerHTML = generateDateBasedScheduleHtml(selectedMembersData, availabilityData) + content.innerHTML.split('</div>')[1];
+ setupGroupScheduleRangeListener(selectedMembersData, availabilityData);
+ };
+ }
+ }, 0);
+ }
+ 
+ // Get members available at a specific date and time
+ function getAvailableMembersAtDateTime(members, availabilityData, dateStr, hour) {
+ if (!availabilityData || typeof availabilityData !== 'object') {
+ return members;
+ }
+ return members.filter(member => {
+ if (!member || !member.id) return false;
+ const memberAvailability = availabilityData[member.id];
+ // 1. Check date-based override
+ if (memberAvailability && memberAvailability[dateStr] && typeof memberAvailability[dateStr][hour] !== 'undefined') {
+ return memberAvailability[dateStr][hour] === true;
+ }
+ // 2. Fallback to weekly pattern
+ const weekday = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' });
+ const freeDay = member.free_days ? member.free_days.find(fd => fd.day_of_week === weekday) : null;
+ if (!freeDay) return false; // If no info, treat as unavailable
+ if (!freeDay.is_available) return false;
+ // Check if hour is within allowed range
+ let startHour = 8;
+ let endHour = 20;
+ if (typeof freeDay.start_time === 'string' && freeDay.start_time.includes(':')) {
+ startHour = parseInt(freeDay.start_time.split(':')[0], 10);
+ } else if (!isNaN(freeDay.start_time)) {
+ startHour = Math.floor(Number(freeDay.start_time) / 3600);
+ }
+ if (typeof freeDay.end_time === 'string' && freeDay.end_time.includes(':')) {
+ endHour = parseInt(freeDay.end_time.split(':')[0], 10);
+ } else if (!isNaN(freeDay.end_time)) {
+ endHour = Math.floor(Number(freeDay.end_time) / 3600);
+ }
+ return hour >= startHour && hour < endHour;
+ });
+ }
+ 
+ // Generate member buttons HTML
+ function generateMemberButtonsHtml(members) {
+ return members.map(member => `
+ <button onclick="showMemberPreferences(${member.id})" 
+ class="p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
+ <div class="font-medium text-gray-900 mb-1">${member.name}</div>
+ <div class="text-sm text-gray-500 mb-2">${member.email}</div>
+ <div class="text-xs text-gray-400 mb-3">${member.membership_type}</div>
+ <div class="flex items-center text-indigo-600 text-sm">
+ <i class="fas fa-eye mr-2"></i>
+ View Full Preferences
+ </div>
+ </button>
+ `).join('');
+ }
+ 
+ // Close preferences popup
+ function closePreferencesPopup() {
+ const popup = document.getElementById('preferencesPopup');
+ popup.classList.add('hidden');
+ }
+ 
+ // Show individual member preferences
+ function showMemberPreferences(memberId) {
+ const member = allMembers.find(m => m.id === memberId);
+ if (!member) {
+ alert('Member not found');
+ return;
+ }
+ 
+ const modal = document.getElementById('memberPreferencesModal');
+ const title = document.getElementById('memberModalTitle');
+ const content = document.getElementById('memberPreferencesContent');
+ 
+ title.textContent = `${member.name}'s Preferences`;
+ 
+ let html = `
+ <div class="space-y-6">
+ <!-- Member Info -->
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h3 class="text-lg font-medium text-gray-900 mb-2">${member.name}</h3>
+ <div class="text-sm text-gray-600">
+ <p><strong>Email:</strong> ${member.email}</p>
+ <p><strong>Membership:</strong> ${member.membership_type}</p>
+ </div>
+ </div>
+ 
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:p-6">
+ <!-- Workout Preferences -->
+ <div class="bg-white border border-gray-200 rounded-lg p-4">
+ <h4 class="text-lg font-medium text-gray-900 mb-3">Workout Preferences</h4>
+ <div class="space-y-3">
+ <div>
+ <span class="text-sm font-medium text-gray-700">Preferred Types:</span>
+ <div class="mt-2">
+ ${member.preferred_workout_types?.length > 0 ? 
+ member.preferred_workout_types.map(type => 
+ `<span class="inline-block bg-indigo-100 text-indigo-800 text-sm px-3 py-1 rounded mr-2 mb-2">${type}</span>`
+ ).join('') :
+ '<span class="text-gray-500 text-sm">None specified</span>'
+ }
+ </div>
+ </div>
+ <div>
+ <span class="text-sm font-medium text-gray-700">Duration:</span>
+ <span class="text-sm text-gray-900 ml-2">${member.preferred_duration || 60} minutes</span>
+ </div>
+ <div>
+ <span class="text-sm font-medium text-gray-700">Preferred Times:</span>
+ <div class="mt-2">
+ ${member.preferred_time_slots?.length > 0 ? 
+ member.preferred_time_slots.map(time => 
+ `<span class="inline-block bg-green-100 text-green-800 text-sm px-3 py-1 rounded mr-2 mb-2">${time}</span>`
+ ).join('') :
+ '<span class="text-gray-500 text-sm">None specified</span>'
+ }
+ </div>
+ </div>
+ </div>
+ </div>
+ 
+ <!-- Availability Info -->
+ <div class="bg-white border border-gray-200 rounded-lg p-4">
+ <h4 class="text-lg font-medium text-gray-900 mb-3">Availability System</h4>
+ <div class="space-y-2">
+ <p class="text-sm text-gray-600">
+ This member uses a date and hour-based availability system. 
+ They can mark specific dates and hours as unavailable.
+ </p>
+ <p class="text-sm text-gray-600">
+ All times are available by default unless marked as unavailable.
+ </p>
+ </div>
+ </div>
+ </div>
+ 
+ <!-- Weekly Availability Section -->
+ ${member.free_days && member.free_days.length > 0 ? `
+ <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+ <h4 class="text-lg font-medium text-gray-900 mb-2">Weekly Availability</h4>
+ <ul class="grid grid-cols-2 md:grid-cols-4 gap-2">
+ ${member.free_days.map(day => `
+ <li>
+ <span class="font-semibold">${day.day_of_week}:</span>
+ ${day.is_available
+ ? `<span class="text-green-600 font-medium">Available</span>
+ <span class="text-gray-700 ml-2">${(day.start_time ? secondsToHHMM(day.start_time) : '08:00')} - ${(day.end_time ? secondsToHHMM(day.end_time) : '20:00')}</span>`
+ : '<span class="text-red-600 font-medium">Unavailable</span>'}
+ </li>
+ `).join('')}
+ </ul>
+ </div>
+ ` : ''}
+ 
+ ${member.notes ? `
+ <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+ <h4 class="text-lg font-medium text-gray-900 mb-2">Notes</h4>
+ <p class="text-sm text-gray-700">${member.notes}</p>
+ </div>
+ ` : ''}
+ 
+ <div class="mt-6">
+ <div id="memberDateBasedSchedule"></div>
+ </div>
+ </div>
+ `;
+ 
+ content.innerHTML = html;
+ modal.classList.remove('hidden');
+ // Render the member's date-based schedule (always 7 days)
+ const scheduleDiv = document.getElementById('memberDateBasedSchedule');
+ renderMemberDateBasedSchedule(member, scheduleDiv, 7);
+ }
+ 
+ // Edit member preferences with calendar interface
+ function editMemberPreferences(memberId) {
+ const member = allMembers.find(m => m.id === memberId);
+ if (!member) {
+ alert('Member not found');
+ return;
+ }
+ 
+ // Create calendar modal
+ const memberName = member.name.replace(/'/g, "\\'");
+ const timeOptions = Array.from({length: 14}, (_, i) => i + 8).map(hour => 
+ `<option value="${hour}">${hour}:00</option>`
+ ).join('');
+ 
+ const calendarModalHtml = `
+ <div id="calendarModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
+ <div class="flex items-center justify-center min-h-screen p-4">
+ <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+ <!-- Modal Header -->
+ <div class="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200">
+ <h2 class="text-xl font-semibold text-gray-900">Edit ${memberName} Availability</h2>
+ <button onclick="closeCalendarModal()" class="text-gray-400 hover:text-gray-600">
+ <i class="fas fa-times text-xl"></i>
+ </button>
+ </div>
+ 
+ <!-- Modal Content -->
+ <div class="p-4 sm:p-6 overflow-auto max-h-[calc(90vh-120px)]">
+ <div class="space-y-6">
+ <!-- Calendar Navigation -->
+ <div class="flex items-center justify-between">
+ <button onclick="previousMonth()" class="px-3 py-2 sm:px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+ <i class="fas fa-chevron-left mr-2"></i>Previous
+ </button>
+ <h3 id="calendarTitle" class="text-lg font-semibold text-gray-900">December 2024</h3>
+ <button onclick="nextMonth()" class="px-3 py-2 sm:px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+ Next<i class="fas fa-chevron-right ml-2"></i>
+ </button>
+ </div>
+ 
+ <!-- Calendar Grid -->
+ <div id="calendarGrid" class="grid grid-cols-7 gap-1">
+ <!-- Calendar will be generated here -->
+ </div>
+ 
+ <!-- Time Range Selection -->
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h4 class="text-lg font-medium text-gray-900 mb-3">Time Range Selection</h4>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+ <select id="startHour" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
+ ${timeOptions}
+ </select>
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">End Time</label>
+ <select id="endHour" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500">
+ ${timeOptions}
+ </select>
+ </div>
+ </div>
+ <div class="mt-4 flex space-x-2 sm:space-x-4">
+ <button onclick="markSelectedAsUnavailable()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+ <i class="fas fa-times mr-2"></i>Mark as Unavailable
+ </button>
+ <button onclick="markSelectedAsAvailable()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+ <i class="fas fa-check mr-2"></i>Mark as Available
+ </button>
+ </div>
+ </div>
+ 
+ <!-- Legend -->
+ <div class="bg-gray-50 rounded-lg p-4">
+ <h4 class="text-sm font-medium text-gray-700 mb-2">Legend:</h4>
+ <div class="flex items-center space-x-2 sm:space-x-4 text-xs">
+ <div class="flex items-center space-x-2">
+ <div class="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+ <span class="text-gray-600">Available</span>
+ </div>
+ <div class="flex items-center space-x-2">
+ <div class="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+ <span class="text-gray-600">Unavailable</span>
+ </div>
+ <div class="flex items-center space-x-2">
+ <div class="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
+ <span class="text-gray-600">No Data</span>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ `;
+ }
 
-    function closeMemberPreferencesModal() {
-        const modal = document.getElementById('memberPreferencesModal');
-        if (modal) {
-            modal.classList.add('hidden');
-        }
-    }
+ function closeMemberPreferencesModal() {
+ const modal = document.getElementById('memberPreferencesModal');
+ if (modal) {
+ modal.classList.add('hidden');
+ }
+ }
 
-    // --- Individual Member Date-Based Schedule ---
-    async function renderMemberDateBasedSchedule(member, container, days = 7) {
-        // Fetch availability for this member
-        try {
-            const today = new Date();
-            const endDate = new Date();
-            endDate.setDate(today.getDate() + days - 1);
-            const startStr = today.toISOString().split('T')[0];
-            const endStr = endDate.toISOString().split('T')[0];
-            const response = await fetch(`/api/availability/bulk?user_ids=${member.id}&start_date=${startStr}&end_date=${endStr}`);
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${response.statusText}\n${errorText}`);
-            }
-            const data = await response.json();
-            const availabilityData = data.availability;
-            // Use the actual start_date and end_date from the API response
-            const startDate = data.start_date;
-            const endDateApi = data.end_date;
-            container.innerHTML = generateDateBasedScheduleHtml([member], availabilityData, startDate, endDateApi);
-        } catch (error) {
-            container.innerHTML = `<div class='text-red-600'>Error loading date-based schedule: ${error.message}</div>`;
-        }
-    }
+ // --- Individual Member Date-Based Schedule ---
+ async function renderMemberDateBasedSchedule(member, container, days = 7) {
+ // Fetch availability for this member
+ try {
+ const today = new Date();
+ const endDate = new Date();
+ endDate.setDate(today.getDate() + days - 1);
+ const startStr = today.toISOString().split('T')[0];
+ const endStr = endDate.toISOString().split('T')[0];
+ const response = await fetch(`/api/availability/bulk?user_ids=${member.id}&start_date=${startStr}&end_date=${endStr}`);
+ if (!response.ok) {
+ const errorText = await response.text();
+ throw new Error(`HTTP ${response.status}: ${response.statusText}\n${errorText}`);
+ }
+ const data = await response.json();
+ const availabilityData = data.availability;
+ // Use the actual start_date and end_date from the API response
+ const startDate = data.start_date;
+ const endDateApi = data.end_date;
+ container.innerHTML = generateDateBasedScheduleHtml([member], availabilityData, startDate, endDateApi);
+ } catch (error) {
+ container.innerHTML = `<div class='text-red-600'>Error loading date-based schedule: ${error.message}</div>`;
+ }
+ }
 
-    function secondsToHHMM(seconds) {
-        if (typeof seconds !== 'number') seconds = parseInt(seconds, 10);
-        if (isNaN(seconds)) return '';
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    }
+ function secondsToHHMM(seconds) {
+ if (typeof seconds !== 'number') seconds = parseInt(seconds, 10);
+ if (isNaN(seconds)) return '';
+ const hours = Math.floor(seconds / 3600);
+ const minutes = Math.floor((seconds % 3600) / 60);
+ return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+ }
 </script>
 {% endblock %}
