@@ -261,7 +261,7 @@
                 return `
                     <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                         <div>
-                            <h4 class="font-medium text-gray-900">${session.session_type}</h4>
+                            <h4 class="font-medium text-gray-900">${session.notes || 'General Training'}</h4>
                             <p class="text-sm text-gray-500">${session.formatted_date} at ${session.formatted_time}</p>
                             <p class="text-xs text-gray-400">${session.duration} minutes</p>
                         </div>

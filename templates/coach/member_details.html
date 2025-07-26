@@ -108,39 +108,178 @@
         </main>
     </div>
 
-    <!-- Assign Best Workout Modal -->
+    <!-- Assign Best Workout Modal with Schedule View -->
     <div id="assignBestWorkoutModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-md w-full overflow-hidden">
+        <div class="flex items-start justify-center min-h-screen p-4 py-8">
+            <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                 <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h2 class="text-xl font-semibold text-gray-900">Assign Best Workout</h2>
-                    <button onclick="closeAssignBestWorkoutModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">Weekly Schedule & Workout Assignment</h2>
+                        <p class="text-sm text-gray-600 mt-1">View schedule, preferences, and assign the best workout time</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex space-x-2">
+                            <button id="prevWeekModal" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
+                                <i class="fas fa-chevron-left mr-1"></i>Prev
+                            </button>
+                            <button id="nextWeekModal" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
+                                Next<i class="fas fa-chevron-right ml-1"></i>
+                            </button>
+                        </div>
+                        <button onclick="closeAssignBestWorkoutModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="p-6">
-                    <form id="assignBestWorkoutForm" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Workout Type</label>
-                            <input type="text" name="workout_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                
+                <div class="flex-1 overflow-y-auto modal-scroll p-6" style="max-height: calc(90vh - 120px);">
+                    <!-- Week Info and Form -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                        <!-- Assignment Form -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h3 class="font-semibold mb-3">Session Details</h3>
+                            <form id="assignBestWorkoutForm" class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Workout Type</label>
+                                    <select name="workout_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm">
+                                        <option value="">Select workout type...</option>
+                                        <option value="Upper Body">Upper Body</option>
+                                        <option value="Lower Body">Lower Body</option>
+                                        <option value="Full Body">Full Body</option>
+                                        <option value="Cardio">Cardio</option>
+                                        <option value="Strength Training">Strength Training</option>
+                                        <option value="Flexibility">Flexibility</option>
+                                        <option value="HIIT">HIIT</option>
+                                        <option value="General Training">General Training</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                                    <select name="duration" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm">
+                                        <option value="60">60 minutes</option>
+                                        <option value="90">90 minutes</option>
+                                        <option value="120">120 minutes</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                    <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"></textarea>
+                                </div>
+                                <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm">
+                                    Find Best Times
+                                </button>
+                            </form>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
-                            <input type="number" name="duration" min="10" max="180" value="60" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        
+                        <!-- Coach Info -->
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <h3 class="font-semibold text-blue-800 mb-3">
+                                <i class="fas fa-user-tie mr-2"></i>Coach Information
+                            </h3>
+                            <div id="modalCoachInfo" class="text-sm">
+                                <p><strong>Name:</strong> <span id="modalCoachName">{{ user.name }}</span></p>
+                                <p><strong>Specialization:</strong> <span id="modalCoachSpecialization">Loading...</span></p>
+                                <p><strong>Preferred Times:</strong> <span id="modalCoachPreferences">Loading...</span></p>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                            <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
+                        
+                        <!-- Member Info -->
+                        <div class="bg-green-50 rounded-lg p-4">
+                            <h3 class="font-semibold text-green-800 mb-3">
+                                <i class="fas fa-user mr-2"></i>Member Information
+                            </h3>
+                            <div id="modalMemberInfo" class="text-sm">
+                                <p><strong>Name:</strong> <span id="modalMemberName">Loading...</span></p>
+                                <p><strong>Membership:</strong> <span id="modalMemberMembership">Loading...</span></p>
+                                <p><strong>Preferred Times:</strong> <span id="modalMemberPreferences">Loading...</span></p>
+                            </div>
                         </div>
-                        <div id="assignBestWorkoutMatches" class="mt-4"></div>
-                        <div class="flex justify-end gap-2 mt-4">
-                            <button type="button" onclick="closeAssignBestWorkoutModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
-                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Find Best Match</button>
+                    </div>
+
+                    <!-- Week Display -->
+                    <div class="mb-4">
+                        <div id="modalWeekInfo" class="text-lg font-medium text-gray-700 text-center">
+                            Loading week information...
                         </div>
-                    </form>
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="bg-white border rounded-lg p-4 mb-6">
+                        <h3 class="font-semibold mb-3 text-sm">Schedule Legend</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-purple-300 rounded mr-2"></div>
+                                <span>Both Prefer (Score: 4)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-blue-300 rounded mr-2"></div>
+                                <span>Coach Prefers (Score: 3)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-green-300 rounded mr-2"></div>
+                                <span>Member Prefers (Score: 2)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-gray-300 rounded mr-2"></div>
+                                <span>Available (Score: 1)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-red-200 border border-red-400 rounded mr-2"></div>
+                                <span>Coach Session</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-orange-200 border border-orange-400 rounded mr-2"></div>
+                                <span>Member Session</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-yellow-200 border-2 border-yellow-500 rounded mr-2"></div>
+                                <span>Best Match</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-blue-200 border border-blue-400 rounded mr-2"></div>
+                                <span>Coach Available</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Schedule Grid -->
+                    <div class="bg-white border rounded-lg overflow-hidden mb-6">
+                        <div class="overflow-x-auto overflow-y-auto modal-scroll max-h-96">
+                            <table id="modalScheduleTable" class="min-w-full text-xs">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                                            Time
+                                        </th>
+                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mon</th>
+                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tue</th>
+                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wed</th>
+                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thu</th>
+                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fri</th>
+                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sat</th>
+                                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sun</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalScheduleBody" class="bg-white divide-y divide-gray-200">
+                                    <!-- Schedule will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Best Matches Section -->
+                    <div id="modalBestMatches" class="hidden">
+                        <h3 class="font-semibold mb-3">
+                            <i class="fas fa-star mr-2 text-yellow-500"></i>Best Available Time Slots
+                        </h3>
+                        <div id="assignBestWorkoutMatches" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto modal-scroll">
+                            <!-- Best matches will be populated here -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
     <script>
         // Get member ID from URL
@@ -335,24 +474,272 @@
         // Load member details when page loads
         fetchMemberDetails();
 
-        // Modal logic
+        // Enhanced Modal logic with Schedule View
         const assignBtn = document.getElementById('assignBestWorkoutBtn');
         const modal = document.getElementById('assignBestWorkoutModal');
         const form = document.getElementById('assignBestWorkoutForm');
         const matchesDiv = document.getElementById('assignBestWorkoutMatches');
+        
+        let currentModalWeek = new Date();
+        let modalScheduleData = null;
+        let modalBestMatches = [];
 
-        assignBtn.onclick = function() {
+        // Modal week navigation
+        function getModalWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff));
+        }
+
+        function formatModalDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function formatModalWeekInfo(weekStart) {
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            const options = { month: 'long', day: 'numeric', year: 'numeric' };
+            return `Week of ${weekStart.toLocaleDateString('en-US', options)} - ${weekEnd.toLocaleDateString('en-US', options)}`;
+        }
+
+        function formatModalTimeSlot(hour) {
+            return `${hour.toString().padStart(2, '0')}:00`;
+        }
+
+        function getModalPreferenceClass(slot) {
+            if (!slot.available_for_both) return '';
+            switch(slot.preference_score) {
+                case 4: return 'modal-preference-both';
+                case 3: return 'modal-preference-coach';
+                case 2: return 'modal-preference-member';
+                case 1: return 'modal-preference-available';
+                default: return '';
+            }
+        }
+
+        function getModalCellContent(slot, day, hour, bestMatches = []) {
+            let content = '<div class="h-16 p-1 text-xs overflow-y-auto">';
+            
+            // Check if this slot is a best match
+            const isBestMatch = bestMatches.some(match => 
+                match.day === day && parseInt(match.hour) === hour
+            );
+            
+            let hasAnySessions = false;
+            
+            if (slot.coach_session) {
+                hasAnySessions = true;
+                content += `
+                    <div class="bg-red-100 border border-red-300 rounded p-1 mb-1 relative group">
+                        <div class="font-semibold text-red-800 text-xs truncate">Coach Session</div>
+                        <div class="text-red-600 text-xs truncate">${slot.coach_session.member_name}</div>
+                        <div class="text-red-500 text-xs">${slot.coach_session.time}</div>
+                        <div class="absolute left-0 top-0 bg-red-800 text-white p-2 rounded shadow-lg hidden group-hover:block z-10 min-w-48">
+                            <div class="font-semibold">Coach Session</div>
+                            <div>Member: ${slot.coach_session.member_name}</div>
+                            <div>Time: ${slot.coach_session.time}</div>
+                            <div>Duration: ${slot.coach_session.duration} min</div>
+                            <div>Type: ${slot.coach_session.session_type}</div>
+                            <div>Status: ${slot.coach_session.status}</div>
+                            ${slot.coach_session.notes ? `<div>Notes: ${slot.coach_session.notes}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (slot.member_session) {
+                hasAnySessions = true;
+                content += `
+                    <div class="bg-orange-100 border border-orange-300 rounded p-1 mb-1 relative group">
+                        <div class="font-semibold text-orange-800 text-xs truncate">Member Session</div>
+                        <div class="text-orange-600 text-xs truncate">${slot.member_session.coach_name}</div>
+                        <div class="text-orange-500 text-xs">${slot.member_session.time}</div>
+                        <div class="absolute left-0 top-0 bg-orange-800 text-white p-2 rounded shadow-lg hidden group-hover:block z-10 min-w-48">
+                            <div class="font-semibold">Member Session</div>
+                            <div>Coach: ${slot.member_session.coach_name}</div>
+                            <div>Time: ${slot.member_session.time}</div>
+                            <div>Duration: ${slot.member_session.duration} min</div>
+                            <div>Type: ${slot.member_session.session_type}</div>
+                            <div>Status: ${slot.member_session.status}</div>
+                            ${slot.member_session.notes ? `<div>Notes: ${slot.member_session.notes}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (slot.available_for_both && !hasAnySessions) {
+                const borderClass = isBestMatch ? 'border-2 border-yellow-500 bg-yellow-100' : '';
+                content += `
+                    <div class="modal-available-slot cursor-pointer hover:bg-opacity-80 rounded p-1 ${borderClass} h-full" 
+                         data-day="${day}" data-hour="${hour}" data-score="${slot.preference_score}">
+                        <div class="text-center h-full flex flex-col justify-center">
+                            ${isBestMatch ? '<i class="fas fa-star text-yellow-600"></i>' : '<i class="fas fa-plus text-green-600"></i>'}
+                            <div class="text-xs">${isBestMatch ? 'Best Match' : 'Available'}</div>
+                            <div class="font-semibold text-xs">Score: ${slot.preference_score}</div>
+                        </div>
+                    </div>
+                `;
+            } else if (slot.available_for_both && hasAnySessions) {
+                // Show a small indicator that there are conflicts
+                content += `
+                    <div class="bg-yellow-100 border border-yellow-400 rounded p-1 text-center">
+                        <div class="text-xs text-yellow-800">⚠️ Conflicts</div>
+                    </div>
+                `;
+            }
+            
+            // If slot has preference indicators but no sessions, show availability
+            if (!hasAnySessions && !slot.available_for_both) {
+                if (slot.coach_available || slot.member_available) {
+                    const availabilityText = [];
+                    if (slot.coach_available) availabilityText.push('Coach');
+                    if (slot.member_available) availabilityText.push('Member');
+                    
+                    content += `
+                        <div class="bg-gray-100 border border-gray-300 rounded p-1 text-center">
+                            <div class="text-xs text-gray-600">${availabilityText.join(' + ')}</div>
+                            <div class="text-xs text-gray-500">Available</div>
+                        </div>
+                    `;
+                }
+            }
+            
+            content += '</div>';
+            return content;
+        }
+
+        assignBtn.onclick = async function() {
+            currentModalWeek = getModalWeekStart(new Date());
+            document.getElementById('modalWeekInfo').textContent = formatModalWeekInfo(currentModalWeek);
+            
+            // Load coach and member info in modal
+            await loadModalParticipantsInfo();
+            
             matchesDiv.innerHTML = '';
             form.reset();
             modal.classList.remove('hidden');
+            
+            // Load initial schedule
+            await loadModalSchedule();
         };
+
+        async function loadModalParticipantsInfo() {
+            try {
+                // Get coach preferences and info
+                const coachResponse = await fetch(`/api/coach/preferences`);
+                if (coachResponse.ok) {
+                    const coachData = await coachResponse.json();
+                    const coachPrefs = coachData.preferences?.preferred_time_slots || [];
+                    document.getElementById('modalCoachPreferences').textContent = 
+                        coachPrefs.length > 0 ? coachPrefs.join(', ') + ':00' : 'None set';
+                    
+                    // Set coach specialization
+                    if (coachData.coach_info?.specialization) {
+                        document.getElementById('modalCoachSpecialization').textContent = coachData.coach_info.specialization;
+                    } else {
+                        document.getElementById('modalCoachSpecialization').textContent = 'Not specified';
+                    }
+                }
+
+                // Get member name and membership from existing data
+                const memberName = document.getElementById('memberName').textContent;
+                const memberMembership = document.getElementById('membershipType').textContent;
+                
+                document.getElementById('modalMemberName').textContent = memberName;
+                document.getElementById('modalMemberMembership').textContent = memberMembership;
+
+                // Get member preferences from existing display
+                const memberPrefsElement = document.getElementById('memberPreferences');
+                if (memberPrefsElement) {
+                    const timeSlotElements = memberPrefsElement.querySelectorAll('.bg-green-100');
+                    const timeSlots = Array.from(timeSlotElements).map(el => el.textContent);
+                    document.getElementById('modalMemberPreferences').textContent = 
+                        timeSlots.length > 0 ? timeSlots.join(', ') : 'None set';
+                }
+            } catch (error) {
+                console.error('Error loading modal participants info:', error);
+            }
+        }
+
+        async function loadModalSchedule() {
+            try {
+                const weekStart = formatModalDate(currentModalWeek);
+                const response = await fetch(`/api/coach/schedule_view/${coachId}/${memberId}?week_start=${weekStart}`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error('Failed to load schedule data');
+                }
+                
+                modalScheduleData = data;
+                displayModalSchedule(data);
+            } catch (error) {
+                console.error('Error loading modal schedule:', error);
+                document.getElementById('modalScheduleBody').innerHTML = 
+                    '<tr><td colspan="8" class="text-center text-red-500 p-4">Error loading schedule data</td></tr>';
+            }
+        }
+
+        function displayModalSchedule(data, bestMatches = []) {
+            const scheduleBody = document.getElementById('modalScheduleBody');
+            scheduleBody.innerHTML = '';
+            
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            
+            // Generate rows for each hour (8 AM to 10 PM)
+            for (let hour = 8; hour <= 22; hour++) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-2 py-1 whitespace-nowrap text-xs font-medium text-gray-900 bg-gray-50">
+                        ${formatModalTimeSlot(hour)}
+                    </td>
+                `;
+                
+                days.forEach(day => {
+                    const slot = data.schedule_grid[day][hour];
+                    const cell = document.createElement('td');
+                    cell.className = `px-1 py-1 whitespace-nowrap text-xs border-l border-gray-200 ${getModalPreferenceClass(slot)}`;
+                    cell.innerHTML = getModalCellContent(slot, day, hour, bestMatches);
+                    row.appendChild(cell);
+                });
+                
+                scheduleBody.appendChild(row);
+            }
+            
+            // Add click handlers for available slots
+            document.querySelectorAll('.modal-available-slot').forEach(slot => {
+                slot.addEventListener('click', function() {
+                    const day = this.dataset.day;
+                    const hour = this.dataset.hour;
+                    assignSessionFromModal(day, hour);
+                });
+            });
+        }
+
         function closeAssignBestWorkoutModal() {
             modal.classList.add('hidden');
+            document.getElementById('modalBestMatches').classList.add('hidden');
+            modalBestMatches = [];
         }
+
+        // Week navigation in modal
+        document.getElementById('prevWeekModal').addEventListener('click', function() {
+            currentModalWeek.setDate(currentModalWeek.getDate() - 7);
+            document.getElementById('modalWeekInfo').textContent = formatModalWeekInfo(currentModalWeek);
+            loadModalSchedule();
+        });
+
+        document.getElementById('nextWeekModal').addEventListener('click', function() {
+            currentModalWeek.setDate(currentModalWeek.getDate() + 7);
+            document.getElementById('modalWeekInfo').textContent = formatModalWeekInfo(currentModalWeek);
+            loadModalSchedule();
+        });
 
         form.onsubmit = async function(e) {
             e.preventDefault();
-            matchesDiv.innerHTML = '<div class="text-gray-500">Finding best matches...</div>';
+            matchesDiv.innerHTML = '<div class="text-gray-500 text-center p-4">Finding best matches...</div>';
+            
             const formData = new FormData(form);
             const data = {
                 coach_id: coachId,
@@ -361,53 +748,212 @@
                 duration: parseInt(formData.get('duration'), 10),
                 notes: formData.get('notes')
             };
-            const res = await fetch('/api/coach/assign_best_workout', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-            const result = await res.json();
-            if (!result.success) {
-                matchesDiv.innerHTML = `<div class='text-red-600'>${result.message}</div>`;
-                return;
+            
+            try {
+                const res = await fetch('/api/coach/assign_best_workout', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                
+                if (!result.success) {
+                    matchesDiv.innerHTML = `<div class='text-red-600 text-center p-4'>${result.message}</div>`;
+                    return;
+                }
+                
+                modalBestMatches = result.matches;
+                displayModalBestMatches(result.matches);
+                
+                // Refresh schedule to show best matches highlighted
+                if (modalScheduleData) {
+                    displayModalSchedule(modalScheduleData, result.matches);
+                }
+                
+                document.getElementById('modalBestMatches').classList.remove('hidden');
+                
+            } catch (error) {
+                matchesDiv.innerHTML = `<div class='text-red-600 text-center p-4'>Error finding matches: ${error.message}</div>`;
             }
-            // Show all returned matches for selection
-            matchesDiv.innerHTML = `<div class='mb-2 text-sm text-gray-700'>Select a time slot:</div>` +
-                result.matches.map((m, i) =>
-                    `<label class='block mb-1'><input type='radio' name='slot' value='${m.date}|${m.day}|${m.hour}' ${i===0?'checked':''}> <span class='font-mono'>${m.date} (${m.day}) ${m.hour}</span></label>`
-                ).join('') +
-                `<button type='button' class='mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700' onclick='confirmAssignBestWorkout()'>Assign Session</button>`;
         };
 
-        async function confirmAssignBestWorkout() {
+        function displayModalBestMatches(matches) {
+            if (matches.length === 0) {
+                matchesDiv.innerHTML = '<div class="text-gray-500 text-center p-4">No optimal time slots found for this week.</div>';
+                return;
+            }
+            
+            matchesDiv.innerHTML = matches.map((match, index) => {
+                const preferenceText = {
+                    4: '🌟 Both prefer this time',
+                    3: '👨‍💼 Coach prefers this time',
+                    2: '👤 Member prefers this time',
+                    1: '✅ Available slot'
+                }[match.preference_score] || 'Available';
+                
+                return `
+                    <div class="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
+                         onclick="assignSessionFromModalMatch('${match.day}', ${match.hour}, '${match.date}')">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-semibold text-sm text-gray-900">${match.day}</h4>
+                                <p class="text-xs text-gray-600">${match.date} at ${formatModalTimeSlot(match.hour)}</p>
+                                <p class="text-xs text-gray-500">${preferenceText}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-green-600">#{index + 1}</div>
+                                <div class="text-xs text-gray-500">Score: ${match.preference_score}</div>
+                                <button class="mt-1 bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700">
+                                    Assign
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function assignSessionFromModal(day, hour, date = null) {
             const formData = new FormData(form);
-            const slot = document.querySelector('input[name="slot"]:checked');
-            if (!slot) return;
-            const [date, day, hour] = slot.value.split('|');
-            const data = {
-                coach_id: coachId,
-                member_id: memberId,
-                day,
-                hour,
-                date,
-                workout_type: formData.get('workout_type'),
-                duration: parseInt(formData.get('duration'), 10),
-                notes: formData.get('notes')
-            };
-            matchesDiv.innerHTML = '<div class="text-gray-500">Assigning session...</div>';
-            const res = await fetch('/api/coach/create_session', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-            const result = await res.json();
-            if (result.success) {
-                matchesDiv.innerHTML = `<div class='text-green-700'>Session assigned successfully!</div>`;
-                setTimeout(() => { closeAssignBestWorkoutModal(); location.reload(); }, 1200);
-            } else {
-                matchesDiv.innerHTML = `<div class='text-red-600'>Failed to assign session.</div>`;
+            
+            if (!formData.get('workout_type')) {
+                alert('Please fill in the session details first');
+                return;
+            }
+
+            // Calculate the date for this day/hour if not provided
+            if (!date) {
+                const weekStart = new Date(currentModalWeek);
+                const dayIndex = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].indexOf(day);
+                const targetDate = new Date(weekStart);
+                targetDate.setDate(targetDate.getDate() + dayIndex);
+                date = formatModalDate(targetDate);
+            }
+
+            await confirmModalAssignment(day, hour, date, formData);
+        }
+
+        async function assignSessionFromModalMatch(day, hour, date) {
+            const formData = new FormData(form);
+            
+            if (!formData.get('workout_type')) {
+                alert('Please fill in the session details first');
+                return;
+            }
+
+            await confirmModalAssignment(day, hour, date, formData);
+        }
+
+        async function confirmModalAssignment(day, hour, date, formData) {
+            const timeStr = formatModalTimeSlot(hour);
+            
+            if (!confirm(`Assign session on ${day}, ${date} at ${timeStr}?`)) {
+                return;
+            }
+
+            try {
+                const data = {
+                    coach_id: coachId,
+                    member_id: memberId,
+                    session_date: date,
+                    session_time: timeStr,
+                    duration: parseInt(formData.get('duration'), 10),
+                    workout_type: formData.get('workout_type'),
+                    notes: formData.get('notes')
+                };
+
+                const res = await fetch('/api/coach/assign_workout_from_schedule', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+
+                if (result.success) {
+                    alert('Session assigned successfully!');
+                    closeAssignBestWorkoutModal();
+                    location.reload(); // Refresh the page to show updated data
+                } else {
+                    alert(`Failed to assign session: ${result.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error assigning session:', error);
+                alert('Error assigning session: ' + error.message);
             }
         }
     </script>
+
+    <style>
+        .modal-preference-both {
+            background-color: #e9d5ff !important; /* purple-200 */
+        }
+
+        .modal-preference-coach {
+            background-color: #bfdbfe !important; /* blue-200 */
+        }
+
+        .modal-preference-member {
+            background-color: #bbf7d0 !important; /* green-200 */
+        }
+
+        .modal-preference-available {
+            background-color: #e5e7eb !important; /* gray-200 */
+        }
+
+        .modal-available-slot {
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Tooltip styles for better session info display */
+        .group:hover .group-hover\\:block {
+            display: block !important;
+        }
+
+        /* Ensure tooltips appear above other elements */
+        .z-10 {
+            z-index: 10;
+        }
+
+        /* Better spacing for schedule cells */
+        #modalScheduleTable td {
+            vertical-align: top;
+            height: 64px;
+        }
+
+        /* Smooth scrolling for modal */
+        .modal-scroll {
+            scroll-behavior: smooth;
+        }
+
+        /* Custom scrollbar styling */
+        .modal-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .modal-scroll::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .modal-scroll::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Ensure modal content doesn't overflow screen */
+        @media (max-height: 600px) {
+            .modal-container {
+                max-height: 95vh;
+            }
+        }
+    </style>
 </body>
 </html> 
