@@ -4394,21 +4394,21 @@ async def chat(request: Request):
                         "• Coaches can view their schedule, assign training sessions, track the progress of the members they train, and adjust plans based on preferences.\n"
                         "• Members can log in to see their coach, track past and upcoming training sessions, and manage personal information like training preferences and membership details.\n\n"
                         "Be ready to help users with these common questions:\n\n"
-                        "• “How do I log in?”  \n"
+                        "• 'How do I log in?'  \n"
                         "  → You log in with the username and password your gym provided. If you forgot them, ask your gym to reset your login.\n\n"
-                        "• “How do I change my workout preferences?”  \n"
+                        "• 'How do I change my workout preferences?'  \n"
                         "  → After logging in, go to the schedule page where you can update the types of exercises you like or the times you're available. Your coach will use this info to build a better plan for you.\n\n"
-                        "• “How do I see my training schedule?”  \n"
-                        "  → You’ll find a calendar or list on your dashboard showing all upcoming sessions. If something is missing, ask your coach or gym.\n\n"
-                        "• “Can I change my coach?”  \n"
+                        "• 'How do I see my training schedule?'  \n"
+                        "  → You'll find a calendar or list on your dashboard showing all upcoming sessions. If something is missing, ask your coach or gym.\n\n"
+                        "• 'Can I change my coach?'  \n"
                         "  → Coaches are usually assigned by the gym, but you can talk to your gym staff if you want to switch.\n\n"
-                        "• “How do I see my progress?”  \n"
-                        "  → On your profile or dashboard, you’ll find a progress section with a summary of your completed workouts, improvements, or coach feedback.\n\n"
-                        "• “What membership do I have?”  \n"
-                        "  → You can check your membership details (like whether you’re Basic, Premium, or VIP) on your profile. If you want to upgrade or change it, contact your gym.\n\n"
-                        "• “How do payments work?”  \n"
+                        "• 'How do I see my progress?'  \n"
+                        "  → On your profile or dashboard, you'll find a progress section with a summary of your completed workouts, improvements, or coach feedback.\n\n"
+                        "• 'What membership do I have?'  \n"
+                        "  → You can check your membership details (like whether you're Basic, Premium, or VIP) on your profile. If you want to upgrade or change it, contact your gym.\n\n"
+                        "• 'How do payments work?'  \n"
                         "  → Payments are handled by the gym. You can see your latest membership or session payments in your account area.\n\n"
-                        "• “I need help!”  \n"
+                        "• 'I need help!'  \n"
                         "  → No problem! You can always message your coach or gym staff directly through the contact section.\n\n"
                         "Answer these questions in a friendly, clear, and simple way, without using technical terms."
                     )
@@ -4698,23 +4698,105 @@ async def assign_best_workout_api(
         member_free_days = cursor.fetchall()
         member_slots = expand_weekly_availability(member_free_days)
 
+        # Get coach preferred time slots
+        cursor.execute("SELECT preferred_time_slots FROM user_preferences WHERE user_id = %s AND user_type = 'coach'", (coach_id,))
+        coach_pref = cursor.fetchone()
+        coach_preferred_times = []
+        if coach_pref and coach_pref['preferred_time_slots']:
+            coach_preferred_times = json.loads(coach_pref['preferred_time_slots'])
+
         # Get member preferred time slots
         cursor.execute("SELECT preferred_time_slots FROM user_preferences WHERE user_id = %s AND user_type = 'member'", (member_id,))
         member_pref = cursor.fetchone()
-        preferred_times = []
+        member_preferred_times = []
         if member_pref and member_pref['preferred_time_slots']:
-            preferred_times = json.loads(member_pref['preferred_time_slots'])
+            member_preferred_times = json.loads(member_pref['preferred_time_slots'])
 
-        # Find intersection
-        overlap = coach_slots & member_slots
+        # Get existing sessions for coach (to avoid conflicts)
+        cursor.execute("""
+            SELECT session_date, session_time, duration 
+            FROM sessions 
+            WHERE coach_id = %s 
+            AND session_date >= CURDATE() 
+            AND status != 'Cancelled'
+        """, (coach_id,))
+        coach_sessions = cursor.fetchall()
 
-        # First, try to match preferred times
-        preferred_overlap = set()
-        if preferred_times:
-            preferred_overlap = set((day, hour) for (day, hour) in overlap if hour in preferred_times)
+        # Get existing sessions for member (to avoid conflicts)
+        cursor.execute("""
+            SELECT session_date, session_time, duration 
+            FROM sessions 
+            WHERE member_id = %s 
+            AND session_date >= CURDATE() 
+            AND status != 'Cancelled'
+        """, (member_id,))
+        member_sessions = cursor.fetchall()
 
-        # Use preferred_overlap if not empty, else fallback to all overlap
-        slots_to_consider = preferred_overlap if preferred_overlap else overlap
+        # Create sets of unavailable slots for coach and member
+        coach_unavailable = set()
+        member_unavailable = set()
+
+        # Add coach's existing sessions to unavailable slots
+        for session in coach_sessions:
+            session_datetime = datetime.combine(session['session_date'], session['session_time'])
+            session_duration = session['duration']
+            
+            # Block the session hour and adjacent hours based on duration
+            hours_to_block = max(1, (session_duration + 59) // 60)  # Round up to nearest hour
+            for i in range(hours_to_block):
+                blocked_datetime = session_datetime + timedelta(hours=i)
+                day_name = blocked_datetime.strftime('%A')
+                hour = blocked_datetime.hour
+                coach_unavailable.add((day_name, hour))
+
+        # Add member's existing sessions to unavailable slots
+        for session in member_sessions:
+            session_datetime = datetime.combine(session['session_date'], session['session_time'])
+            session_duration = session['duration']
+            
+            # Block the session hour and adjacent hours based on duration
+            hours_to_block = max(1, (session_duration + 59) // 60)  # Round up to nearest hour
+            for i in range(hours_to_block):
+                blocked_datetime = session_datetime + timedelta(hours=i)
+                day_name = blocked_datetime.strftime('%A')
+                hour = blocked_datetime.hour
+                member_unavailable.add((day_name, hour))
+
+        # Remove unavailable slots from available slots
+        coach_available_slots = coach_slots - coach_unavailable
+        member_available_slots = member_slots - member_unavailable
+
+        # Find intersection of available slots
+        overlap = coach_available_slots & member_available_slots
+
+        if not overlap:
+            return {"success": False, "message": "This workout cannot be assigned — no matching time slot found after considering existing sessions."}
+
+        # Prioritize slots based on preferences
+        # 1. Both coach and member prefer this time
+        both_preferred = set()
+        # 2. Only coach prefers this time
+        coach_only_preferred = set()
+        # 3. Only member prefers this time
+        member_only_preferred = set()
+        # 4. Neither prefers this time (but both are available)
+        no_preference = set()
+
+        for day, hour in overlap:
+            coach_prefers = hour in coach_preferred_times if coach_preferred_times else False
+            member_prefers = hour in member_preferred_times if member_preferred_times else False
+            
+            if coach_prefers and member_prefers:
+                both_preferred.add((day, hour))
+            elif coach_prefers:
+                coach_only_preferred.add((day, hour))
+            elif member_prefers:
+                member_only_preferred.add((day, hour))
+            else:
+                no_preference.add((day, hour))
+
+        # Combine slots in order of preference
+        slots_to_consider = list(both_preferred) + list(coach_only_preferred) + list(member_only_preferred) + list(no_preference)
 
         if not slots_to_consider:
             return {"success": False, "message": "This workout cannot be assigned — no matching time slot found."}
@@ -4723,11 +4805,56 @@ async def assign_best_workout_api(
         slot_datetimes = []
         for day, hour in slots_to_consider:
             dt = next_occurrence(day, hour)
-            slot_datetimes.append((dt, day, hour))
+            # Double-check that this specific datetime doesn't conflict with existing sessions
+            is_available = True
+            
+            # Check coach availability for this specific datetime
+            for session in coach_sessions:
+                session_start = datetime.combine(session['session_date'], session['session_time'])
+                session_end = session_start + timedelta(minutes=session['duration'])
+                proposed_start = dt
+                proposed_end = dt + timedelta(minutes=duration)
+                
+                # Check for overlap
+                if (proposed_start < session_end and proposed_end > session_start):
+                    is_available = False
+                    break
+            
+            # Check member availability for this specific datetime
+            if is_available:
+                for session in member_sessions:
+                    session_start = datetime.combine(session['session_date'], session['session_time'])
+                    session_end = session_start + timedelta(minutes=session['duration'])
+                    proposed_start = dt
+                    proposed_end = dt + timedelta(minutes=duration)
+                    
+                    # Check for overlap
+                    if (proposed_start < session_end and proposed_end > session_start):
+                        is_available = False
+                        break
+            
+            if is_available:
+                # Determine preference level for scoring
+                coach_prefers = hour in coach_preferred_times if coach_preferred_times else False
+                member_prefers = hour in member_preferred_times if member_preferred_times else False
+                
+                if coach_prefers and member_prefers:
+                    preference_score = 4
+                elif coach_prefers:
+                    preference_score = 3
+                elif member_prefers:
+                    preference_score = 2
+                else:
+                    preference_score = 1
+                
+                slot_datetimes.append((dt, day, hour, preference_score))
+        
         # Only keep future slots
         slot_datetimes = [s for s in slot_datetimes if s[0] > datetime.now()]
-        # Sort by datetime
-        slot_datetimes.sort()
+        
+        # Sort by preference score (descending) then by datetime (ascending)
+        slot_datetimes.sort(key=lambda x: (-x[3], x[0]))
+        
         # Take the best 10
         best_matches = slot_datetimes[:10]
         if not best_matches:
@@ -4739,9 +4866,10 @@ async def assign_best_workout_api(
                 {
                     "date": dt.strftime("%Y-%m-%d"),
                     "day": day,
-                    "hour": hour
+                    "hour": hour,
+                    "preference_score": preference_score
                 }
-                for dt, day, hour in best_matches
+                for dt, day, hour, preference_score in best_matches
             ]
         }
     finally:
@@ -4779,6 +4907,395 @@ async def create_session_api(
         """, (gym_id, coach_id, member_id, session_date, session_time, duration, notes + f" | Workout: {workout_type}"))
         conn.commit()
         return {"success": True, "session_id": cursor.lastrowid}
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/api/coach/schedule_view/{coach_id}/{member_id}")
+async def get_schedule_view(
+    coach_id: int,
+    member_id: int,
+    week_start: str = Query(..., description="Week start date in YYYY-MM-DD format")
+):
+    """Get comprehensive schedule view including sessions, preferences, and availability"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        from datetime import datetime, timedelta
+        import json
+        
+        # Parse week start date
+        week_start_date = datetime.strptime(week_start, "%Y-%m-%d").date()
+        week_end_date = week_start_date + timedelta(days=6)
+        
+        # Get coach information
+        cursor.execute("SELECT name, specialization FROM coaches WHERE id = %s", (coach_id,))
+        coach_info = cursor.fetchone()
+        
+        # Get member information
+        cursor.execute("SELECT name, membership_type FROM members WHERE id = %s", (member_id,))
+        member_info = cursor.fetchone()
+        
+        # Get coach sessions for the week
+        cursor.execute("""
+            SELECT s.*, m.name as member_name, m.membership_type,
+                   DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
+                   TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time,
+                   DAYNAME(s.session_date) as day_name,
+                   HOUR(s.session_time) as hour_slot
+            FROM sessions s
+            JOIN members m ON s.member_id = m.id
+            WHERE s.coach_id = %s 
+            AND s.session_date BETWEEN %s AND %s
+            AND s.status != 'Cancelled'
+            ORDER BY s.session_date, s.session_time
+        """, (coach_id, week_start_date, week_end_date))
+        coach_sessions = cursor.fetchall()
+        
+        # Get member sessions for the week
+        cursor.execute("""
+            SELECT s.*, c.name as coach_name, c.specialization,
+                   DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
+                   TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time,
+                   DAYNAME(s.session_date) as day_name,
+                   HOUR(s.session_time) as hour_slot
+            FROM sessions s
+            JOIN coaches c ON s.coach_id = c.id
+            WHERE s.member_id = %s 
+            AND s.session_date BETWEEN %s AND %s
+            AND s.status != 'Cancelled'
+            ORDER BY s.session_date, s.session_time
+        """, (member_id, week_start_date, week_end_date))
+        member_sessions = cursor.fetchall()
+        
+        # Get coach preferences and availability
+        cursor.execute("SELECT * FROM user_preferences WHERE user_id = %s AND user_type = 'coach'", (coach_id,))
+        coach_preferences = cursor.fetchone()
+        
+        cursor.execute("SELECT * FROM free_days WHERE user_id = %s AND user_type = 'coach'", (coach_id,))
+        coach_availability = cursor.fetchall()
+        
+        # Get member preferences and availability
+        cursor.execute("SELECT * FROM user_preferences WHERE user_id = %s AND user_type = 'member'", (member_id,))
+        member_preferences = cursor.fetchone()
+        
+        cursor.execute("SELECT * FROM free_days WHERE user_id = %s AND user_type = 'member'", (member_id,))
+        member_availability = cursor.fetchall()
+        
+        # Parse preferred time slots
+        coach_preferred_times = []
+        if coach_preferences and coach_preferences.get('preferred_time_slots'):
+            coach_preferred_times = json.loads(coach_preferences['preferred_time_slots'])
+            
+        member_preferred_times = []
+        if member_preferences and member_preferences.get('preferred_time_slots'):
+            member_preferred_times = json.loads(member_preferences['preferred_time_slots'])
+        
+        # Create a weekly schedule grid (7 days x 24 hours)
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        schedule_grid = {}
+        
+        for day in days:
+            schedule_grid[day] = {}
+            for hour in range(24):
+                schedule_grid[day][hour] = {
+                    'coach_available': False,
+                    'member_available': False,
+                    'coach_preferred': hour in coach_preferred_times,
+                    'member_preferred': hour in member_preferred_times,
+                    'coach_session': None,
+                    'member_session': None,
+                    'available_for_both': False,
+                    'preference_score': 0
+                }
+        
+        # Mark coach availability
+        for avail in coach_availability:
+            if avail['is_available']:
+                day = avail['day_of_week']
+                start_hour = avail['start_time'].seconds // 3600
+                end_hour = avail['end_time'].seconds // 3600
+                
+                for hour in range(start_hour, min(end_hour, 24)):
+                    if day in schedule_grid:
+                        schedule_grid[day][hour]['coach_available'] = True
+        
+        # Mark member availability
+        for avail in member_availability:
+            if avail['is_available']:
+                day = avail['day_of_week']
+                start_hour = avail['start_time'].seconds // 3600
+                end_hour = avail['end_time'].seconds // 3600
+                
+                for hour in range(start_hour, min(end_hour, 24)):
+                    if day in schedule_grid:
+                        schedule_grid[day][hour]['member_available'] = True
+        
+        # Mark coach sessions
+        for session in coach_sessions:
+            day = session['day_name']
+            hour = session['hour_slot']
+            if day in schedule_grid and 0 <= hour < 24:
+                schedule_grid[day][hour]['coach_session'] = {
+                    'id': session['id'],
+                    'member_name': session['member_name'],
+                    'time': session['formatted_time'],
+                    'duration': session['duration'],
+                    'status': session['status'],
+                    'notes': session['notes'],
+                    'session_type': session.get('session_type', 'General Training')
+                }
+                schedule_grid[day][hour]['coach_available'] = False
+        
+        # Mark member sessions
+        for session in member_sessions:
+            day = session['day_name']
+            hour = session['hour_slot']
+            if day in schedule_grid and 0 <= hour < 24:
+                schedule_grid[day][hour]['member_session'] = {
+                    'id': session['id'],
+                    'coach_name': session['coach_name'],
+                    'time': session['formatted_time'],
+                    'duration': session['duration'],
+                    'status': session['status'],
+                    'notes': session['notes'],
+                    'session_type': session.get('session_type', 'General Training')
+                }
+                schedule_grid[day][hour]['member_available'] = False
+        
+        # Calculate availability for both and preference scores
+        for day in days:
+            for hour in range(24):
+                slot = schedule_grid[day][hour]
+                slot['available_for_both'] = (
+                    slot['coach_available'] and 
+                    slot['member_available'] and
+                    not slot['coach_session'] and 
+                    not slot['member_session']
+                )
+                
+                # Calculate preference score
+                if slot['available_for_both']:
+                    if slot['coach_preferred'] and slot['member_preferred']:
+                        slot['preference_score'] = 4
+                    elif slot['coach_preferred']:
+                        slot['preference_score'] = 3
+                    elif slot['member_preferred']:
+                        slot['preference_score'] = 2
+                    else:
+                        slot['preference_score'] = 1
+        
+        return {
+            "success": True,
+            "week_start": week_start,
+            "week_end": week_end_date.strftime("%Y-%m-%d"),
+            "coach": {
+                "id": coach_id,
+                "name": coach_info['name'] if coach_info else "Unknown",
+                "specialization": coach_info['specialization'] if coach_info else "",
+                "preferred_times": coach_preferred_times,
+                "sessions": coach_sessions
+            },
+            "member": {
+                "id": member_id,
+                "name": member_info['name'] if member_info else "Unknown", 
+                "membership_type": member_info['membership_type'] if member_info else "Basic",
+                "preferred_times": member_preferred_times,
+                "sessions": member_sessions
+            },
+            "schedule_grid": schedule_grid,
+            "legend": {
+                "preference_scores": {
+                    "4": "Both prefer this time",
+                    "3": "Coach prefers this time", 
+                    "2": "Member prefers this time",
+                    "1": "Available but no preference"
+                }
+            }
+        }
+        
+    except Exception as e:
+        print(f"Error getting schedule view: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.post("/api/coach/assign_workout_from_schedule")
+async def assign_workout_from_schedule(
+    coach_id: int = Body(...),
+    member_id: int = Body(...),
+    session_date: str = Body(...),
+    session_time: str = Body(...),
+    duration: int = Body(...),
+    workout_type: str = Body(...),
+    notes: str = Body("")
+):
+    """Assign a workout session from the schedule view"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Validate the coach and member exist and are associated
+        cursor.execute("""
+            SELECT 1 FROM member_coach 
+            WHERE coach_id = %s AND member_id = %s
+        """, (coach_id, member_id))
+        
+        if not cursor.fetchone():
+            raise HTTPException(status_code=400, detail="Member not assigned to this coach")
+        
+        # Check for session conflicts
+        cursor.execute("""
+            SELECT 1 FROM sessions 
+            WHERE coach_id = %s 
+            AND session_date = %s 
+            AND session_time = %s
+            AND status != 'Cancelled'
+        """, (coach_id, session_date, session_time))
+        
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="Coach already has a session at this time")
+            
+        cursor.execute("""
+            SELECT 1 FROM sessions 
+            WHERE member_id = %s 
+            AND session_date = %s 
+            AND session_time = %s
+            AND status != 'Cancelled'
+        """, (member_id, session_date, session_time))
+        
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="Member already has a session at this time")
+        
+        # Get gym_id for the coach
+        cursor.execute("SELECT gym_id FROM coaches WHERE id = %s", (coach_id,))
+        gym_data = cursor.fetchone()
+        if not gym_data:
+            raise HTTPException(status_code=400, detail="Coach not found")
+        
+        # Create the session
+        cursor.execute("""
+            INSERT INTO sessions (
+                gym_id,
+                coach_id,
+                member_id,
+                session_date,
+                session_time,
+                duration,
+                status,
+                notes,
+                created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, 'Scheduled', %s, NOW())
+        """, (
+            gym_data['gym_id'],
+            coach_id,
+            member_id,
+            session_date,
+            session_time,
+            duration,
+            notes
+        ))
+        
+        session_id = cursor.lastrowid
+        conn.commit()
+        
+        # Get the created session details
+        cursor.execute("""
+            SELECT s.*, m.name as member_name, c.name as coach_name,
+                   DATE_FORMAT(s.session_date, '%%Y-%%m-%%d') as formatted_date,
+                   TIME_FORMAT(s.session_time, '%%H:%%i') as formatted_time
+            FROM sessions s
+            JOIN members m ON s.member_id = m.id
+            JOIN coaches c ON s.coach_id = c.id
+            WHERE s.id = %s
+        """, (session_id,))
+        
+        new_session = cursor.fetchone()
+        
+        return {
+            "success": True,
+            "message": "Session assigned successfully",
+            "session": {
+                "id": new_session['id'],
+                "coach_name": new_session['coach_name'],
+                "member_name": new_session['member_name'],
+                "date": new_session['formatted_date'],
+                "time": new_session['formatted_time'],
+                "duration": new_session['duration'],
+                "session_type": new_session.get('session_type', workout_type),
+                "status": new_session['status'],
+                "notes": new_session['notes']
+            }
+        }
+        
+    except HTTPException as he:
+        conn.rollback()
+        raise he
+    except Exception as e:
+        conn.rollback()
+        print(f"Error assigning workout from schedule: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.get("/api/coach/preferences")
+async def get_coach_preferences(request: Request):
+    """Get coach preferences and availability"""
+    user = get_current_user(request)
+    if not user or user["user_type"] != "coach":
+        raise HTTPException(status_code=401, detail="Not authenticated as coach")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get coach info including specialization
+        cursor.execute("""
+            SELECT name, specialization FROM coaches 
+            WHERE id = %s
+        """, (user["id"],))
+        coach_info = cursor.fetchone()
+        
+        # Get coach preferences
+        cursor.execute("""
+            SELECT * FROM user_preferences 
+            WHERE user_id = %s AND user_type = 'coach'
+        """, (user["id"],))
+        preferences = cursor.fetchone()
+        
+        # Get coach availability
+        cursor.execute("""
+            SELECT * FROM free_days 
+            WHERE user_id = %s AND user_type = 'coach'
+            ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+        """, (user["id"],))
+        free_days = cursor.fetchall()
+        
+        # Parse preferences if they exist
+        parsed_preferences = None
+        if preferences:
+            import json
+            parsed_preferences = {
+                'preferred_workout_types': json.loads(preferences['preferred_workout_types']) if preferences['preferred_workout_types'] else [],
+                'preferred_duration': preferences['preferred_duration'],
+                'preferred_time_slots': json.loads(preferences['preferred_time_slots']) if preferences['preferred_time_slots'] else [],
+                'notes': preferences['notes']
+            }
+        
+        return {
+            "success": True,
+            "coach_info": coach_info,
+            "preferences": parsed_preferences,
+            "free_days": free_days
+        }
+        
+    except Exception as e:
+        print(f"Error getting coach preferences: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
         conn.close()

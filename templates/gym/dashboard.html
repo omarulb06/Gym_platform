@@ -213,7 +213,7 @@
                     <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                         <div>
                             <h4 class="font-medium text-gray-900">${session.member_name}</h4>
-                            <p class="text-sm text-gray-500">${session.session_type}</p>
+                            <p class="text-sm text-gray-500">${session.notes || 'General Training'}</p>
                             <p class="text-xs text-gray-400">${new Date(session.session_date).toLocaleDateString()} at ${session.session_time}</p>
                         </div>
                         <div class="text-right">
