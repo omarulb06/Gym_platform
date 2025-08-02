@@ -6,8 +6,26 @@
  <!-- Welcome Section -->
  <div class="bg-white shadow rounded-lg mb-4">
  <div class="px-4 py-3">
+ <div class="flex justify-between items-center">
+ <div>
  <h3 class="text-lg font-medium text-gray-900">My Progress</h3>
  <p class="text-sm text-gray-500">Track your fitness journey and achievements</p>
+ </div>
+ <div class="flex items-center space-x-2">
+ <button onclick="exportMemberProgress('csv')" 
+ class="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:outline-none
+ <i class="fas fa-download mr-2"></i>Export CSV
+ </button>
+ <button onclick="exportMemberProgress('excel')" 
+ class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
+ <i class="fas fa-file-excel mr-2"></i>Export Excel
+ </button>
+ <button onclick="exportMemberProgress('pdf')" 
+ class="bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:outline-none
+ <i class="fas fa-file-pdf mr-2"></i>Export PDF
+ </button>
+ </div>
+ </div>
  </div>
  </div>
 
@@ -252,5 +270,32 @@
  document.addEventListener('DOMContentLoaded', () => {
  loadProgressData();
  });
+
+ // Export member progress function
+ async function exportMemberProgress(format) {
+     try {
+         const url = `/api/export/progress/member?format=${format}`;
+         const response = await fetch(url);
+         
+         if (!response.ok) {
+             throw new Error('Failed to export progress');
+         }
+         
+         // Create a temporary link to download the file
+         const blob = await response.blob();
+         const url2 = window.URL.createObjectURL(blob);
+         const a = document.createElement('a');
+         a.href = url2;
+         a.download = `member_progress_${new Date().toISOString().split('T')[0]}.${format}`;
+         document.body.appendChild(a);
+         a.click();
+         window.URL.revokeObjectURL(url2);
+         document.body.removeChild(a);
+         
+     } catch (error) {
+         console.error('Error exporting progress:', error);
+         alert('Failed to export progress. Please try again.');
+     }
+ }
 </script>
 {% endblock %} 

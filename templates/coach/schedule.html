@@ -179,6 +179,20 @@
  <i class="fas fa-search mr-2"></i>Search
  </button>
  </div>
+ <div class="flex items-center space-x-2">
+ <button onclick="exportSchedule('csv')" 
+ class="bg-green-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-green-700 focus:outline-none focus:outline-none
+ <i class="fas fa-download mr-2"></i>Export CSV
+ </button>
+ <button onclick="exportSchedule('excel')" 
+ class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
+ <i class="fas fa-file-excel mr-2"></i>Export Excel
+ </button>
+ <button onclick="exportSchedule('pdf')" 
+ class="bg-red-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-red-700 focus:outline-none focus:outline-none
+ <i class="fas fa-file-pdf mr-2"></i>Export PDF
+ </button>
+ </div>
  </div>
  </div>
 
@@ -807,5 +821,40 @@
  alert('Failed to update preferences. Please try again.');
  }
  });
+
+ // Export schedule function
+ async function exportSchedule(format) {
+ const startDate = document.getElementById('startDate').value;
+ const endDate = document.getElementById('endDate').value;
+ 
+ if (!startDate || !endDate) {
+ alert('Please select both start and end dates before exporting');
+ return;
+ }
+ 
+ try {
+ const url = `/api/export/schedule/coach?format=${format}&start_date=${startDate}&end_date=${endDate}`;
+ const response = await fetch(url);
+ 
+ if (!response.ok) {
+ throw new Error('Failed to export schedule');
+ }
+ 
+ // Create a temporary link to download the file
+ const blob = await response.blob();
+ const url2 = window.URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url2;
+ a.download = `coach_schedule_${startDate}_to_${endDate}.${format}`;
+ document.body.appendChild(a);
+ a.click();
+ window.URL.revokeObjectURL(url2);
+ document.body.removeChild(a);
+ 
+ } catch (error) {
+ console.error('Error exporting schedule:', error);
+ alert('Failed to export schedule. Please try again.');
+ }
+ }
 </script>
 {% endblock %} 

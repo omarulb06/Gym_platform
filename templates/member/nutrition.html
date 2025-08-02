@@ -1,9 +1,156 @@
 {% extends "base.html" %}
 
 {% block head %}
-<!-- TensorFlow.js for free food recognition -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@latest/dist/mobilenet.min.js"></script>
+<!-- Hugging Face Transformers.js for superior food recognition -->
+<script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.15.0/dist/transformers.min.js"></script>
+<!-- Chart.js for weekly progress charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Custom Chart Implementation - No external dependencies -->
+<script>
+// Custom chart implementation using pure HTML/CSS/JavaScript
+class CustomChart {
+    constructor(container, data, options = {}) {
+        this.container = container;
+        this.data = data;
+        this.options = {
+            type: 'line',
+            height: 300,
+            colors: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+            ...options
+        };
+        this.render();
+    }
+    
+    render() {
+        if (this.options.type === 'line') {
+            this.renderLineChart();
+        } else if (this.options.type === 'bar') {
+            this.renderBarChart();
+        }
+    }
+    
+    renderLineChart() {
+        const { labels, datasets } = this.data;
+        const maxValue = Math.max(...datasets.flatMap(dataset => dataset.data));
+        const minValue = Math.min(...datasets.flatMap(dataset => dataset.data));
+        const range = maxValue - minValue;
+        
+        const chartHTML = `
+            <div class="custom-chart-container" style="height: ${this.options.height}px; position: relative;">
+                <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    ${this.renderGrid(range, minValue)}
+                    ${datasets.map((dataset, index) => this.renderLine(dataset, labels, range, minValue, index)).join('')}
+                    ${this.renderPoints(datasets, labels, range, minValue)}
+                </svg>
+                <div class="chart-labels flex justify-between text-xs text-gray-500 mt-2">
+                    ${labels.map(label => `<span>${label}</span>`).join('')}
+                </div>
+            </div>
+        `;
+        
+        this.container.innerHTML = chartHTML;
+    }
+    
+    renderGrid(range, minValue) {
+        const gridLines = [];
+        const steps = 5;
+        
+        for (let i = 0; i <= steps; i++) {
+            const y = 100 - (i * 100 / steps);
+            const value = minValue + (range * i / steps);
+            gridLines.push(`
+                <line x1="0" y1="${y}" x2="100" y2="${y}" stroke="#e5e7eb" stroke-width="0.5" opacity="0.5"/>
+                <text x="0" y="${y + 2}" font-size="3" fill="#6b7280" text-anchor="start">${Math.round(value)}</text>
+            `);
+        }
+        
+        return gridLines.join('');
+    }
+    
+    renderLine(dataset, labels, range, minValue, colorIndex) {
+        const points = dataset.data.map((value, index) => {
+            const x = (index / (labels.length - 1)) * 100;
+            const y = 100 - ((value - minValue) / range) * 100;
+            return `${x},${y}`;
+        }).join(' ');
+        
+        const color = this.options.colors[colorIndex % this.options.colors.length];
+        
+        return `
+            <polyline 
+                points="${points}" 
+                fill="none" 
+                stroke="${color}" 
+                stroke-width="2" 
+                opacity="0.8"
+                vector-effect="non-scaling-stroke"
+            />
+        `;
+    }
+    
+    renderPoints(datasets, labels, range, minValue) {
+        const points = [];
+        
+        datasets.forEach((dataset, datasetIndex) => {
+            const color = this.options.colors[datasetIndex % this.options.colors.length];
+            
+            dataset.data.forEach((value, index) => {
+                const x = (index / (labels.length - 1)) * 100;
+                const y = 100 - ((value - minValue) / range) * 100;
+                
+                points.push(`
+                    <circle 
+                        cx="${x}" 
+                        cy="${y}" 
+                        r="1.5" 
+                        fill="${color}" 
+                        stroke="white" 
+                        stroke-width="0.5"
+                    />
+                `);
+            });
+        });
+        
+        return points.join('');
+    }
+    
+    renderBarChart() {
+        const { labels, datasets } = this.data;
+        const maxValue = Math.max(...datasets.flatMap(dataset => dataset.data));
+        
+        const chartHTML = `
+            <div class="custom-chart-container" style="height: ${this.options.height}px; position: relative;">
+                <div class="flex items-end justify-between h-full space-x-1">
+                    ${labels.map((label, index) => {
+                        const values = datasets.map(dataset => dataset.data[index]);
+                        const maxBarValue = Math.max(...values);
+                        const height = (maxBarValue / maxValue) * 100;
+                        
+                        return `
+                            <div class="flex-1 flex flex-col items-center">
+                                <div class="w-full bg-gray-200 rounded-t" style="height: ${height}%;">
+                                    ${datasets.map((dataset, datasetIndex) => {
+                                        const value = dataset.data[index];
+                                        const barHeight = (value / maxValue) * 100;
+                                        const color = this.options.colors[datasetIndex % this.options.colors.length];
+                                        
+                                        return `
+                                            <div class="w-full rounded-t" style="height: ${barHeight}%; background-color: ${color}; opacity: 0.8;"></div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                                <span class="text-xs text-gray-500 mt-1">${label}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+        
+        this.container.innerHTML = chartHTML;
+    }
+}
+</script>
 {% endblock %}
 
 {% block content_title %}
@@ -37,8 +184,8 @@
             <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600 mb-4">
                 <i class="fas fa-camera text-xl"></i>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Smart Photo Analysis</h3>
-            <p class="text-gray-600 text-sm mb-4">Upload a photo for free AI food recognition</p>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Advanced AI Food Recognition</h3>
+            <p class="text-gray-600 text-sm mb-4">Upload a photo for superior AI food classification</p>
             <button onclick="openPhotoAnalysis()" class="w-full px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all">
                 <i class="fas fa-camera mr-2"></i>Analyze Photo
             </button>
@@ -182,11 +329,67 @@
             Weekly Progress
         </h2>
         
-        <div class="h-64 flex items-center justify-center text-gray-500">
-            <div class="text-center">
-                <i class="fas fa-chart-line text-4xl mb-2 opacity-50"></i>
-                <p>Weekly progress chart coming soon...</p>
+        <!-- Chart Controls -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex space-x-2">
+                <button id="caloriesChartBtn" onclick="switchChart('calories')" 
+                        class="px-3 py-1 text-sm font-medium rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors">
+                    Calories
+                </button>
+                <button id="macrosChartBtn" onclick="switchChart('macros')" 
+                        class="px-3 py-1 text-sm font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                    Macros
+                </button>
+                <button id="goalsChartBtn" onclick="switchChart('goals')" 
+                        class="px-3 py-1 text-sm font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                    Goals
+                </button>
             </div>
+            <div class="text-sm text-gray-500">
+                <span id="weekRange">This Week</span>
+            </div>
+        </div>
+        
+        <!-- Chart Container -->
+        <div class="relative">
+            <canvas id="weeklyChart" class="w-full h-64"></canvas>
+            <div id="chartLoading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 hidden">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin text-emerald-600 text-xl mb-2"></i>
+                    <p class="text-sm text-gray-600">Loading weekly data...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Weekly Summary -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg border border-emerald-100">
+                <div class="text-2xl font-bold text-emerald-600" id="weeklyAvgCalories">0</div>
+                <div class="text-sm text-emerald-700">Avg Calories</div>
+            </div>
+            <div class="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                <div class="text-2xl font-bold text-blue-600" id="weeklyAvgProtein">0g</div>
+                <div class="text-sm text-blue-700">Avg Protein</div>
+            </div>
+            <div class="text-center p-4 bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg border border-orange-100">
+                <div class="text-2xl font-bold text-orange-600" id="weeklyAvgCarbs">0g</div>
+                <div class="text-sm text-orange-700">Avg Carbs</div>
+            </div>
+            <div class="text-center p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-lg border border-red-100">
+                <div class="text-2xl font-bold text-red-600" id="weeklyAvgFat">0g</div>
+                <div class="text-sm text-red-700">Avg Fat</div>
+            </div>
+        </div>
+        
+        <!-- Weekly Insights -->
+        <div class="mt-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-4 border border-emerald-100">
+            <h4 class="text-sm font-medium text-emerald-800 mb-2 flex items-center">
+                <i class="fas fa-lightbulb text-emerald-600 mr-2"></i>
+                Weekly Insights
+            </h4>
+            <p class="text-sm text-emerald-700" id="weeklyInsights">
+                Start logging your meals to see weekly nutrition insights!
+            </p>
         </div>
     </div>
 </div>
@@ -196,7 +399,7 @@
     <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Smart Photo Analysis</h3>
+                <h3 class="text-lg font-semibold text-gray-900">Advanced AI Food Recognition</h3>
                 <button onclick="closeModal('photoModal')" class="text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times"></i>
                 </button>
@@ -218,8 +421,8 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Food Photo</label>
                         <input type="file" name="file" accept="image/*" required 
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                               onchange="analyzePhotoWithTensorFlow(this)">
-                        <p class="text-xs text-gray-500 mt-1">Our AI will try to identify foods in your photo</p>
+                               onchange="analyzePhotoWithHuggingFace(this)">
+                        <p class="text-xs text-gray-500 mt-1">Our advanced AI will identify foods with superior accuracy</p>
                     </div>
                     
                     <!-- Photo Preview -->
@@ -391,24 +594,125 @@
 
 <script>
 // Global variables
-let mobilenetModel = null;
+let foodClassifier = null;
 let detectedFoodsData = [];
+let currentChartType = 'calories';
+let weeklyData = null;
 
-// Initialize dashboard
-document.addEventListener('DOMContentLoaded', function() {
-    loadNutritionDashboard();
-    updateCurrentDate();
-    loadTensorFlowModel();
+// Chart.js will be used for creating charts
+
+// Initialize dashboard - use window.onload to ensure Chart.js is ready
+window.onload = function() {
+    console.log('Window loaded, checking libraries...');
+    console.log('Chart.js available:', typeof Chart !== 'undefined');
+    console.log('Hugging Face Transformers available:', typeof pipeline !== 'undefined');
+    
+    // Ensure Chart.js is loaded before proceeding
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js not loaded, attempting to load from CDN...');
+        loadChartJSFromCDN();
+    } else {
+        console.log('Chart.js loaded successfully');
+        waitForChartJS(initializeDashboard);
+    }
+};
+
+// Cleanup function to prevent memory leaks
+window.addEventListener('beforeunload', function() {
+    destroyWeeklyChart();
 });
 
-// Load TensorFlow.js MobileNet model for food recognition
-async function loadTensorFlowModel() {
+// Function to wait for Chart.js to be available
+function waitForChartJS(callback, maxAttempts = 10) {
+    let attempts = 0;
+    
+    function checkChartJS() {
+        attempts++;
+        console.log(`Checking Chart.js availability (attempt ${attempts}/${maxAttempts})...`);
+        
+        if (typeof Chart !== 'undefined' && typeof Chart === 'function') {
+            console.log('Chart.js is now available!');
+            callback();
+        } else if (attempts >= maxAttempts) {
+            console.error('Chart.js failed to load after maximum attempts');
+            callback(); // Continue without Chart.js
+        } else {
+            setTimeout(checkChartJS, 500); // Check again in 500ms
+        }
+    }
+    
+    checkChartJS();
+}
+
+// Function to load Chart.js from CDN with fallback
+function loadChartJSFromCDN() {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    script.onload = function() {
+        console.log('Chart.js loaded successfully from CDN');
+        waitForChartJS(initializeDashboard);
+    };
+    script.onerror = function() {
+        console.error('Failed to load Chart.js from CDN, using fallback');
+        // Try alternative CDN
+        const fallbackScript = document.createElement('script');
+        fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+        fallbackScript.onload = function() {
+            console.log('Chart.js loaded successfully from fallback CDN');
+            waitForChartJS(initializeDashboard);
+        };
+        fallbackScript.onerror = function() {
+            console.error('All Chart.js CDN attempts failed');
+            initializeDashboard(); // Continue without Chart.js
+        };
+        document.head.appendChild(fallbackScript);
+    };
+    
+    // Add timeout to prevent hanging
+    setTimeout(() => {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js loading timeout, proceeding without it');
+            initializeDashboard();
+        }
+    }, 5000); // 5 second timeout
+    
+    document.head.appendChild(script);
+}
+
+// Initialize dashboard components
+function initializeDashboard() {
+    // Double-check Chart.js is available before proceeding
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js still not available in initializeDashboard');
+        // Continue without Chart.js
+    } else {
+        console.log('Chart.js confirmed available in initializeDashboard');
+    }
+    
+    loadNutritionDashboard();
+    updateCurrentDate();
+    loadFoodClassifier();
+    loadWeeklyProgress();
+    
+    // Test Chart.js availability after a short delay
+    setTimeout(() => {
+        testChartJS();
+    }, 2000);
+}
+
+// Load Hugging Face food classification model
+async function loadFoodClassifier() {
     try {
-        console.log('Loading TensorFlow.js MobileNet model...');
-        mobilenetModel = await mobilenet.load();
-        console.log('TensorFlow.js model loaded successfully!');
+        console.log('Loading Hugging Face food classification model...');
+        if (typeof pipeline !== 'undefined') {
+            foodClassifier = await pipeline('image-classification', 'nateraw/food');
+            console.log('Hugging Face food classifier loaded successfully!');
+        } else {
+            console.warn('Hugging Face Transformers.js not available - photo analysis will be limited');
+        }
     } catch (error) {
-        console.error('Error loading TensorFlow.js model:', error);
+        console.error('Error loading Hugging Face model:', error);
+        console.warn('Photo analysis will work with manual food entry only');
     }
 }
 
@@ -437,8 +741,8 @@ async function loadNutritionDashboard() {
     }
 }
 
-// TensorFlow.js Photo Analysis
-async function analyzePhotoWithTensorFlow(fileInput) {
+// Hugging Face Food Analysis
+async function analyzePhotoWithHuggingFace(fileInput) {
     if (!fileInput.files || !fileInput.files[0]) return;
     
     const file = fileInput.files[0];
@@ -453,26 +757,43 @@ async function analyzePhotoWithTensorFlow(fileInput) {
     // Show loading state
     const resultsDiv = document.getElementById('detectionResults');
     const foodsList = document.getElementById('detectedFoodsList');
-    foodsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-emerald-600"></i><p class="text-sm text-gray-600 mt-2">Analyzing food in photo...</p></div>';
+    foodsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-emerald-600"></i><p class="text-sm text-gray-600 mt-2">Analyzing food with AI...</p></div>';
     resultsDiv.classList.remove('hidden');
     
     try {
-        if (!mobilenetModel) {
-            await loadTensorFlowModel();
+        if (!foodClassifier) {
+            await loadFoodClassifier();
         }
         
-        // Create image element for TensorFlow
+        // Check if Hugging Face model is available
+        if (!foodClassifier || typeof pipeline === 'undefined') {
+            console.warn('Hugging Face model not available - using fallback food detection');
+            // Use fallback food detection
+            detectedFoodsData = [{
+                name: "Food Item (Manual Entry Recommended)",
+                quantity: 100,
+                calories: 200,
+                protein: 8,
+                carbs: 25,
+                fat: 8,
+                confidence: 0.5
+            }];
+            displayDetectedFoods(detectedFoodsData);
+            return;
+        }
+        
+        // Create image element for Hugging Face
         const img = new Image();
         img.onload = async () => {
             try {
-                // Get predictions from MobileNet
-                const predictions = await mobilenetModel.classify(img);
+                // Get predictions from Hugging Face model
+                const predictions = await foodClassifier(img);
                 
-                // Process predictions to extract food-related items
-                const foodPredictions = filterFoodPredictions(predictions);
+                // Process predictions to extract food items
+                const foodPredictions = filterHuggingFacePredictions(predictions);
                 
                 if (foodPredictions.length > 0) {
-                    detectedFoodsData = await estimateNutritionFromPredictions(foodPredictions);
+                    detectedFoodsData = await estimateNutritionFromHuggingFacePredictions(foodPredictions);
                     displayDetectedFoods(detectedFoodsData);
                 } else {
                     // No food detected
@@ -495,161 +816,113 @@ async function analyzePhotoWithTensorFlow(fileInput) {
         img.src = imageUrl;
         
     } catch (error) {
-        console.error('Error with TensorFlow analysis:', error);
+        console.error('Error with Hugging Face analysis:', error);
         showErrorInResults();
     }
 }
 
-function filterFoodPredictions(predictions) {
-    // Debug: Log all predictions to see what MobileNet is detecting
-    console.log('🔍 MobileNet Predictions:', predictions.map(p => ({
-        name: p.className,
-        confidence: Math.round(p.probability * 100) + '%'
+function filterHuggingFacePredictions(predictions) {
+    // Debug: Log all predictions to see what Hugging Face model is detecting
+    console.log('🔍 Hugging Face Food Predictions:', predictions.map(p => ({
+        name: p.label,
+        confidence: Math.round(p.score * 100) + '%'
     })));
     
-    // Expanded food-related keywords in ImageNet classes
-    const foodKeywords = [
-        // Fruits
-        'apple', 'banana', 'strawberry', 'orange', 'lemon', 'pineapple', 'grapes',
-        'watermelon', 'cantaloupe', 'fig', 'pomegranate', 'jackfruit', 'custard apple',
-        
-        // Vegetables
-        'broccoli', 'mushroom', 'bell pepper', 'cucumber', 'artichoke', 'corn',
-        'acorn squash', 'spaghetti squash', 'zucchini', 'head cabbage', 'cauliflower',
-        'carrot', 'radish', 'sweet potato', 'butternut squash',
-        
-        // Prepared foods
-        'pizza', 'hamburger', 'hotdog', 'sandwich', 'taco', 'burrito', 'bagel', 
-        'pretzel', 'cheeseburger', 'meat loaf', 'ice cream', 'chocolate', 'custard', 
-        'pudding', 'consomme', 'trifle', 'french loaf', 'pretzel', 'bagel',
-        
-        // Drinks & containers (often appear with food)
-        'espresso', 'cup', 'plate', 'wine bottle', 'beer bottle', 'cocktail shaker', 
-        'soup bowl', 'coffee mug', 'water bottle'
-    ];
-    
-    // First try exact keyword matching
-    let foodPredictions = predictions.filter(pred => 
-        foodKeywords.some(keyword => 
-            pred.className.toLowerCase().includes(keyword)
-        )
-    );
-    
-    // If no exact matches found, try broader food-related patterns
-    if (foodPredictions.length === 0) {
-        console.log('🔄 No exact matches, trying broader patterns...');
-        
-        const broadFoodPatterns = [
-            // Common food-related words that might appear in class names
-            /fruit/i, /vegetable/i, /food/i, /eat/i, /meal/i, /dish/i, 
-            /bread/i, /cake/i, /pie/i, /soup/i, /salad/i, /meat/i,
-            /cheese/i, /milk/i, /egg/i, /fish/i, /chicken/i, /beef/i,
-            /rice/i, /pasta/i, /noodle/i, /bean/i, /nut/i, /seed/i
-        ];
-        
-        foodPredictions = predictions.filter(pred => 
-            broadFoodPatterns.some(pattern => 
-                pattern.test(pred.className)
-            )
-        );
-    }
-    
-    // If still no matches, accept any prediction with reasonable confidence
-    if (foodPredictions.length === 0) {
-        console.log('🤷 No food patterns found, using top predictions as potential food...');
-        foodPredictions = predictions.filter(pred => pred.probability > 0.1).slice(0, 2);
-    }
+    // The nateraw/food model is specifically trained on Food101 dataset
+    // All predictions are food-related, so we can trust them more
+    const foodPredictions = predictions.filter(pred => pred.score > 0.1);
     
     console.log('✅ Filtered Food Predictions:', foodPredictions.map(p => ({
-        name: p.className,
-        confidence: Math.round(p.probability * 100) + '%'
+        name: p.label,
+        confidence: Math.round(p.score * 100) + '%'
     })));
     
-    return foodPredictions.slice(0, 3); // Take top 3 food-related predictions
+    return foodPredictions.slice(0, 3); // Take top 3 predictions
 }
 
-async function estimateNutritionFromPredictions(predictions) {
-    // Expanded nutrition database based on detected food types
+async function estimateNutritionFromHuggingFacePredictions(predictions) {
+    // Comprehensive nutrition database for Food101 categories
     const nutritionDatabase = {
-        // Fruits (per 100g)
-        'apple': { calories: 52, protein: 0.3, carbs: 14, fat: 0.2, defaultGrams: 150 },
+        // Fruits
+        'apple_pie': { calories: 237, protein: 2.4, carbs: 34, fat: 11, defaultGrams: 100 },
         'banana': { calories: 89, protein: 1.1, carbs: 23, fat: 0.3, defaultGrams: 120 },
         'orange': { calories: 47, protein: 0.9, carbs: 12, fat: 0.1, defaultGrams: 130 },
         'strawberry': { calories: 32, protein: 0.7, carbs: 8, fat: 0.3, defaultGrams: 100 },
-        'grape': { calories: 62, protein: 0.6, carbs: 16, fat: 0.2, defaultGrams: 80 },
         'pineapple': { calories: 50, protein: 0.5, carbs: 13, fat: 0.1, defaultGrams: 100 },
         'watermelon': { calories: 30, protein: 0.6, carbs: 8, fat: 0.2, defaultGrams: 200 },
-        'lemon': { calories: 29, protein: 1.1, carbs: 9, fat: 0.3, defaultGrams: 60 },
         
-        // Vegetables (per 100g)
+        // Vegetables
         'broccoli': { calories: 34, protein: 2.8, carbs: 7, fat: 0.4, defaultGrams: 100 },
         'carrot': { calories: 41, protein: 0.9, carbs: 10, fat: 0.2, defaultGrams: 80 },
         'cucumber': { calories: 16, protein: 0.7, carbs: 4, fat: 0.1, defaultGrams: 100 },
-        'pepper': { calories: 31, protein: 1, carbs: 7, fat: 0.3, defaultGrams: 80 },
+        'bell_pepper': { calories: 31, protein: 1, carbs: 7, fat: 0.3, defaultGrams: 80 },
         'mushroom': { calories: 22, protein: 3.1, carbs: 3, fat: 0.3, defaultGrams: 70 },
         'corn': { calories: 86, protein: 3.3, carbs: 19, fat: 1.4, defaultGrams: 100 },
         'potato': { calories: 77, protein: 2, carbs: 17, fat: 0.1, defaultGrams: 150 },
         
-        // Prepared foods
-        'pizza': { calories: 285, protein: 12, carbs: 36, fat: 10, defaultGrams: 150 },
+        // Meats
+        'beef_carpaccio': { calories: 250, protein: 26, carbs: 0, fat: 15, defaultGrams: 100 },
+        'beef_tartare': { calories: 250, protein: 26, carbs: 0, fat: 15, defaultGrams: 100 },
+        'chicken_curry': { calories: 200, protein: 25, carbs: 8, fat: 10, defaultGrams: 150 },
+        'chicken_wings': { calories: 290, protein: 27, carbs: 0, fat: 19, defaultGrams: 100 },
+        'fish_and_chips': { calories: 350, protein: 15, carbs: 35, fat: 18, defaultGrams: 200 },
         'hamburger': { calories: 540, protein: 25, carbs: 40, fat: 31, defaultGrams: 200 },
-        'sandwich': { calories: 320, protein: 15, carbs: 45, fat: 8, defaultGrams: 180 },
-        'hotdog': { calories: 290, protein: 11, carbs: 3, fat: 26, defaultGrams: 100 },
+        'hot_dog': { calories: 290, protein: 11, carbs: 3, fat: 26, defaultGrams: 100 },
+        'pizza': { calories: 285, protein: 12, carbs: 36, fat: 10, defaultGrams: 150 },
+        'steak': { calories: 250, protein: 26, carbs: 0, fat: 15, defaultGrams: 150 },
+        
+        // Breads and Grains
         'bagel': { calories: 250, protein: 10, carbs: 49, fat: 1.5, defaultGrams: 90 },
-        'pretzel': { calories: 380, protein: 9, carbs: 80, fat: 3, defaultGrams: 60 },
+        'bread': { calories: 265, protein: 9, carbs: 49, fat: 3.2, defaultGrams: 50 },
+        'french_fries': { calories: 365, protein: 4, carbs: 63, fat: 17, defaultGrams: 100 },
+        'french_toast': { calories: 229, protein: 7, carbs: 25, fat: 12, defaultGrams: 100 },
+        'pancakes': { calories: 227, protein: 6, carbs: 35, fat: 9, defaultGrams: 100 },
+        'waffles': { calories: 291, protein: 8, carbs: 38, fat: 14, defaultGrams: 100 },
         
         // Desserts
-        'ice cream': { calories: 207, protein: 3.5, carbs: 24, fat: 11, defaultGrams: 100 },
-        'chocolate': { calories: 546, protein: 4.9, carbs: 61, fat: 31, defaultGrams: 40 },
-        'cake': { calories: 257, protein: 3, carbs: 46, fat: 8, defaultGrams: 80 },
+        'apple_pie': { calories: 237, protein: 2.4, carbs: 34, fat: 11, defaultGrams: 100 },
+        'cheesecake': { calories: 321, protein: 6, carbs: 26, fat: 23, defaultGrams: 100 },
+        'chocolate_cake': { calories: 371, protein: 5, carbs: 45, fat: 20, defaultGrams: 100 },
+        'chocolate_mousse': { calories: 225, protein: 4, carbs: 20, fat: 15, defaultGrams: 100 },
+        'donuts': { calories: 253, protein: 4, carbs: 31, fat: 13, defaultGrams: 60 },
+        'ice_cream': { calories: 207, protein: 3.5, carbs: 24, fat: 11, defaultGrams: 100 },
+        'tiramisu': { calories: 285, protein: 6, carbs: 28, fat: 18, defaultGrams: 100 },
         
-        // Generic categories for unknown items
-        'fruit': { calories: 50, protein: 0.8, carbs: 12, fat: 0.2, defaultGrams: 120 },
-        'vegetable': { calories: 25, protein: 2, carbs: 5, fat: 0.3, defaultGrams: 100 },
-        'bread': { calories: 265, protein: 9, carbs: 49, fat: 3.2, defaultGrams: 50 },
-        'meat': { calories: 250, protein: 26, carbs: 0, fat: 15, defaultGrams: 100 },
+        // Other foods
+        'sushi': { calories: 150, protein: 6, carbs: 30, fat: 1, defaultGrams: 100 },
+        'tacos': { calories: 226, protein: 9, carbs: 26, fat: 12, defaultGrams: 100 },
+        'spaghetti_carbonara': { calories: 400, protein: 15, carbs: 45, fat: 20, defaultGrams: 200 },
+        'ramen': { calories: 350, protein: 12, carbs: 60, fat: 8, defaultGrams: 300 },
+        'salad': { calories: 25, protein: 2, carbs: 5, fat: 0.3, defaultGrams: 100 },
+        
+        // Default for unknown items
         'default': { calories: 200, protein: 8, carbs: 25, fat: 8, defaultGrams: 100 }
     };
     
     return predictions.map(pred => {
-        const foodName = pred.className.toLowerCase();
+        const foodName = pred.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
         let nutritionData = nutritionDatabase['default'];
         let matchedKey = 'default';
         
         console.log(`🔍 Trying to match: "${foodName}"`);
         
-        // Find matching nutrition data with better matching logic
+        // Find matching nutrition data
         for (const [key, data] of Object.entries(nutritionDatabase)) {
             if (key === 'default') continue;
             
             // Try exact match first
-            if (foodName.includes(key)) {
+            if (foodName === key) {
                 nutritionData = data;
                 matchedKey = key;
                 console.log(`✅ Exact match found: ${key}`);
                 break;
             }
             
-            // Try partial matches for common variations
-            if (key === 'apple' && (foodName.includes('granny') || foodName.includes('red delicious'))) {
+            // Try partial matches
+            if (foodName.includes(key) || key.includes(foodName)) {
                 nutritionData = data;
                 matchedKey = key;
-                console.log(`✅ Apple variant match: ${key}`);
-                break;
-            }
-            
-            // Generic category fallbacks
-            if (key === 'fruit' && (foodName.includes('berry') || foodName.includes('melon') || foodName.includes('citrus'))) {
-                nutritionData = data;
-                matchedKey = key;
-                console.log(`✅ Fruit category match: ${key}`);
-                break;
-            }
-            
-            if (key === 'vegetable' && (foodName.includes('green') || foodName.includes('leaf'))) {
-                nutritionData = data;
-                matchedKey = key;
-                console.log(`✅ Vegetable category match: ${key}`);
+                console.log(`✅ Partial match found: ${key}`);
                 break;
             }
         }
@@ -657,13 +930,13 @@ async function estimateNutritionFromPredictions(predictions) {
         console.log(`📊 Final match for "${foodName}": ${matchedKey}`);
         
         return {
-            name: pred.className,
+            name: pred.label,
             quantity: nutritionData.defaultGrams,
             calories: Math.round(nutritionData.calories * (nutritionData.defaultGrams / 100)),
             protein: Math.round(nutritionData.protein * (nutritionData.defaultGrams / 100) * 10) / 10,
             carbs: Math.round(nutritionData.carbs * (nutritionData.defaultGrams / 100) * 10) / 10,
             fat: Math.round(nutritionData.fat * (nutritionData.defaultGrams / 100) * 10) / 10,
-            confidence: pred.probability
+            confidence: pred.score
         };
     });
 }
@@ -851,6 +1124,7 @@ document.getElementById('photoForm').addEventListener('submit', async function(e
             showNotification('Photo and meal data saved successfully!', 'success');
             closeModal('photoModal');
             loadNutritionDashboard();
+            refreshWeeklyProgress();
             this.reset();
         } else {
             showNotification(data.detail || 'Failed to save meal', 'error');
@@ -943,6 +1217,7 @@ document.getElementById('manualForm').addEventListener('submit', async function(
             showNotification('Food added successfully!', 'success');
             closeModal('manualModal');
             loadNutritionDashboard();
+            refreshWeeklyProgress();
             this.reset();
         } else {
             showNotification(data.detail || 'Failed to add food', 'error');
@@ -981,5 +1256,1019 @@ document.getElementById('foodSearchQuery').addEventListener('keypress', function
         searchFood();
     }
 });
+
+// Weekly Progress Functions
+async function loadWeeklyProgress() {
+    try {
+        showChartLoading(true);
+        const response = await fetch(`/api/nutrition/weekly-progress/{{ user.id if user else 1 }}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            weeklyData = data.weekly_data;
+            updateWeeklySummary(data.weekly_data);
+            updateWeeklyInsights(data.weekly_data);
+            
+            // Ensure Chart.js is available before creating chart
+            if (typeof Chart !== 'undefined' && typeof Chart === 'function') {
+                createWeeklyChart(data.weekly_data);
+            } else {
+                console.warn('Chart.js not available for chart creation, showing fallback');
+                showChartLoading(false);
+                showFallbackContent(data.weekly_data);
+            }
+            
+            updateWeekRange();
+        } else {
+            throw new Error(data.detail || 'Failed to load weekly data');
+        }
+    } catch (error) {
+        console.error('Error loading weekly progress:', error);
+        showChartLoading(false);
+        
+        // Show fallback content
+        const chartContainer = document.getElementById('weeklyChart').parentElement;
+        chartContainer.innerHTML = `
+            <div class="h-64 flex items-center justify-center text-gray-500">
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-2"></i>
+                    <p>Unable to load weekly progress data</p>
+                    <p class="text-sm mt-2">Please try refreshing the page or contact support</p>
+                </div>
+            </div>
+        `;
+        
+        // Update insights with error message
+        document.getElementById('weeklyInsights').textContent = 'Weekly progress data is currently unavailable. Please try again later.';
+    }
+}
+
+function showChartLoading(show) {
+    const loading = document.getElementById('chartLoading');
+    if (show) {
+        loading.classList.remove('hidden');
+    } else {
+        loading.classList.add('hidden');
+    }
+}
+
+function updateWeekRange() {
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    
+    const options = { month: 'short', day: 'numeric' };
+    const startStr = weekStart.toLocaleDateString('en-US', options);
+    const endStr = weekEnd.toLocaleDateString('en-US', options);
+    
+    document.getElementById('weekRange').textContent = `${startStr} - ${endStr}`;
+}
+
+function updateWeeklySummary(weeklyData) {
+    if (!weeklyData || weeklyData.length === 0) return;
+    
+    const daysWithData = weeklyData.filter(day => day.calories > 0);
+    if (daysWithData.length === 0) return;
+    
+    const avgCalories = Math.round(daysWithData.reduce((sum, day) => sum + day.calories, 0) / daysWithData.length);
+    const avgProtein = Math.round(daysWithData.reduce((sum, day) => sum + day.protein, 0) / daysWithData.length);
+    const avgCarbs = Math.round(daysWithData.reduce((sum, day) => sum + day.carbs, 0) / daysWithData.length);
+    const avgFat = Math.round(daysWithData.reduce((sum, day) => sum + day.fat, 0) / daysWithData.length);
+    
+    document.getElementById('weeklyAvgCalories').textContent = avgCalories;
+    document.getElementById('weeklyAvgProtein').textContent = avgProtein + 'g';
+    document.getElementById('weeklyAvgCarbs').textContent = avgCarbs + 'g';
+    document.getElementById('weeklyAvgFat').textContent = avgFat + 'g';
+}
+
+function updateWeeklyInsights(weeklyData) {
+    if (!weeklyData || weeklyData.length === 0) {
+        document.getElementById('weeklyInsights').textContent = 'Start logging your meals to see weekly nutrition insights!';
+        return;
+    }
+    
+    const daysWithData = weeklyData.filter(day => day.calories > 0);
+    if (daysWithData.length === 0) {
+        document.getElementById('weeklyInsights').textContent = 'No nutrition data logged this week. Start tracking your meals!';
+        return;
+    }
+    
+    const avgCalories = daysWithData.reduce((sum, day) => sum + day.calories, 0) / daysWithData.length;
+    const avgProtein = daysWithData.reduce((sum, day) => sum + day.protein, 0) / daysWithData.length;
+    const goalCalories = 2000; // Default goal
+    const goalProtein = 150; // Default goal
+    
+    let insights = [];
+    
+    if (avgCalories < goalCalories * 0.8) {
+        insights.push('You\'re eating below your calorie target. Consider adding healthy snacks.');
+    } else if (avgCalories > goalCalories * 1.2) {
+        insights.push('You\'re eating above your calorie target. Focus on portion control.');
+    } else {
+        insights.push('Great job maintaining your calorie target this week!');
+    }
+    
+    if (avgProtein < goalProtein * 0.8) {
+        insights.push('Your protein intake is low. Try adding more lean meats, eggs, or legumes.');
+    } else if (avgProtein > goalProtein * 1.2) {
+        insights.push('Your protein intake is high. This is fine if you\'re building muscle.');
+    } else {
+        insights.push('Excellent protein balance this week!');
+    }
+    
+    if (daysWithData.length >= 5) {
+        insights.push(`You tracked ${daysWithData.length} days this week - great consistency!`);
+    } else {
+        insights.push(`You tracked ${daysWithData.length} days. Try to log meals daily for better insights.`);
+    }
+    
+    document.getElementById('weeklyInsights').textContent = insights.join(' ');
+}
+
+function createWeeklyChart(weeklyData) {
+    try {
+        console.log('Creating Chart.js weekly chart with data:', weeklyData);
+        
+        const chartContainer = document.getElementById('weeklyChart');
+        
+        // Check if canvas element exists
+        if (!chartContainer) {
+            console.error('Weekly chart canvas element not found');
+            showChartLoading(false);
+            showFallbackContent(weeklyData);
+            return;
+        }
+        
+        const labels = weeklyData.map(day => day.day_name);
+        const datasets = getChartDatasets(weeklyData, currentChartType);
+        
+        // Comprehensive Chart.js availability check
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js library not loaded');
+            showChartLoading(false);
+            showFallbackContent(weeklyData);
+            return;
+        }
+        
+        // Additional check for Chart constructor
+        if (typeof Chart !== 'function') {
+            console.error('Chart constructor not available');
+            showChartLoading(false);
+            showFallbackContent(weeklyData);
+            return;
+        }
+        
+        // Test if Chart.js is actually working
+        try {
+            // Create a test chart to verify Chart.js is fully functional
+            const testCanvas = document.createElement('canvas');
+            testCanvas.width = 1;
+            testCanvas.height = 1;
+            const testChart = new Chart(testCanvas, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: { responsive: false }
+            });
+            testChart.destroy();
+            console.log('Chart.js functionality confirmed');
+        } catch (testError) {
+            console.error('Chart.js functionality test failed:', testError);
+            showChartLoading(false);
+            showFallbackContent(weeklyData);
+            return;
+        }
+        
+        // Destroy existing chart if it exists and is a valid Chart.js instance
+        if (window.weeklyChart && typeof window.weeklyChart.destroy === 'function') {
+            try {
+                window.weeklyChart.destroy();
+                console.log('Previous chart destroyed successfully');
+            } catch (destroyError) {
+                console.warn('Error destroying previous chart:', destroyError);
+            }
+        } else if (window.weeklyChart) {
+            console.warn('Previous chart exists but destroy method not available, clearing reference');
+            window.weeklyChart = null;
+        }
+        
+        // Create Chart.js configuration
+        const config = {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: currentChartType === 'macros',
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        };
+        
+        // Create the chart
+        try {
+            // Clear any existing chart reference first
+            if (window.weeklyChart) {
+                window.weeklyChart = null;
+            }
+            
+            // Create new chart instance
+            window.weeklyChart = new Chart(chartContainer, config);
+            
+            // Verify the chart was created successfully
+            if (window.weeklyChart && typeof window.weeklyChart.destroy === 'function') {
+                showChartLoading(false);
+                console.log('Chart.js chart created successfully');
+            } else {
+                throw new Error('Chart instance created but destroy method not available');
+            }
+        } catch (chartError) {
+            console.error('Error creating Chart.js instance:', chartError);
+            window.weeklyChart = null; // Clear invalid reference
+            showChartLoading(false);
+            showFallbackContent(weeklyData);
+        }
+        
+    } catch (error) {
+        console.error('Error creating Chart.js chart:', error);
+        showChartLoading(false);
+        showFallbackContent(weeklyData);
+    }
+}
+
+function showFallbackContent(weeklyData) {
+    const chartContainer = document.getElementById('weeklyChart');
+    const avgCalories = Math.round(weeklyData.reduce((sum, day) => sum + day.calories, 0) / 7);
+    const avgProtein = Math.round(weeklyData.reduce((sum, day) => sum + day.protein, 0) / 7);
+    
+    chartContainer.innerHTML = `
+        <div class="h-64 flex items-center justify-center text-gray-500">
+            <div class="text-center">
+                <i class="fas fa-chart-line text-4xl mb-2 opacity-50"></i>
+                <p class="font-medium text-gray-700 mb-2">Weekly Nutrition Summary</p>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-emerald-50 p-3 rounded-lg">
+                        <div class="text-2xl font-bold text-emerald-600">${avgCalories}</div>
+                        <div class="text-emerald-700">Avg Calories</div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <div class="text-2xl font-bold text-blue-600">${avgProtein}g</div>
+                        <div class="text-blue-700">Avg Protein</div>
+                    </div>
+                </div>
+                <div class="mt-4 text-xs text-gray-500">
+                    <p>Daily breakdown available in the data below</p>
+                </div>
+                <div class="mt-2 text-xs text-yellow-600">
+                    <p>Chart.js failed to load. <button onclick="retryChartJS()" class="text-blue-600 underline">Click here to retry</button></p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getChartDatasets(weeklyData, chartType) {
+    const colors = {
+        calories: '#10b981',
+        protein: '#3b82f6',
+        carbs: '#f59e0b',
+        fat: '#ef4444'
+    };
+    
+    switch (chartType) {
+        case 'calories':
+            return [{
+                label: 'Calories',
+                data: weeklyData.map(day => day.calories),
+                borderColor: colors.calories,
+                backgroundColor: colors.calories + '20',
+                fill: true,
+                tension: 0.4
+            }];
+        
+        case 'macros':
+            return [
+                {
+                    label: 'Protein (g)',
+                    data: weeklyData.map(day => day.protein),
+                    borderColor: colors.protein,
+                    backgroundColor: colors.protein + '20',
+                    fill: false,
+                    tension: 0.4
+                },
+                {
+                    label: 'Carbs (g)',
+                    data: weeklyData.map(day => day.carbs),
+                    borderColor: colors.carbs,
+                    backgroundColor: colors.carbs + '20',
+                    fill: false,
+                    tension: 0.4
+                },
+                {
+                    label: 'Fat (g)',
+                    data: weeklyData.map(day => day.fat),
+                    borderColor: colors.fat,
+                    backgroundColor: colors.fat + '20',
+                    fill: false,
+                    tension: 0.4
+                }
+            ];
+        
+        case 'goals':
+            return [
+                {
+                    label: 'Actual Calories',
+                    data: weeklyData.map(day => day.calories),
+                    borderColor: colors.calories,
+                    backgroundColor: colors.calories + '20',
+                    fill: false,
+                    tension: 0.4
+                },
+                {
+                    label: 'Goal Calories',
+                    data: weeklyData.map(() => 2000), // Default goal
+                    borderColor: '#6b7280',
+                    backgroundColor: 'transparent',
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0
+                }
+            ];
+        
+        default:
+            return [];
+    }
+}
+
+function switchChart(chartType) {
+    currentChartType = chartType;
+    
+    // Update button styles
+    const buttons = ['caloriesChartBtn', 'macrosChartBtn', 'goalsChartBtn'];
+    buttons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btnId === chartType + 'ChartBtn') {
+            btn.className = 'px-3 py-1 text-sm font-medium rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors';
+        } else {
+            btn.className = 'px-3 py-1 text-sm font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors';
+        }
+    });
+    
+    // Safely destroy existing chart before creating new one
+    destroyWeeklyChart();
+    
+    // Update chart if data is available
+    if (weeklyData) {
+        createWeeklyChart(weeklyData);
+    }
+}
+
+// Refresh weekly data when new meals are added
+function refreshWeeklyProgress() {
+    loadWeeklyProgress();
+}
+
+// Test function to manually check custom chart
+function testCustomChart() {
+    console.log('Testing custom chart availability...');
+    if (typeof CustomChart !== 'undefined') {
+        console.log('✅ Custom chart is available');
+        
+        // Test with sample data
+        const testContainer = document.createElement('div');
+        testContainer.style.width = '100px';
+        testContainer.style.height = '100px';
+        document.body.appendChild(testContainer);
+        
+        try {
+            const testChart = new CustomChart(testContainer, {
+                labels: ['Mon', 'Tue', 'Wed'],
+                datasets: [{
+                    label: 'Test',
+                    data: [10, 20, 15]
+                }]
+            });
+            console.log('✅ Custom chart test created successfully');
+            document.body.removeChild(testContainer);
+        } catch (error) {
+            console.error('❌ Custom chart test failed:', error);
+        }
+    } else {
+        console.log('❌ Custom chart is not available');
+    }
+}
+
+// Test function to check Chart.js availability
+function testChartJS() {
+    console.log('Testing Chart.js availability...');
+    console.log('Chart type:', typeof Chart);
+    console.log('Chart constructor:', typeof Chart === 'function' ? 'Available' : 'Not available');
+    
+    if (typeof Chart !== 'undefined' && typeof Chart === 'function') {
+        console.log('✅ Chart.js is available and ready to use');
+        
+        // Test if we can create a simple chart
+        const testCanvas = document.createElement('canvas');
+        testCanvas.width = 100;
+        testCanvas.height = 100;
+        document.body.appendChild(testCanvas);
+        
+        try {
+            const testChart = new Chart(testCanvas, {
+                type: 'line',
+                data: {
+                    labels: ['Test'],
+                    datasets: [{
+                        label: 'Test',
+                        data: [1]
+                    }]
+                }
+            });
+            console.log('✅ Chart.js test chart created successfully');
+            testChart.destroy();
+            document.body.removeChild(testCanvas);
+        } catch (error) {
+            console.error('❌ Chart.js test chart failed:', error);
+        }
+    } else {
+        console.log('❌ Chart.js is not available');
+        console.log('Attempting to reload Chart.js...');
+        loadChartJSFromCDN();
+    }
+}
+
+// Retry function for custom chart
+function retryCustomChart() {
+    console.log('Retrying custom chart creation...');
+    if (weeklyData) {
+        createWeeklyChart(weeklyData);
+    } else {
+        loadWeeklyProgress();
+    }
+}
+
+// Global retry function for Chart.js (can be called from browser console)
+function retryChartJS() {
+    console.log('Manually retrying Chart.js loading...');
+    loadChartJSFromCDN();
+    setTimeout(() => {
+        if (typeof Chart !== 'undefined') {
+            console.log('Chart.js loaded successfully, retrying chart creation...');
+            if (weeklyData) {
+                createWeeklyChart(weeklyData);
+            } else {
+                loadWeeklyProgress();
+            }
+        } else {
+            console.error('Chart.js still not available after manual retry');
+        }
+    }, 2000);
+}
+
+// Global function to safely destroy weekly chart
+function destroyWeeklyChart() {
+    if (window.weeklyChart && typeof window.weeklyChart.destroy === 'function') {
+        try {
+            window.weeklyChart.destroy();
+            console.log('Weekly chart destroyed successfully');
+        } catch (error) {
+            console.warn('Error destroying weekly chart:', error);
+        }
+    }
+    window.weeklyChart = null;
+}
+
+// Global function to check chart instance health
+function checkChartHealth() {
+    console.log('Chart instance check:');
+    console.log('- window.weeklyChart exists:', !!window.weeklyChart);
+    console.log('- window.weeklyChart type:', typeof window.weeklyChart);
+    if (window.weeklyChart) {
+        console.log('- destroy method available:', typeof window.weeklyChart.destroy === 'function');
+        console.log('- chart instance properties:', Object.keys(window.weeklyChart));
+    }
+}
 </script>
+<!-- AI Meal Planning Section -->
+<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <h3 class="text-xl font-semibold text-gray-800 mb-4">🤖 AI Meal Planning</h3>
+    
+    <!-- AI Features Status -->
+    <div id="ai-status" class="mb-4 p-3 rounded-lg bg-gray-50">
+        <div class="flex items-center">
+            <div id="ai-status-indicator" class="w-3 h-3 rounded-full bg-yellow-400 mr-2"></div>
+            <span id="ai-status-text" class="text-sm text-gray-600">Checking AI availability...</span>
+        </div>
+    </div>
+    
+    <!-- AI Meal Plan Generator -->
+    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6">
+            <h4 class="text-lg font-medium text-gray-800 mb-3">📋 Generate AI Meal Plan</h4>
+            <form id="meal-plan-form" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                        <input type="number" id="age" name="age" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                        <select id="gender" name="gender" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                            <option value="">Select</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                        <input type="number" id="weight" name="weight" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                        <input type="number" id="height" name="height" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Activity Level</label>
+                    <select id="activity-level" name="activity_level" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <option value="">Select</option>
+                        <option value="sedentary">Sedentary</option>
+                        <option value="lightly_active">Lightly Active</option>
+                        <option value="moderately_active">Moderately Active</option>
+                        <option value="very_active">Very Active</option>
+                        <option value="extremely_active">Extremely Active</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Goal</label>
+                    <select id="goal" name="goal" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <option value="">Select</option>
+                        <option value="weight_loss">Weight Loss</option>
+                        <option value="muscle_gain">Muscle Gain</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dietary Restrictions</label>
+                    <input type="text" id="dietary-restrictions" name="dietary_restrictions" placeholder="e.g., vegetarian, gluten-free" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
+                    <input type="text" id="allergies" name="allergies" placeholder="e.g., nuts, dairy" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Preferences</label>
+                    <input type="text" id="preferences" name="preferences" placeholder="e.g., high protein, low carb" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 font-medium text-lg">
+                    🚀 Generate 7-Day AI Meal Plan
+                </button>
+            </form>
+        </div>
+        
+
+    </div>
+    
+    <!-- AI Results Section -->
+    <div id="ai-results" class="mt-6 hidden">
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h4 class="text-xl font-semibold text-gray-800">🤖 AI Generated Results</h4>
+                <button onclick="closeAIResults()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="ai-results-content" class="space-y-6">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// AI Meal Planning JavaScript
+let aiStatus = 'checking';
+
+// Check AI availability on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkAIStatus();
+    setupAIForms();
+});
+
+function checkAIStatus() {
+    const statusIndicator = document.getElementById('ai-status-indicator');
+    const statusText = document.getElementById('ai-status-text');
+    
+    // Check if user has premium membership
+    fetch('/api/user')
+        .then(response => response.json())
+        .then(user => {
+            if (user.membership_type && ['Premium', 'VIP'].includes(user.membership_type)) {
+                aiStatus = 'available';
+                statusIndicator.className = 'w-3 h-3 rounded-full bg-green-400 mr-2';
+                statusText.textContent = '✅ AI features available for Premium/VIP members';
+            } else {
+                aiStatus = 'premium_required';
+                statusIndicator.className = 'w-3 h-3 rounded-full bg-red-400 mr-2';
+                statusText.textContent = '🔒 AI features require Premium or VIP membership';
+            }
+        })
+        .catch(error => {
+            console.error('Error checking AI status:', error);
+            aiStatus = 'error';
+            statusIndicator.className = 'w-3 h-3 rounded-full bg-red-400 mr-2';
+            statusText.textContent = '❌ Error checking AI availability';
+        });
+}
+
+function setupAIForms() {
+    // Meal Plan Form
+    document.getElementById('meal-plan-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (aiStatus !== 'available') {
+            alert('AI features require Premium or VIP membership');
+            return;
+        }
+        generateMealPlan();
+    });
+}
+
+function generateMealPlan() {
+    const form = document.getElementById('meal-plan-form');
+    const formData = new FormData(form);
+    
+    const userProfile = {
+        age: parseInt(formData.get('age')),
+        gender: formData.get('gender'),
+        weight: parseFloat(formData.get('weight')),
+        height: parseFloat(formData.get('height')),
+        activity_level: formData.get('activity_level'),
+        goal: formData.get('goal'),
+        dietary_restrictions: formData.get('dietary_restrictions') || 'none',
+        allergies: formData.get('allergies') || 'none',
+        preferences: formData.get('preferences') || 'none'
+    };
+    
+    showLoading('Generating AI meal plan...');
+    
+    fetch('/api/nutrition/generate-meal-plan', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_profile: userProfile })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.error) {
+            showError('Error generating meal plan: ' + data.error);
+        } else {
+            displayMealPlan(data);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        showError('Error generating meal plan: ' + error.message);
+    });
+}
+
+
+
+function displayMealPlan(data) {
+    const resultsDiv = document.getElementById('ai-results-content');
+    
+    let html = `
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h5 class="text-2xl font-bold text-blue-800">📋 7-Day AI Meal Plan</h5>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                    <i class="fas fa-robot mr-1"></i>AI Generated
+                </span>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <h6 class="font-semibold text-blue-700 mb-3 flex items-center">
+                        <i class="fas fa-chart-pie mr-2"></i>Daily Targets
+                    </h6>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Calories:</span>
+                            <span class="font-medium text-blue-600">${data.nutritional_needs?.daily_calories || 'N/A'} kcal</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Protein:</span>
+                            <span class="font-medium text-blue-600">${data.nutritional_needs?.daily_protein || 'N/A'}g</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Carbs:</span>
+                            <span class="font-medium text-blue-600">${data.nutritional_needs?.daily_carbs || 'N/A'}g</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Fat:</span>
+                            <span class="font-medium text-blue-600">${data.nutritional_needs?.daily_fat || 'N/A'}g</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <h6 class="font-semibold text-blue-700 mb-3 flex items-center">
+                        <i class="fas fa-star mr-2"></i>Plan Features
+                    </h6>
+                    <ul class="text-sm text-blue-600 space-y-2">
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>7-day comprehensive plan</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Shopping list included</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Meal prep tips</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Substitution options</li>
+                    </ul>
+                </div>
+                <div class="bg-white rounded-lg p-4 shadow-sm">
+                    <h6 class="font-semibold text-blue-700 mb-3 flex items-center">
+                        <i class="fas fa-lightbulb mr-2"></i>AI Insights
+                    </h6>
+                    <p class="text-sm text-blue-600 leading-relaxed">
+                        Personalized meal plan optimized for your goals, preferences, and dietary requirements. 
+                        Each meal is carefully balanced for optimal nutrition and satisfaction.
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (data.meal_plan) {
+        const days = Object.keys(data.meal_plan);
+        html += `
+            <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <!-- Day Navigation -->
+                <div class="flex items-center justify-between mb-6">
+                    <h5 class="text-xl font-bold text-gray-800">7-Day Meal Plan</h5>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="previousDay()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" id="prevBtn">
+                            <i class="fas fa-chevron-left text-gray-600"></i>
+                        </button>
+                        <span class="text-sm font-medium text-gray-600">
+                            Day <span id="currentDayNum">1</span> of 7
+                        </span>
+                        <button onclick="nextDay()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" id="nextBtn">
+                            <i class="fas fa-chevron-right text-gray-600"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Day Indicators -->
+                <div class="flex justify-center space-x-2 mb-6">
+                    ${days.map((day, index) => `
+                        <button onclick="goToDay(${index})" 
+                                class="day-indicator w-3 h-3 rounded-full transition-all duration-200 ${index === 0 ? 'bg-blue-500' : 'bg-gray-300 hover:bg-gray-400'}"
+                                data-day="${index}">
+                        </button>
+                    `).join('')}
+                </div>
+                
+                <!-- Meal Plan Slider -->
+                <div class="relative overflow-hidden">
+                    <div id="mealPlanSlider" class="flex transition-transform duration-300 ease-in-out" style="width: ${days.length * 100}%;">
+        `;
+        
+        days.forEach((day, dayIndex) => {
+            const dayData = data.meal_plan[day];
+            html += `
+                <div class="day-slide w-full" style="width: ${100 / days.length}%;" data-day="${dayIndex}">
+                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h6 class="text-2xl font-bold text-gray-800 capitalize">${day.replace('_', ' ')}</h6>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                <i class="fas fa-calendar-day mr-1"></i>Day ${dayIndex + 1}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            `;
+            
+            const mealTypes = [
+                { key: 'breakfast', icon: 'fa-sun', color: 'yellow', title: 'Breakfast' },
+                { key: 'lunch', icon: 'fa-hamburger', color: 'orange', title: 'Lunch' },
+                { key: 'dinner', icon: 'fa-utensils', color: 'purple', title: 'Dinner' },
+                { key: 'snack_1', icon: 'fa-cookie-bite', color: 'green', title: 'Snack 1' },
+                { key: 'snack_2', icon: 'fa-apple-alt', color: 'red', title: 'Snack 2' }
+            ];
+            
+            mealTypes.forEach(mealType => {
+                if (dayData[mealType.key]) {
+                    const mealData = dayData[mealType.key];
+                    const colorClasses = {
+                        yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+                        orange: 'bg-orange-50 border-orange-200 text-orange-800',
+                        purple: 'bg-purple-50 border-purple-200 text-purple-800',
+                        green: 'bg-green-50 border-green-200 text-green-800',
+                        red: 'bg-red-50 border-red-200 text-red-800'
+                    };
+                    
+                    html += `
+                        <div class="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition-all duration-200">
+                            <div class="flex items-center justify-between mb-3">
+                                <h7 class="font-semibold text-gray-800 flex items-center">
+                                    <i class="fas ${mealType.icon} mr-2 text-${mealType.color}-500"></i>
+                                    ${mealType.title}
+                                </h7>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colorClasses[mealType.color]}">
+                                    ${mealData.nutrition?.calories || 'N/A'} cal
+                                </span>
+                            </div>
+                            <div class="space-y-3">
+                                <p class="text-sm font-medium text-gray-700 leading-relaxed">${mealData.name}</p>
+                                <div class="grid grid-cols-3 gap-3 text-xs">
+                                    <div class="text-center bg-blue-50 rounded-lg p-2">
+                                        <div class="font-bold text-blue-600 text-sm">${mealData.nutrition?.protein || 'N/A'}g</div>
+                                        <div class="text-blue-700">Protein</div>
+                                    </div>
+                                    <div class="text-center bg-orange-50 rounded-lg p-2">
+                                        <div class="font-bold text-orange-600 text-sm">${mealData.nutrition?.carbs || 'N/A'}g</div>
+                                        <div class="text-orange-700">Carbs</div>
+                                    </div>
+                                    <div class="text-center bg-red-50 rounded-lg p-2">
+                                        <div class="font-bold text-red-600 text-sm">${mealData.nutrition?.fat || 'N/A'}g</div>
+                                        <div class="text-red-700">Fat</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    if (data.shopping_list && data.shopping_list.length > 0) {
+        html += `
+            <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h6 class="text-xl font-bold text-green-800 flex items-center">
+                        <i class="fas fa-shopping-cart mr-2"></i>Shopping List
+                    </h6>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        ${data.shopping_list.length} items
+                    </span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    ${data.shopping_list.map((item, index) => `
+                        <div class="bg-white rounded-lg p-3 shadow-sm flex items-center">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium mr-3">
+                                ${index + 1}
+                            </span>
+                            <span class="text-sm font-medium text-gray-700">${item}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    resultsDiv.innerHTML = html;
+    document.getElementById('ai-results').classList.remove('hidden');
+}
+
+
+
+function closeAIResults() {
+    document.getElementById('ai-results').classList.add('hidden');
+}
+
+function showLoading(message) {
+    // You can implement a loading indicator here
+    console.log('Loading:', message);
+}
+
+function hideLoading() {
+    // Hide loading indicator
+    console.log('Loading complete');
+}
+
+function showError(message) {
+    alert('Error: ' + message);
+}
+
+// Meal Plan Slider Functions
+let currentDayIndex = 0;
+let totalDays = 7;
+
+function nextDay() {
+    if (currentDayIndex < totalDays - 1) {
+        currentDayIndex++;
+        updateSlider();
+    }
+}
+
+function previousDay() {
+    if (currentDayIndex > 0) {
+        currentDayIndex--;
+        updateSlider();
+    }
+}
+
+function goToDay(dayIndex) {
+    currentDayIndex = dayIndex;
+    updateSlider();
+}
+
+function updateSlider() {
+    const slider = document.getElementById('mealPlanSlider');
+    const currentDayNum = document.getElementById('currentDayNum');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const indicators = document.querySelectorAll('.day-indicator');
+    
+    if (slider) {
+        // Update slider position
+        const translateX = -(currentDayIndex * (100 / totalDays));
+        slider.style.transform = `translateX(${translateX}%)`;
+        
+        // Update day number
+        if (currentDayNum) {
+            currentDayNum.textContent = currentDayIndex + 1;
+        }
+        
+        // Update navigation buttons
+        if (prevBtn) {
+            prevBtn.disabled = currentDayIndex === 0;
+            prevBtn.style.opacity = currentDayIndex === 0 ? '0.5' : '1';
+        }
+        
+        if (nextBtn) {
+            nextBtn.disabled = currentDayIndex === totalDays - 1;
+            nextBtn.style.opacity = currentDayIndex === totalDays - 1 ? '0.5' : '1';
+        }
+        
+        // Update indicators
+        indicators.forEach((indicator, index) => {
+            if (index === currentDayIndex) {
+                indicator.classList.remove('bg-gray-300', 'hover:bg-gray-400');
+                indicator.classList.add('bg-blue-500');
+            } else {
+                indicator.classList.remove('bg-blue-500');
+                indicator.classList.add('bg-gray-300', 'hover:bg-gray-400');
+            }
+        });
+    }
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (document.getElementById('mealPlanSlider')) {
+        if (e.key === 'ArrowLeft') {
+            previousDay();
+        } else if (e.key === 'ArrowRight') {
+            nextDay();
+        }
+    }
+});
+</script>
+
 {% endblock %} 
