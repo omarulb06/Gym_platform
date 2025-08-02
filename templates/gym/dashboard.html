@@ -198,6 +198,15 @@
  document.getElementById('todaySessions').textContent = data.stats.today_sessions;
  document.getElementById('monthlyRevenue').textContent = `$${data.stats.monthly_revenue.toLocaleString()}`;
  
+ // Update sidebar stats if they exist
+ const sidebarTotalMembers = document.getElementById('sidebarTotalMembers');
+ const sidebarActiveCoaches = document.getElementById('sidebarActiveCoaches');
+ const sidebarTodaySessions = document.getElementById('sidebarTodaySessions');
+ 
+ if (sidebarTotalMembers) sidebarTotalMembers.textContent = data.stats.total_members;
+ if (sidebarActiveCoaches) sidebarActiveCoaches.textContent = data.stats.active_coaches;
+ if (sidebarTodaySessions) sidebarTodaySessions.textContent = data.stats.today_sessions;
+ 
  // Update recent members
  const recentMembersDiv = document.getElementById('recentMembers');
  if (data.recent_members.length === 0) {
@@ -211,9 +220,8 @@
  <p class="text-xs text-gray-400">Joined ${new Date(member.join_date).toLocaleDateString()}</p>
  </div>
  <div class="text-right">
- <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
- ${member.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
- ${member.status}
+ <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+ ${member.membership_type}
  </span>
  </div>
  </div>

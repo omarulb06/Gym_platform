@@ -53,6 +53,7 @@
  <div class="ml-5">
  <h4 class="text-lg font-medium text-gray-900">Monthly Revenue</h4>
  <p id="monthlyRevenue" class="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900">-</p>
+ <div id="revenueBreakdown"></div>
  </div>
  </div>
  </div>
@@ -142,6 +143,25 @@
  
  const monthlyRevenue = data.revenue_stats.monthly_revenue || 0;
  document.getElementById('monthlyRevenue').textContent = `$${monthlyRevenue.toFixed(2)}`;
+ 
+ // Update revenue breakdown if elements exist
+ const basicCount = data.revenue_stats.basic_members || 0;
+ const premiumCount = data.revenue_stats.premium_members || 0;
+ const vipCount = data.revenue_stats.vip_members || 0;
+ 
+ const basicRevenue = basicCount * 50;
+ const premiumRevenue = premiumCount * 100;
+ const vipRevenue = vipCount * 150;
+ 
+ if (document.getElementById('revenueBreakdown')) {
+   document.getElementById('revenueBreakdown').innerHTML = `
+     <div class="text-sm text-gray-600 mt-2">
+       <div>Basic (${basicCount} members): $${basicRevenue.toLocaleString()}</div>
+       <div>Premium (${premiumCount} members): $${premiumRevenue.toLocaleString()}</div>
+       <div>VIP (${vipCount} members): $${vipRevenue.toLocaleString()}</div>
+     </div>
+   `;
+ }
  
  const completionRate = data.session_stats.total_sessions > 0 
  ? (data.session_stats.completed_sessions / data.session_stats.total_sessions * 100).toFixed(1)

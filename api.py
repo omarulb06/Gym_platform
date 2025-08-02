@@ -167,6 +167,13 @@ def get_current_user(request: Request) -> Optional[dict]:
         print(f"Error in get_current_user: {str(e)}")  # Debug log
         return None
 
+# FastAPI dependency version of get_current_user
+def get_current_user_dependency(request: Request) -> dict:
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
+
 # Database connection
 def get_db_connection():
     return pymysql.connect(
@@ -205,6 +212,8 @@ def init_db():
                 email VARCHAR(100) UNIQUE NOT NULL,
                 password VARCHAR(100) NOT NULL,
                 specialization VARCHAR(100),
+                experience INT DEFAULT 0,
+                role_level ENUM('Junior Coach', 'Senior Coach', 'Head Coach', 'Personal Trainer', 'Specialist') DEFAULT 'Senior Coach',
                 status ENUM('Active', 'Inactive') DEFAULT 'Active',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (gym_id) REFERENCES gyms(id)
@@ -767,7 +776,7 @@ async def get_coach_schedule(coach_id: int):
 async def get_coach_members(
     search: str = "",
     membership_type: str = "all",
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     if current_user["user_type"] != "coach":
         raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
@@ -780,8 +789,8 @@ async def get_coach_members(
         query = """
             SELECT m.*, 
                    COUNT(s.id) as total_sessions,
-                   SUM(CASE WHEN s.status = 'completed' THEN 1 ELSE 0 END) as completed_sessions,
-                   MAX(CASE WHEN s.status = 'completed' THEN s.session_date ELSE NULL END) as last_session
+                   SUM(CASE WHEN s.status = 'Completed' THEN 1 ELSE 0 END) as completed_sessions,
+                   MAX(CASE WHEN s.status = 'Completed' THEN s.session_date ELSE NULL END) as last_session
             FROM members m 
             JOIN member_coach mc ON m.id = mc.member_id 
             LEFT JOIN sessions s ON m.id = s.member_id
@@ -819,7 +828,7 @@ async def get_coach_sessions(
     status: str = "all",
     member: str = "all",
     search: str = "",
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     if current_user["user_type"] != "coach":
         raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
@@ -915,7 +924,7 @@ async def get_coach_sessions(
 async def update_session_status(
     session_id: int,
     status: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     if current_user["user_type"] != "coach":
         raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
@@ -953,7 +962,7 @@ async def update_session_status(
 @app.get("/api/coach/progress")
 async def get_coach_progress(
     time_range: str = "month",
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     # Redirect to the member-specific endpoint with member_id=0 (all members)
     return await get_member_progress(0, time_range, current_user)
@@ -962,7 +971,7 @@ async def get_coach_progress(
 async def get_member_progress(
     member_id: int,
     time_range: str = "month",
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     if current_user["user_type"] != "coach":
         raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
@@ -1312,18 +1321,16 @@ async def get_gym_dashboard(request: Request):
                 (SELECT COUNT(*) FROM coaches WHERE gym_id = %s AND status = 'Active') as active_coaches,
                 (SELECT COUNT(*) FROM sessions WHERE gym_id = %s AND DATE(session_date) = CURDATE()) as today_sessions,
                 (
-                    -- Calculate membership revenue only
+                    -- Calculate total monthly revenue from all active members
                     SELECT COALESCE(SUM(
                         CASE 
                             WHEN m.membership_type = 'Basic' THEN 50.00
                             WHEN m.membership_type = 'Premium' THEN 100.00
-                            WHEN m.membership_type = 'VIP' THEN 200.00
+                            WHEN m.membership_type = 'VIP' THEN 150.00
                         END
                     ), 0)
                     FROM members m
                     WHERE m.gym_id = %s
-                    AND m.join_date >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01')
-                    AND m.join_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL 1 MONTH)
                 ) as monthly_revenue
         """, (user["id"], user["id"], user["id"], user["id"]))
         stats = cursor.fetchone()
@@ -1574,7 +1581,10 @@ async def get_gym_sessions(
                 if session["notes"]:
                     try:
                         lines = session["notes"].split('\n')
-                        workout_type = lines[0].replace(' Workout:', '')
+                        if lines and "Workout Type:" in lines[0]:
+                            workout_type = lines[0].split("Workout Type:")[1].strip()
+                        else:
+                            workout_type = lines[0].replace(' Workout:', '') if lines else "Custom"
                         exercises = [line.strip() for line in lines[1:] if line.strip()]
                     except Exception as e:
                         print(f"Error parsing notes: {str(e)}")
@@ -1820,7 +1830,7 @@ async def regenerate_db():
                         exercises = WORKOUT_TEMPLATES[workout_type]
                         
                         # Create detailed notes with exercises
-                        notes = f"{workout_type} Workout:\n"
+                        notes = f"Workout Type: {workout_type}\n"
                         for i, exercise in enumerate(exercises, 1):
                             notes += f"{i}. {exercise}\n"
                         
@@ -1953,7 +1963,7 @@ async def add_gym_member(request: Request):
         # Get member data from request
         data = await request.json()
         
-        # Validate required fields
+        # Validate required fields (removed join_date since it's auto-generated)
         required_fields = ["name", "email", "password", "membership_type"]
         for field in required_fields:
             if field not in data:
@@ -2662,10 +2672,12 @@ async def get_coach_member_details_page(request: Request, member_id: int):
         conn.close()
 
 @app.get("/api/coach/members/{member_id}")
-async def get_coach_member_details(member_id: int, current_user: dict = Depends(get_current_user)):
+async def get_coach_member_details(member_id: int, current_user: dict = Depends(get_current_user_dependency)):
     if current_user["user_type"] != "coach":
         raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
     
+    conn = None
+    cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -2676,8 +2688,8 @@ async def get_coach_member_details(member_id: int, current_user: dict = Depends(
                 m.*,
                 mc.assigned_date,
                 COUNT(s.id) as total_sessions,
-                SUM(CASE WHEN s.status = 'completed' THEN 1 ELSE 0 END) as completed_sessions,
-                MAX(CASE WHEN s.status = 'completed' THEN s.session_date ELSE NULL END) as last_session
+                SUM(CASE WHEN s.status = 'Completed' THEN 1 ELSE 0 END) as completed_sessions,
+                MAX(CASE WHEN s.status = 'Completed' THEN s.session_date ELSE NULL END) as last_session
             FROM members m
             JOIN member_coach mc ON m.id = mc.member_id
             LEFT JOIN sessions s ON m.id = s.member_id
@@ -2698,6 +2710,7 @@ async def get_coach_member_details(member_id: int, current_user: dict = Depends(
             FROM sessions s
             WHERE s.member_id = %s AND s.coach_id = %s
             ORDER BY s.session_date DESC, s.session_time DESC
+            LIMIT 10
         """, (member_id, current_user["id"]))
         recent_sessions = cursor.fetchall()
         
@@ -2706,7 +2719,7 @@ async def get_coach_member_details(member_id: int, current_user: dict = Depends(
         for session in recent_sessions:
             workout_type = "Custom"
             exercises = []
-            if session["notes"]:
+            if session.get("notes"):
                 try:
                     lines = session["notes"].split("\n")
                     if lines and "Workout Type:" in lines[0]:
@@ -2725,11 +2738,8 @@ async def get_coach_member_details(member_id: int, current_user: dict = Depends(
                     "type": workout_type,
                     "exercises": exercises
                 },
-                "notes": session["notes"]
+                "notes": session.get("notes", "")
             })
-        
-        cursor.close()
-        conn.close()
         
         return {
             "member": {
@@ -2737,20 +2747,27 @@ async def get_coach_member_details(member_id: int, current_user: dict = Depends(
                 "name": member["name"],
                 "email": member["email"],
                 "membership_type": member["membership_type"],
-                "join_date": member["join_date"].strftime("%Y-%m-%d") if member["join_date"] else None,
-                "assigned_date": member["assigned_date"].strftime("%Y-%m-%d") if member["assigned_date"] else None,
+                "join_date": member["join_date"].strftime("%Y-%m-%d") if member.get("join_date") else None,
+                "assigned_date": member["assigned_date"].strftime("%Y-%m-%d") if member.get("assigned_date") else None,
                 "total_sessions": member["total_sessions"] or 0,
                 "completed_sessions": member["completed_sessions"] or 0,
-                "last_session": member["last_session"].strftime("%Y-%m-%d") if member["last_session"] else None
+                "last_session": member["last_session"].strftime("%Y-%m-%d") if member.get("last_session") else None
             },
             "recent_sessions": formatted_sessions
         }
     except Exception as e:
         print(f"Error in get_coach_member_details: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Error retrieving member details")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.get("/api/user")
-async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+async def get_current_user_info(current_user: dict = Depends(get_current_user_dependency)):
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return current_user
@@ -2762,14 +2779,14 @@ async def logout():
     return response
 
 @app.get("/api/coach/members/")
-async def get_coach_members_root(current_user: dict = Depends(get_current_user)):
+async def get_coach_members_root(current_user: dict = Depends(get_current_user_dependency)):
     # Redirect to the main members endpoint
     return RedirectResponse(url="/api/coach/members")
 
 @app.post("/api/coach/sessions")
 async def create_coach_session(
     request: Request,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     if current_user["user_type"] != "coach":
         raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
@@ -2903,7 +2920,7 @@ async def get_coach_schedule(
     start_date: str = None,
     end_date: str = None,
     member: str = None,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     if current_user["user_type"] != "coach":
         raise HTTPException(status_code=403, detail="Only coaches can access this endpoint")
@@ -3104,7 +3121,7 @@ async def get_member_schedule(
     request: Request,
     start_date: str = None,
     end_date: str = None,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     if current_user["user_type"] != "member":
         raise HTTPException(status_code=403, detail="Only members can access this endpoint")
@@ -3295,7 +3312,7 @@ async def get_member_preferences_page(request: Request):
     return templates.TemplateResponse("member/preferences.html", {"request": request, "user": user})
 
 @app.get("/api/member/progress")
-async def get_member_progress_data(current_user: dict = Depends(get_current_user)):
+async def get_member_progress_data(current_user: dict = Depends(get_current_user_dependency)):
     if current_user["user_type"] != "member":
         raise HTTPException(status_code=403, detail="Only members can access this endpoint")
     
@@ -3313,6 +3330,8 @@ async def get_member_progress_data(current_user: dict = Depends(get_current_user
             WHERE member_id = %s
         """, (current_user["id"],))
         stats = cursor.fetchone()
+        
+
         
         # Calculate attendance rate
         total_sessions = stats["total_sessions"] or 0
@@ -3356,6 +3375,8 @@ async def get_member_progress_data(current_user: dict = Depends(get_current_user
             ORDER BY count DESC
         """, (current_user["id"],))
         workout_distribution = cursor.fetchall()
+        
+
         
         # Get recent sessions
         cursor.execute("""
@@ -3489,18 +3510,19 @@ async def get_gym_reports(request: Request):
         """, (user["id"],))
         session_stats = cursor.fetchone()
         
-        # Get revenue statistics
+        # Get revenue statistics - total monthly revenue from all active members
         cursor.execute("""
             SELECT 
                 SUM(CASE 
                     WHEN membership_type = 'Basic' THEN 50.00
                     WHEN membership_type = 'Premium' THEN 100.00
-                    WHEN membership_type = 'VIP' THEN 200.00
-                END) as monthly_revenue
+                    WHEN membership_type = 'VIP' THEN 150.00
+                END) as monthly_revenue,
+                COUNT(CASE WHEN membership_type = 'Basic' THEN 1 END) as basic_members,
+                COUNT(CASE WHEN membership_type = 'Premium' THEN 1 END) as premium_members,
+                COUNT(CASE WHEN membership_type = 'VIP' THEN 1 END) as vip_members
             FROM members 
             WHERE gym_id = %s
-            AND join_date >= DATE_FORMAT(CURDATE(), '%%Y-%%m-01')
-            AND join_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%%Y-%%m-01'), INTERVAL 1 MONTH)
         """, (user["id"],))
         revenue_stats = cursor.fetchone()
         
@@ -3921,7 +3943,7 @@ async def test_messages_table():
 # Preferences and Free Days API Endpoints
 
 @app.get("/api/preferences")
-async def get_user_preferences(current_user: dict = Depends(get_current_user)):
+async def get_user_preferences(current_user: dict = Depends(get_current_user_dependency)):
     """Get user preferences and free days"""
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -4004,7 +4026,7 @@ async def get_user_preferences(current_user: dict = Depends(get_current_user)):
             connection.close()
 
 @app.post("/api/preferences")
-async def update_user_preferences(request: Request, current_user: dict = Depends(get_current_user)):
+async def update_user_preferences(request: Request, current_user: dict = Depends(get_current_user_dependency)):
     """Update user preferences and free days"""
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -4068,11 +4090,13 @@ async def update_user_preferences(request: Request, current_user: dict = Depends
             connection.close()
 
 @app.get("/api/coach/members/{member_id}/preferences")
-async def get_member_preferences(member_id: int, current_user: dict = Depends(get_current_user)):
+async def get_member_preferences(member_id: int, current_user: dict = Depends(get_current_user_dependency)):
     """Get member preferences for coach view"""
     if not current_user or current_user.get('user_type') != 'coach':
         raise HTTPException(status_code=401, detail="Not authorized")
     
+    connection = None
+    cursor = None
     try:
         connection = get_db_connection()
         cursor = connection.cursor()
@@ -4101,26 +4125,47 @@ async def get_member_preferences(member_id: int, current_user: dict = Depends(ge
         """, (member_id,))
         free_days = cursor.fetchall()
         
-        # Parse JSON fields
-        if preferences and preferences.get('preferred_workout_types'):
-            preferences['preferred_workout_types'] = json.loads(preferences['preferred_workout_types'])
-        if preferences and preferences.get('preferred_time_slots'):
-            preferences['preferred_time_slots'] = json.loads(preferences['preferred_time_slots'])
+        # Parse JSON fields safely
+        parsed_preferences = None
+        if preferences:
+            parsed_preferences = {
+                'preferred_workout_types': [],
+                'preferred_duration': preferences.get('preferred_duration', 60),
+                'preferred_time_slots': [],
+                'notes': preferences.get('notes', '')
+            }
+            
+            # Parse JSON fields with error handling
+            try:
+                if preferences.get('preferred_workout_types'):
+                    parsed_preferences['preferred_workout_types'] = json.loads(preferences['preferred_workout_types'])
+            except (json.JSONDecodeError, TypeError):
+                parsed_preferences['preferred_workout_types'] = []
+                
+            try:
+                if preferences.get('preferred_time_slots'):
+                    parsed_preferences['preferred_time_slots'] = json.loads(preferences['preferred_time_slots'])
+            except (json.JSONDecodeError, TypeError):
+                parsed_preferences['preferred_time_slots'] = []
         
         return {
-            'preferences': preferences,
-            'free_days': free_days
+            'preferences': parsed_preferences,
+            'free_days': free_days or []
         }
         
     except Exception as e:
         print(f"Error getting member preferences: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to get member preferences")
     finally:
+        if cursor:
+            cursor.close()
         if connection:
             connection.close()
 
 @app.get("/api/member/coach")
-async def get_member_coach_info(current_user: dict = Depends(get_current_user)):
+async def get_member_coach_info(current_user: dict = Depends(get_current_user_dependency)):
     """Get current member's coach information"""
     if not current_user or current_user.get('user_type') != 'member':
         raise HTTPException(status_code=401, detail="Not authorized")
@@ -4151,7 +4196,7 @@ async def get_member_coach_info(current_user: dict = Depends(get_current_user)):
             connection.close()
 
 @app.get("/api/member/coach/{coach_id}/preferences")
-async def get_coach_preferences(coach_id: int, current_user: dict = Depends(get_current_user)):
+async def get_coach_preferences(coach_id: int, current_user: dict = Depends(get_current_user_dependency)):
     """Get coach preferences for member view"""
     if not current_user or current_user.get('user_type') != 'member':
         raise HTTPException(status_code=401, detail="Not authorized")
@@ -4207,7 +4252,7 @@ async def get_coach_preferences(coach_id: int, current_user: dict = Depends(get_
 @app.get("/api/coach/all-members")
 async def get_all_members_for_coach(
     search: str = "",
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     """Get assigned members with their preferences for coach view"""
     if not current_user or current_user.get('user_type') != 'coach':
@@ -4265,7 +4310,7 @@ async def get_all_members_for_coach(
 @app.get("/api/member/all-coaches")
 async def get_all_coaches_for_member(
     search: str = "",
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     """Get all coaches with their preferences for member view"""
     if not current_user or current_user.get('user_type') != 'member':
@@ -4326,7 +4371,7 @@ async def get_bulk_availability(
     user_ids: str = Query(None, description="Comma-separated list of user IDs"),
     start_date: str = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: str = Query(None, description="End date (YYYY-MM-DD)"),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     """Get availability for multiple users"""
     if not current_user:
@@ -4394,7 +4439,7 @@ async def get_user_availability(
     user_id: int,
     start_date: str = None,
     end_date: str = None,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     """Get user availability for a date range"""
     if not current_user:
@@ -4444,7 +4489,7 @@ async def get_user_availability(
 @app.post("/api/availability")
 async def update_user_availability(
     request: Request,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     """Update user availability for specific dates and hours"""
     if not current_user:
@@ -4484,7 +4529,7 @@ async def update_user_availability(
 async def delete_user_availability(
     date: str,
     hour: int,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     """Delete user availability for a specific date and hour (mark as available)"""
     if not current_user:
@@ -4516,7 +4561,7 @@ async def get_user_availability_calendar(
     user_id: int,
     year: int = Query(None, description="Year (YYYY)"),
     month: int = Query(None, description="Month (1-12)"),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     """Get user availability for calendar view"""
     if not current_user:
@@ -4606,7 +4651,7 @@ async def get_user_availability_calendar(
 @app.post("/api/availability/bulk")
 async def update_user_availability_bulk(
     request: Request,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     """Update user availability for a date range and time range"""
     if not current_user:
@@ -4665,7 +4710,7 @@ model = model.to(device)
 @app.post("/api/classify-frame")
 async def classify_frame(
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     # Only allow premium members
     if not current_user or current_user.get("user_type") != "member":
@@ -5065,7 +5110,17 @@ async def assign_best_workout_api(
 
         # Add coach's existing sessions to unavailable slots
         for session in coach_sessions:
-            session_datetime = datetime.combine(session['session_date'], session['session_time'])
+            # Convert timedelta to time object if needed
+            session_time = session['session_time']
+            if isinstance(session_time, timedelta):
+                # Convert timedelta to time object
+                total_seconds = int(session_time.total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                seconds = total_seconds % 60
+                session_time = dt_time(hours, minutes, seconds)
+            
+            session_datetime = datetime.combine(session['session_date'], session_time)
             session_duration = session['duration']
             
             # Block the session hour and adjacent hours based on duration
@@ -5078,7 +5133,17 @@ async def assign_best_workout_api(
 
         # Add member's existing sessions to unavailable slots
         for session in member_sessions:
-            session_datetime = datetime.combine(session['session_date'], session['session_time'])
+            # Convert timedelta to time object if needed
+            session_time = session['session_time']
+            if isinstance(session_time, timedelta):
+                # Convert timedelta to time object
+                total_seconds = int(session_time.total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                seconds = total_seconds % 60
+                session_time = dt_time(hours, minutes, seconds)
+            
+            session_datetime = datetime.combine(session['session_date'], session_time)
             session_duration = session['duration']
             
             # Block the session hour and adjacent hours based on duration
@@ -5137,7 +5202,17 @@ async def assign_best_workout_api(
             
             # Check coach availability for this specific datetime
             for session in coach_sessions:
-                session_start = datetime.combine(session['session_date'], session['session_time'])
+                # Convert timedelta to time object if needed
+                session_time = session['session_time']
+                if isinstance(session_time, timedelta):
+                    # Convert timedelta to time object
+                    total_seconds = int(session_time.total_seconds())
+                    hours = total_seconds // 3600
+                    minutes = (total_seconds % 3600) // 60
+                    seconds = total_seconds % 60
+                    session_time = dt_time(hours, minutes, seconds)
+                
+                session_start = datetime.combine(session['session_date'], session_time)
                 session_end = session_start + timedelta(minutes=session['duration'])
                 proposed_start = dt
                 proposed_end = dt + timedelta(minutes=duration)
@@ -5150,7 +5225,17 @@ async def assign_best_workout_api(
             # Check member availability for this specific datetime
             if is_available:
                 for session in member_sessions:
-                    session_start = datetime.combine(session['session_date'], session['session_time'])
+                    # Convert timedelta to time object if needed
+                    session_time = session['session_time']
+                    if isinstance(session_time, timedelta):
+                        # Convert timedelta to time object
+                        total_seconds = int(session_time.total_seconds())
+                        hours = total_seconds // 3600
+                        minutes = (total_seconds % 3600) // 60
+                        seconds = total_seconds % 60
+                        session_time = dt_time(hours, minutes, seconds)
+                    
+                    session_start = datetime.combine(session['session_date'], session_time)
                     session_end = session_start + timedelta(minutes=session['duration'])
                     proposed_start = dt
                     proposed_end = dt + timedelta(minutes=duration)
@@ -5231,7 +5316,7 @@ async def create_session_api(
         cursor.execute("""
             INSERT INTO sessions (gym_id, coach_id, member_id, session_date, session_time, duration, status, notes)
             VALUES (%s, %s, %s, %s, %s, %s, 'Scheduled', %s)
-        """, (gym_id, coach_id, member_id, session_date, session_time, duration, notes + f" | Workout: {workout_type}"))
+        """, (gym_id, coach_id, member_id, session_date, session_time, duration, f"Workout Type: {workout_type}\n{notes}" if notes else f"Workout Type: {workout_type}"))
         conn.commit()
         return {"success": True, "session_id": cursor.lastrowid}
     finally:
@@ -7107,6 +7192,356 @@ async def calculate_nutritional_needs(
     except Exception as e:
         print(f"Error calculating nutritional needs: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+# Additional CRUD endpoints for Members
+@app.put("/api/gym/members/{member_id}")
+async def update_gym_member(member_id: int, request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        # Get member data from request
+        data = await request.json()
+        
+        # Validate required fields (password and coach_id are optional for updates)
+        required_fields = ["name", "email", "membership_type"]
+        for field in required_fields:
+            if field not in data:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Validate password if provided
+        if "password" in data and len(data["password"]) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+        
+        # Validate email format
+        if not "@" in data["email"] or not "." in data["email"]:
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        
+        # Validate membership type
+        valid_membership_types = ["Basic", "Premium", "VIP"]
+        if data["membership_type"] not in valid_membership_types:
+            raise HTTPException(status_code=400, detail=f"Invalid membership type. Must be one of: {', '.join(valid_membership_types)}")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if member exists and belongs to this gym
+            cursor.execute("SELECT id FROM members WHERE id = %s AND gym_id = %s", (member_id, user["id"]))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=404, detail="Member not found")
+            
+            # Check if email already exists for other members
+            cursor.execute("SELECT id FROM members WHERE email = %s AND id != %s", (data["email"], member_id))
+            if cursor.fetchone():
+                raise HTTPException(status_code=400, detail="Email already registered")
+            
+            # Update member (with optional password)
+            if "password" in data:
+                cursor.execute("""
+                    UPDATE members 
+                    SET name = %s, email = %s, membership_type = %s, password = %s
+                    WHERE id = %s AND gym_id = %s
+                """, (
+                    data["name"],
+                    data["email"],
+                    data["membership_type"],
+                    data["password"],
+                    member_id,
+                    user["id"]
+                ))
+            else:
+                cursor.execute("""
+                    UPDATE members 
+                    SET name = %s, email = %s, membership_type = %s
+                    WHERE id = %s AND gym_id = %s
+                """, (
+                    data["name"],
+                    data["email"],
+                    data["membership_type"],
+                    member_id,
+                    user["id"]
+                ))
+            
+            # Handle coach assignment update
+            if "coach_id" in data:
+                # First, remove any existing coach assignment
+                cursor.execute("DELETE FROM member_coach WHERE member_id = %s", (member_id,))
+                
+                # If a new coach is assigned, add the relationship
+                if data["coach_id"]:
+                    cursor.execute("""
+                        INSERT INTO member_coach (member_id, coach_id, assigned_date)
+                        VALUES (%s, %s, CURDATE())
+                    """, (member_id, data["coach_id"]))
+            
+            conn.commit()
+            
+            return {"message": "Member updated successfully"}
+            
+        except HTTPException as he:
+            conn.rollback()
+            raise he
+        except Exception as e:
+            conn.rollback()
+            print(f"Error updating member: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/gym/members/{member_id}")
+async def delete_gym_member(member_id: int, request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if member exists and belongs to this gym
+        cursor.execute("SELECT id FROM members WHERE id = %s AND gym_id = %s", (member_id, user["id"]))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # Delete related records first
+        cursor.execute("DELETE FROM member_coach WHERE member_id = %s", (member_id,))
+        cursor.execute("DELETE FROM sessions WHERE member_id = %s", (member_id,))
+        cursor.execute("DELETE FROM payments WHERE member_id = %s", (member_id,))
+        
+        # Delete member
+        cursor.execute("DELETE FROM members WHERE id = %s AND gym_id = %s", (member_id, user["id"]))
+        
+        conn.commit()
+        
+        return {"message": "Member deleted successfully"}
+        
+    except HTTPException as he:
+        conn.rollback()
+        raise he
+    except Exception as e:
+        conn.rollback()
+        print(f"Error deleting member: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+# CRUD endpoints for Coaches
+@app.post("/api/gym/coaches")
+async def add_gym_coach(request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        # Get coach data from request
+        data = await request.json()
+        
+        # Validate required fields
+        required_fields = ["name", "email", "password", "specialization"]
+        for field in required_fields:
+            if field not in data:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Validate password length
+        if len(data["password"]) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+        
+        # Validate email format
+        if not "@" in data["email"] or not "." in data["email"]:
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        
+
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if email already exists
+            cursor.execute("SELECT id FROM coaches WHERE email = %s", (data["email"],))
+            if cursor.fetchone():
+                raise HTTPException(status_code=400, detail="Email already registered")
+            
+            # Insert new coach
+            cursor.execute("""
+                INSERT INTO coaches (name, email, specialization, gym_id, password, status)
+                VALUES (%s, %s, %s, %s, %s, 'Active')
+            """, (
+                data["name"],
+                data["email"],
+                data["specialization"],
+                user["id"],
+                data["password"]
+            ))
+            
+            coach_id = cursor.lastrowid
+            conn.commit()
+            
+            return {
+                "message": "Coach added successfully",
+                "coach_id": coach_id
+            }
+            
+        except HTTPException as he:
+            conn.rollback()
+            raise he
+        except Exception as e:
+            conn.rollback()
+            print(f"Error adding coach: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/gym/coaches/{coach_id}")
+async def update_gym_coach(coach_id: int, request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        # Get coach data from request
+        data = await request.json()
+        
+        # Validate required fields (password is optional for updates)
+        required_fields = ["name", "email", "specialization", "status"]
+        for field in required_fields:
+            if field not in data:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Validate password if provided
+        if "password" in data and len(data["password"]) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+        
+        # Validate email format
+        if not "@" in data["email"] or not "." in data["email"]:
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        
+        # Validate status
+        valid_statuses = ["Active", "Inactive"]
+        if data["status"] not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if coach exists and belongs to this gym
+            cursor.execute("SELECT id FROM coaches WHERE id = %s AND gym_id = %s", (coach_id, user["id"]))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=404, detail="Coach not found")
+            
+            # Check if email already exists for other coaches
+            cursor.execute("SELECT id FROM coaches WHERE email = %s AND id != %s", (data["email"], coach_id))
+            if cursor.fetchone():
+                raise HTTPException(status_code=400, detail="Email already registered")
+            
+            # Update coach (with optional password)
+            if "password" in data:
+                cursor.execute("""
+                    UPDATE coaches 
+                    SET name = %s, email = %s, specialization = %s, status = %s, password = %s
+                    WHERE id = %s AND gym_id = %s
+                """, (
+                    data["name"],
+                    data["email"],
+                    data["specialization"],
+                    data["status"],
+                    data["password"],
+                    coach_id,
+                    user["id"]
+                ))
+            else:
+                cursor.execute("""
+                    UPDATE coaches 
+                    SET name = %s, email = %s, specialization = %s, status = %s
+                    WHERE id = %s AND gym_id = %s
+                """, (
+                    data["name"],
+                    data["email"],
+                    data["specialization"],
+                    data["status"],
+                    coach_id,
+                    user["id"]
+                ))
+            
+            conn.commit()
+            
+            return {"message": "Coach updated successfully"}
+            
+        except HTTPException as he:
+            conn.rollback()
+            raise he
+        except Exception as e:
+            conn.rollback()
+            print(f"Error updating coach: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/gym/coaches/{coach_id}")
+async def delete_gym_coach(coach_id: int, request: Request):
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if coach exists and belongs to this gym
+        cursor.execute("SELECT id FROM coaches WHERE id = %s AND gym_id = %s", (coach_id, user["id"]))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Coach not found")
+        
+        # Delete related records first
+        cursor.execute("DELETE FROM member_coach WHERE coach_id = %s", (coach_id,))
+        cursor.execute("DELETE FROM sessions WHERE coach_id = %s", (coach_id,))
+        
+        # Delete coach
+        cursor.execute("DELETE FROM coaches WHERE id = %s AND gym_id = %s", (coach_id, user["id"]))
+        
+        conn.commit()
+        
+        return {"message": "Coach deleted successfully"}
+        
+    except HTTPException as he:
+        conn.rollback()
+        raise he
+    except Exception as e:
+        conn.rollback()
+        print(f"Error deleting coach: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == "__main__":
     import uvicorn
