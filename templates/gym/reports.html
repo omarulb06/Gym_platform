@@ -11,6 +11,20 @@
  <h3 class="text-lg leading-6 font-medium text-gray-900">Reports & Analytics</h3>
  <p class="mt-1 text-sm text-gray-500">View your gym's performance metrics</p>
  </div>
+ <div class="flex items-center space-x-2">
+ <button onclick="exportAnalytics('csv')" 
+ class="bg-green-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-green-700 focus:outline-none focus:outline-none
+ <i class="fas fa-download mr-2"></i>Export CSV
+ </button>
+ <button onclick="exportAnalytics('excel')" 
+ class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
+ <i class="fas fa-file-excel mr-2"></i>Export Excel
+ </button>
+ <button onclick="exportAnalytics('pdf')" 
+ class="bg-red-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-red-700 focus:outline-none focus:outline-none
+ <i class="fas fa-file-pdf mr-2"></i>Export PDF
+ </button>
+ </div>
  </div>
  </div>
  </div>
@@ -237,6 +251,33 @@
 
  // Load data when page loads
  document.addEventListener('DOMContentLoaded', loadReports);
+
+ // Export analytics function
+ async function exportAnalytics(format) {
+     try {
+         const url = `/api/export/analytics/gym?format=${format}&analytics_type=all`;
+         const response = await fetch(url);
+         
+         if (!response.ok) {
+             throw new Error('Failed to export analytics');
+         }
+         
+         // Create a temporary link to download the file
+         const blob = await response.blob();
+         const url2 = window.URL.createObjectURL(blob);
+         const a = document.createElement('a');
+         a.href = url2;
+         a.download = `gym_analytics_${new Date().toISOString().split('T')[0]}.${format}`;
+         document.body.appendChild(a);
+         a.click();
+         window.URL.revokeObjectURL(url2);
+         document.body.removeChild(a);
+         
+     } catch (error) {
+         console.error('Error exporting analytics:', error);
+         alert('Failed to export analytics. Please try again.');
+     }
+ }
 </script>
 {% endblock %}
 

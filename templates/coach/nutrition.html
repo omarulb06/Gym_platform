@@ -1,0 +1,779 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<!-- Chart.js for nutrition analytics -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Ensure Chart.js is loaded before using it
+window.addEventListener('load', function() {
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js failed to load');
+    } else {
+        console.log('Chart.js loaded successfully');
+    }
+});
+</script>
+<style>
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+    overflow: hidden;
+}
+.chart-container canvas {
+    max-height: 100%;
+    max-width: 100%;
+}
+</style>
+{% endblock %}
+
+{% block content_title %}
+<div class="flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+        <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-lg">
+            <i class="fas fa-apple-alt text-xl"></i>
+        </div>
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Nutrition Management</h1>
+            <p class="text-gray-600 text-sm sm:text-base">Monitor and guide member nutrition progress</p>
+        </div>
+    </div>
+    <div class="hidden sm:flex items-center space-x-2">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-sm">
+            <i class="fas fa-chart-line mr-1"></i>Analytics
+        </span>
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <i class="fas fa-users mr-1"></i>{{ stats.total_members if stats else 0 }} Members
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Overview Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="glass rounded-xl p-6 border border-emerald-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total Members</p>
+                    <p class="text-2xl font-bold text-gray-900" id="totalMembers">{{ stats.total_members if stats else 0 }}</p>
+                </div>
+                <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-emerald-100 text-emerald-600">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass rounded-xl p-6 border border-blue-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Active Nutrition</p>
+                    <p class="text-2xl font-bold text-gray-900" id="activeNutrition">{{ stats.members_with_nutrition if stats else 0 }}</p>
+                </div>
+                <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 text-blue-600">
+                    <i class="fas fa-apple-alt text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass rounded-xl p-6 border border-orange-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total Entries</p>
+                    <p class="text-2xl font-bold text-gray-900" id="totalEntries">{{ stats.total_nutrition_entries if stats else 0 }}</p>
+                </div>
+                <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-orange-100 text-orange-600">
+                    <i class="fas fa-clipboard-list text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass rounded-xl p-6 border border-purple-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Avg Calories</p>
+                    <p class="text-2xl font-bold text-gray-900" id="avgCalories">{{ "%.0f"|format(stats.avg_calories) if stats and stats.avg_calories else 0 }}</p>
+                </div>
+                <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-purple-100 text-purple-600">
+                    <i class="fas fa-fire text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Member Nutrition Overview -->
+    <div class="glass rounded-xl p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-users text-emerald-600 mr-2"></i>
+                Member Nutrition Overview
+            </h2>
+            <div class="flex space-x-2">
+                <select id="timeRangeFilter" class="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="quarter">This Quarter</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entries</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Calories</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Protein</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Entry</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="membersTable">
+                    <!-- Members will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Nutrition Entries -->
+    <div class="glass rounded-xl p-6 border border-gray-100">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+            <i class="fas fa-clock text-emerald-600 mr-2"></i>
+            Recent Nutrition Entries
+        </h2>
+        
+        <div class="space-y-4" id="recentEntries">
+            <!-- Recent entries will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Nutrition Analytics -->
+    <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
+        <!-- Meal Type Distribution -->
+        <div class="glass rounded-xl p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Meal Type Distribution</h3>
+            <div class="chart-container">
+                <canvas id="mealTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nutrition Plans -->
+    <div class="glass rounded-xl p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-clipboard-list text-emerald-600 mr-2"></i>
+                Nutrition Plans
+            </h2>
+            <button onclick="openCreatePlanModal()" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all">
+                <i class="fas fa-plus mr-2"></i>Create Plan
+            </button>
+        </div>
+
+        <div id="nutritionPlans">
+            <!-- Nutrition plans will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Create Nutrition Plan Modal -->
+<div id="createPlanModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Create Nutrition Plan</h3>
+                <button onclick="closeModal('createPlanModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="createPlanForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Member</label>
+                        <select name="member_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Select Member</option>
+                            <!-- Members will be loaded here -->
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Plan Name</label>
+                        <input type="text" name="plan_name" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                               placeholder="e.g., Weight Loss Plan">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Daily Calories</label>
+                            <input type="number" name="daily_calories" required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                   placeholder="2000">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Daily Protein (g)</label>
+                            <input type="number" name="daily_protein" required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                   placeholder="150">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Daily Carbs (g)</label>
+                            <input type="number" name="daily_carbs" required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                   placeholder="250">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Daily Fat (g)</label>
+                            <input type="number" name="daily_fat" required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                   placeholder="70">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea name="notes" rows="3" 
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                  placeholder="Additional notes about the nutrition plan..."></textarea>
+                    </div>
+                    
+                    <div class="flex space-x-3 pt-4">
+                        <button type="button" onclick="closeModal('createPlanModal')" 
+                                class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="flex-1 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all">
+                            <i class="fas fa-save mr-2"></i>Create Plan
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Member Nutrition Details Modal -->
+<div id="memberDetailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Member Nutrition Details</h3>
+                <button onclick="closeModal('memberDetailsModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="memberDetailsContent">
+                <!-- Member details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables
+let nutritionData = null;
+let mealTypeChart = null;
+
+// Initialize page
+window.addEventListener('load', function() {
+    console.log('Page loaded, Chart.js available:', typeof Chart !== 'undefined');
+    
+    // Ensure Chart.js is loaded before initializing
+    if (typeof Chart !== 'undefined') {
+        console.log('Chart.js is available, loading data...');
+        loadNutritionDashboard();
+        loadMembers();
+        loadRecentEntries();
+        loadAnalytics();
+    } else {
+        console.error('Chart.js not available, retrying in 500ms...');
+        setTimeout(() => {
+            if (typeof Chart !== 'undefined') {
+                console.log('Chart.js now available, loading data...');
+                loadNutritionDashboard();
+                loadMembers();
+                loadRecentEntries();
+                loadAnalytics();
+            } else {
+                console.error('Chart.js still not available');
+            }
+        }, 500);
+    }
+});
+
+// Load nutrition dashboard data
+async function loadNutritionDashboard() {
+    try {
+        const response = await fetch('/api/coach/nutrition/dashboard');
+        const data = await response.json();
+        
+        if (data.success) {
+            nutritionData = data;
+            updateDashboardStats(data.stats);
+            updateRecentEntries(data.recent_entries);
+            updateAnalytics(data);
+        }
+    } catch (error) {
+        console.error('Error loading nutrition dashboard:', error);
+    }
+}
+
+// Load members with nutrition data
+async function loadMembers() {
+    try {
+        const response = await fetch('/api/coach/nutrition/members');
+        const data = await response.json();
+        
+        console.log('Members response:', data);
+        
+        if (data.success) {
+            updateMembersTable(data.members);
+        } else {
+            console.error('Members request failed:', data);
+        }
+    } catch (error) {
+        console.error('Error loading members:', error);
+    }
+}
+
+// Load recent nutrition entries
+async function loadRecentEntries() {
+    try {
+        const response = await fetch('/api/coach/nutrition/dashboard');
+        const data = await response.json();
+        
+        console.log('Recent entries response:', data);
+        
+        if (data.success) {
+            updateRecentEntries(data.recent_entries);
+        } else {
+            console.error('Recent entries request failed:', data);
+        }
+    } catch (error) {
+        console.error('Error loading recent entries:', error);
+    }
+}
+
+// Load analytics
+async function loadAnalytics() {
+    try {
+        const timeRange = document.getElementById('timeRangeFilter').value;
+        console.log('Loading analytics for time range:', timeRange);
+        
+        const response = await fetch(`/api/coach/nutrition/analytics?time_range=${timeRange}`);
+        const data = await response.json();
+        
+        console.log('Analytics response:', data);
+        
+        if (data.success) {
+            updateAnalytics(data);
+        } else {
+            console.error('Analytics request failed:', data);
+        }
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+    }
+}
+
+// Update dashboard statistics
+function updateDashboardStats(stats) {
+    if (stats) {
+        document.getElementById('totalMembers').textContent = stats.total_members || 0;
+        document.getElementById('activeNutrition').textContent = stats.members_with_nutrition || 0;
+        document.getElementById('totalEntries').textContent = stats.total_nutrition_entries || 0;
+        document.getElementById('avgCalories').textContent = Math.round(stats.avg_calories || 0);
+    }
+}
+
+// Update members table
+function updateMembersTable(members) {
+    const tbody = document.getElementById('membersTable');
+    
+    if (!members || members.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                    No members with nutrition data found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = members.map(member => {
+        const firstName = member.first_name || '';
+        const lastName = member.last_name || '';
+        const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Member';
+        
+        return `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 h-10 w-10">
+                            <div class="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <i class="fas fa-user text-emerald-600"></i>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">${fullName}</div>
+                            <div class="text-sm text-gray-500">${member.email || 'No email'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${member.nutrition_entries || 0}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${Math.round(member.avg_calories || 0)}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${Math.round(member.avg_protein || 0)}g
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${member.last_nutrition_entry ? new Date(member.last_nutrition_entry).toLocaleDateString() : 'Never'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="viewMemberNutrition(${member.id})" class="text-emerald-600 hover:text-emerald-900 mr-3">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button onclick="addNutritionFeedback(${member.id})" class="text-blue-600 hover:text-blue-900">
+                        <i class="fas fa-comment"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Update recent entries
+function updateRecentEntries(entries) {
+    const container = document.getElementById('recentEntries');
+    
+    if (!entries || entries.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-clipboard-list text-4xl mb-2 opacity-50"></i>
+                <p>No recent nutrition entries</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Ensure we only show the latest 5 entries
+    const recentEntries = entries.slice(0, 5);
+    
+    container.innerHTML = recentEntries.map(entry => {
+        const firstName = entry.first_name || '';
+        const lastName = entry.last_name || '';
+        const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Member';
+        
+        return `
+            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fas ${getMealIcon(entry.meal_type)}"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900">${fullName}</h4>
+                        <p class="text-sm text-gray-600">${entry.food_name || 'Unknown Food'} (${entry.meal_type || 'Unknown'})</p>
+                    </div>
+                </div>
+                <div class="text-right text-sm text-gray-600">
+                    <div>${Math.round(entry.calories || 0)} calories</div>
+                    <div>P: ${Math.round(entry.protein || 0)}g • C: ${Math.round(entry.carbs || 0)}g • F: ${Math.round(entry.fat || 0)}g</div>
+                    <div class="text-xs text-gray-500">${entry.created_at ? new Date(entry.created_at).toLocaleDateString() : 'Unknown date'}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Update analytics
+function updateAnalytics(data) {
+    console.log('Updating analytics with data:', data);
+    
+    if (data.meal_distribution && data.meal_distribution.length > 0) {
+        createMealTypeChart(data.meal_distribution);
+    } else {
+        console.log('No meal distribution data available');
+    }
+}
+
+// Create meal type distribution chart
+function createMealTypeChart(mealDistribution) {
+    const ctx = document.getElementById('mealTypeChart');
+    
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded');
+        return;
+    }
+    
+    // Destroy existing chart if it exists
+    if (mealTypeChart) {
+        mealTypeChart.destroy();
+        mealTypeChart = null;
+    }
+    
+    // Check if we have data
+    if (!mealDistribution || mealDistribution.length === 0) {
+        console.log('No meal distribution data available');
+        ctx.style.display = 'none';
+        return;
+    }
+    
+    ctx.style.display = 'block';
+    
+    // Ensure the canvas has proper dimensions
+    const container = ctx.parentElement;
+    ctx.width = container.offsetWidth;
+    ctx.height = container.offsetHeight;
+    
+    const labels = mealDistribution.map(item => item.meal_type);
+    const data = mealDistribution.map(item => item.count);
+    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
+    
+    mealTypeChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 10,
+                    bottom: 10
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: {
+                            size: 12
+                        }
+                    }
+                }
+            },
+            elements: {
+                arc: {
+                    borderWidth: 2
+                }
+            }
+        }
+    });
+}
+
+
+
+// View member nutrition details
+async function viewMemberNutrition(memberId) {
+    try {
+        const response = await fetch(`/api/coach/nutrition/member/${memberId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            showMemberDetails(data);
+        }
+    } catch (error) {
+        console.error('Error loading member nutrition:', error);
+    }
+}
+
+// Show member details modal
+function showMemberDetails(data) {
+    const modal = document.getElementById('memberDetailsModal');
+    const content = document.getElementById('memberDetailsContent');
+    
+    content.innerHTML = `
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <i class="fas fa-user text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900">${data.member.first_name} ${data.member.last_name}</h4>
+                    <p class="text-sm text-gray-600">${data.member.email}</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h5 class="text-md font-semibold text-gray-900 mb-3">Recent Nutrition Entries</h5>
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                        ${data.nutrition_entries.map(entry => `
+                            <div class="p-3 bg-gray-50 rounded-lg">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-medium text-gray-900">${entry.food_name}</p>
+                                        <p class="text-sm text-gray-600">${entry.meal_type} • ${entry.quantity}${entry.unit}</p>
+                                    </div>
+                                    <div class="text-right text-sm">
+                                        <p class="font-medium">${Math.round(entry.calories)} cal</p>
+                                        <p class="text-gray-600">P: ${Math.round(entry.protein)}g C: ${Math.round(entry.carbs)}g F: ${Math.round(entry.fat)}g</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div>
+                    <h5 class="text-md font-semibold text-gray-900 mb-3">Weekly Summary</h5>
+                    <div class="space-y-2">
+                        ${data.weekly_summary.map(summary => `
+                            <div class="p-3 bg-blue-50 rounded-lg">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium">${new Date(summary.date).toLocaleDateString()}</span>
+                                    <span class="text-sm text-gray-600">${summary.entries_count} entries</span>
+                                </div>
+                                <div class="text-sm text-gray-600 mt-1">
+                                    ${Math.round(summary.total_calories)} cal • P: ${Math.round(summary.total_protein)}g • C: ${Math.round(summary.total_carbs)}g • F: ${Math.round(summary.total_fat)}g
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
+
+// Add nutrition feedback
+function addNutritionFeedback(memberId) {
+    // Implementation for adding nutrition feedback
+    console.log('Add nutrition feedback for member:', memberId);
+}
+
+// Modal functions
+function openCreatePlanModal() {
+    document.getElementById('createPlanModal').classList.remove('hidden');
+    loadMembersForPlan();
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+}
+
+// Load members for plan creation
+async function loadMembersForPlan() {
+    try {
+        const response = await fetch('/api/coach/nutrition/members');
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.querySelector('select[name="member_id"]');
+            select.innerHTML = '<option value="">Select Member</option>' + 
+                data.members.map(member => 
+                    `<option value="${member.id}">${member.first_name} ${member.last_name}</option>`
+                ).join('');
+        }
+    } catch (error) {
+        console.error('Error loading members for plan:', error);
+    }
+}
+
+// Handle plan creation form
+document.getElementById('createPlanForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating...';
+        
+        const response = await fetch('/api/coach/nutrition/plan', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Nutrition plan created successfully!', 'success');
+            closeModal('createPlanModal');
+            this.reset();
+        } else {
+            showNotification(data.detail || 'Failed to create plan', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating nutrition plan:', error);
+        showNotification('Error creating nutrition plan', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Create Plan';
+    }
+});
+
+// Utility functions
+function getMealIcon(mealType) {
+    const icons = {
+        'Breakfast': 'fa-coffee',
+        'Lunch': 'fa-hamburger',
+        'Dinner': 'fa-utensils',
+        'Snack': 'fa-cookie-bite'
+    };
+    return icons[mealType] || 'fa-utensils';
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.classList.remove('translate-x-full'), 100);
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => document.body.removeChild(notification), 300);
+    }, 3000);
+}
+
+// Event listeners
+document.getElementById('timeRangeFilter').addEventListener('change', function() {
+    console.log('Time range changed to:', this.value);
+    
+    // Destroy existing chart before loading new data
+    if (mealTypeChart) {
+        mealTypeChart.destroy();
+        mealTypeChart = null;
+    }
+    
+    loadAnalytics();
+});
+
+// Handle window resize to ensure chart stays properly sized
+window.addEventListener('resize', function() {
+    if (mealTypeChart) {
+        mealTypeChart.resize();
+    }
+});
+</script>
+{% endblock %} 

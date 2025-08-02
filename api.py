@@ -25,6 +25,13 @@ except ImportError:
     pass
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 
+# Import AI meal planner
+try:
+    from ai_meal_planner import meal_planner
+except ImportError:
+    meal_planner = None
+    print("Warning: AI meal planner not available. Install required dependencies.")
+
 # Helper function to convert non-serializable objects to JSON-serializable format
 def convert_for_json(obj):
     if isinstance(obj, datetime):
@@ -280,23 +287,19 @@ def init_db():
             CREATE TABLE IF NOT EXISTS nutrition_logs (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 member_id INT NOT NULL,
-                log_date DATE NOT NULL,
-                meal_type ENUM('Breakfast', 'Lunch', 'Dinner', 'Snack') NOT NULL,
-                food_item_id INT,
-                custom_food_name VARCHAR(200),
+                meal_type ENUM('breakfast', 'lunch', 'dinner', 'snack') NOT NULL,
+                food_name VARCHAR(200) NOT NULL,
                 quantity DECIMAL(7,2) NOT NULL,
-                unit ENUM('grams', 'ml', 'pieces', 'cups', 'tablespoons') DEFAULT 'grams',
-                total_calories DECIMAL(7,2) NOT NULL,
-                total_protein DECIMAL(7,2) DEFAULT 0,
-                total_carbs DECIMAL(7,2) DEFAULT 0,
-                total_fat DECIMAL(7,2) DEFAULT 0,
-                photo_url VARCHAR(500),
-                ai_confidence DECIMAL(3,2),
+                unit ENUM('grams', 'ml', 'pieces', 'cups', 'tablespoons', 'serving') DEFAULT 'grams',
+                calories DECIMAL(7,2) NOT NULL,
+                protein DECIMAL(7,2) DEFAULT 0,
+                carbs DECIMAL(7,2) DEFAULT 0,
+                fat DECIMAL(7,2) DEFAULT 0,
+                photo_path VARCHAR(500),
                 notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (member_id) REFERENCES members(id),
-                FOREIGN KEY (food_item_id) REFERENCES food_items(id),
-                INDEX idx_member_date (member_id, log_date)
+                INDEX idx_member_date (member_id, created_at)
             )
         """)
         
@@ -360,6 +363,29 @@ def init_db():
                 FOREIGN KEY (member_id) REFERENCES members(id)
             )
         """)
+        
+        # AI-generated nutrition plans
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS nutrition_plans (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_id INT,
+                coach_id INT,
+                plan_name VARCHAR(200) NOT NULL,
+                plan_data JSON,
+                daily_calories INT,
+                daily_protein INT,
+                daily_carbs INT,
+                daily_fat INT,
+                notes TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (member_id) REFERENCES members(id),
+                FOREIGN KEY (coach_id) REFERENCES coaches(id),
+                INDEX idx_member (member_id),
+                INDEX idx_coach (coach_id),
+                INDEX idx_created (created_at)
+            )
+        """)
 
         # Create payments table
         cursor.execute("""
@@ -421,6 +447,25 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 UNIQUE KEY unique_user_day (user_id, user_type, day_of_week)
+            )
+        """)
+        
+        # Messages table for communication between users
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sender_id INT NOT NULL,
+                sender_type ENUM('gym', 'coach', 'member') NOT NULL,
+                receiver_id INT NOT NULL,
+                receiver_type ENUM('gym', 'coach', 'member') NOT NULL,
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_sender (sender_id, sender_type),
+                INDEX idx_receiver (receiver_id, receiver_type),
+                INDEX idx_conversation (sender_id, sender_type, receiver_id, receiver_type),
+                INDEX idx_created_at (created_at)
             )
         """)
         
@@ -3530,6 +3575,9 @@ def get_message_contacts(user):
             coach = cursor.fetchone()
             if coach:
                 contacts.append(coach)
+    except Exception as e:
+        print(f"Error getting message contacts: {str(e)}")
+        return []
     finally:
         cursor.close()
         conn.close()
@@ -3542,15 +3590,27 @@ def get_conversation(user, contact_id, contact_type):
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            SELECT * FROM messages
-            WHERE ((sender_id = %s AND sender_type = %s AND receiver_id = %s AND receiver_type = %s)
-                OR (sender_id = %s AND sender_type = %s AND receiver_id = %s AND receiver_type = %s))
-            ORDER BY created_at ASC
+            SELECT m.*, 
+                   CASE 
+                       WHEN m.sender_type = 'gym' THEN g.name
+                       WHEN m.sender_type = 'coach' THEN c.name
+                       WHEN m.sender_type = 'member' THEN mem.name
+                   END as sender_name
+            FROM messages m
+            LEFT JOIN gyms g ON m.sender_id = g.id AND m.sender_type = 'gym'
+            LEFT JOIN coaches c ON m.sender_id = c.id AND m.sender_type = 'coach'
+            LEFT JOIN members mem ON m.sender_id = mem.id AND m.sender_type = 'member'
+            WHERE ((m.sender_id = %s AND m.sender_type = %s AND m.receiver_id = %s AND m.receiver_type = %s)
+                OR (m.sender_id = %s AND m.sender_type = %s AND m.receiver_id = %s AND m.receiver_type = %s))
+            ORDER BY m.created_at ASC
         """, (
             user["id"], user["user_type"], contact_id, contact_type,
             contact_id, contact_type, user["id"], user["user_type"]
         ))
         return cursor.fetchall()
+    except Exception as e:
+        print(f"Error getting conversation: {str(e)}")
+        return []
     finally:
         cursor.close()
         conn.close()
@@ -3575,21 +3635,43 @@ async def coach_messages_page(request: Request, contact_id: int = None, contact_
 
 @app.post("/coach/messages", response_class=HTMLResponse)
 async def coach_send_message(request: Request, contact_id: int = Form(...), contact_type: str = Form(...), message: str = Form(...)):
-    user = get_current_user(request)
-    if not user or user["user_type"] != "coach":
-        return RedirectResponse(url="/")
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute("""
-            INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, message)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (user["id"], user["user_type"], contact_id, contact_type, message))
-        conn.commit()
-    finally:
-        cursor.close()
-        conn.close()
-    return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=303)
+        user = get_current_user(request)
+        if not user or user["user_type"] != "coach":
+            return RedirectResponse(url="/")
+        
+        # Validate input
+        if not message or not message.strip():
+            return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}&error=empty_message", status_code=303)
+        
+        if len(message.strip()) > 1000:  # Limit message length
+            return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}&error=message_too_long", status_code=303)
+        
+        # Validate contact exists and coach can message them
+        contacts = get_message_contacts(user)
+        valid_contact = next((c for c in contacts if c["id"] == contact_id and c["type"] == contact_type), None)
+        if not valid_contact:
+            return RedirectResponse(url=f"/coach/messages?error=invalid_contact", status_code=303)
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, message)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (user["id"], user["user_type"], contact_id, contact_type, message.strip()))
+            conn.commit()
+        except Exception as e:
+            print(f"Error sending message: {str(e)}")
+            return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}&error=send_failed", status_code=303)
+        finally:
+            cursor.close()
+            conn.close()
+        
+        return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}&success=message_sent", status_code=303)
+    except Exception as e:
+        print(f"Unexpected error in coach_send_message: {str(e)}")
+        return RedirectResponse(url=f"/coach/messages?error=unexpected_error", status_code=303)
 
 # GYM MESSAGES
 @app.get("/gym/messages", response_class=HTMLResponse)
@@ -3610,21 +3692,43 @@ async def gym_messages_page(request: Request, contact_id: int = None, contact_ty
 
 @app.post("/gym/messages", response_class=HTMLResponse)
 async def gym_send_message(request: Request, contact_id: int = Form(...), contact_type: str = Form(...), message: str = Form(...)):
-    user = get_current_user(request)
-    if not user or user["user_type"] != "gym":
-        return RedirectResponse(url="/")
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute("""
-            INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, message)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (user["id"], user["user_type"], contact_id, contact_type, message))
-        conn.commit()
-    finally:
-        cursor.close()
-        conn.close()
-    return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=303)
+        user = get_current_user(request)
+        if not user or user["user_type"] != "gym":
+            return RedirectResponse(url="/")
+        
+        # Validate input
+        if not message or not message.strip():
+            return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}&error=empty_message", status_code=303)
+        
+        if len(message.strip()) > 1000:  # Limit message length
+            return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}&error=message_too_long", status_code=303)
+        
+        # Validate contact exists and gym can message them
+        contacts = get_message_contacts(user)
+        valid_contact = next((c for c in contacts if c["id"] == contact_id and c["type"] == contact_type), None)
+        if not valid_contact:
+            return RedirectResponse(url=f"/gym/messages?error=invalid_contact", status_code=303)
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, message)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (user["id"], user["user_type"], contact_id, contact_type, message.strip()))
+            conn.commit()
+        except Exception as e:
+            print(f"Error sending message: {str(e)}")
+            return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}&error=send_failed", status_code=303)
+        finally:
+            cursor.close()
+            conn.close()
+        
+        return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}&success=message_sent", status_code=303)
+    except Exception as e:
+        print(f"Unexpected error in gym_send_message: {str(e)}")
+        return RedirectResponse(url=f"/gym/messages?error=unexpected_error", status_code=303)
 
 # MEMBER MESSAGES
 @app.get("/member/messages", response_class=HTMLResponse)
@@ -3645,21 +3749,43 @@ async def member_messages_page(request: Request, contact_id: int = None, contact
 
 @app.post("/member/messages", response_class=HTMLResponse)
 async def member_send_message(request: Request, contact_id: int = Form(...), contact_type: str = Form(...), message: str = Form(...)):
-    user = get_current_user(request)
-    if not user or user["user_type"] != "member":
-        return RedirectResponse(url="/")
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute("""
-            INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, message)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (user["id"], user["user_type"], contact_id, contact_type, message))
-        conn.commit()
-    finally:
-        cursor.close()
-        conn.close()
-    return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=303)
+        user = get_current_user(request)
+        if not user or user["user_type"] != "member":
+            return RedirectResponse(url="/")
+        
+        # Validate input
+        if not message or not message.strip():
+            return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}&error=empty_message", status_code=303)
+        
+        if len(message.strip()) > 1000:  # Limit message length
+            return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}&error=message_too_long", status_code=303)
+        
+        # Validate contact exists and member can message them
+        contacts = get_message_contacts(user)
+        valid_contact = next((c for c in contacts if c["id"] == contact_id and c["type"] == contact_type), None)
+        if not valid_contact:
+            return RedirectResponse(url=f"/member/messages?error=invalid_contact", status_code=303)
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO messages (sender_id, sender_type, receiver_id, receiver_type, message)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (user["id"], user["user_type"], contact_id, contact_type, message.strip()))
+            conn.commit()
+        except Exception as e:
+            print(f"Error sending message: {str(e)}")
+            return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}&error=send_failed", status_code=303)
+        finally:
+            cursor.close()
+            conn.close()
+        
+        return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}&success=message_sent", status_code=303)
+    except Exception as e:
+        print(f"Unexpected error in member_send_message: {str(e)}")
+        return RedirectResponse(url=f"/member/messages?error=unexpected_error", status_code=303)
 
 # DELETE MESSAGE ENDPOINTS
 @app.post("/coach/messages/delete/{message_id}", response_class=HTMLResponse)
@@ -3667,64 +3793,130 @@ async def coach_delete_message(request: Request, message_id: int, contact_id: in
     user = get_current_user(request)
     if not user or user["user_type"] != "coach":
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
         # Only allow sender to delete their own message
         cursor.execute("SELECT * FROM messages WHERE id = %s", (message_id,))
         msg = cursor.fetchone()
-        if not msg or msg["sender_id"] != user["id"] or msg["sender_type"] != user["user_type"]:
-            cursor.close()
-            conn.close()
-            return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+        if not msg:
+            return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}&error=message_not_found", status_code=status.HTTP_303_SEE_OTHER)
+        
+        if msg["sender_id"] != user["id"] or msg["sender_type"] != user["user_type"]:
+            return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}&error=unauthorized_delete", status_code=status.HTTP_303_SEE_OTHER)
+        
         cursor.execute("DELETE FROM messages WHERE id = %s", (message_id,))
         conn.commit()
+    except Exception as e:
+        print(f"Error deleting message: {str(e)}")
+        return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}&error=delete_failed", status_code=status.HTTP_303_SEE_OTHER)
     finally:
         cursor.close()
         conn.close()
-    return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+    
+    return RedirectResponse(url=f"/coach/messages?contact_id={contact_id}&contact_type={contact_type}&success=message_deleted", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/gym/messages/delete/{message_id}", response_class=HTMLResponse)
 async def gym_delete_message(request: Request, message_id: int, contact_id: int = Form(...), contact_type: str = Form(...)):
     user = get_current_user(request)
     if not user or user["user_type"] != "gym":
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
         cursor.execute("SELECT * FROM messages WHERE id = %s", (message_id,))
         msg = cursor.fetchone()
-        if not msg or msg["sender_id"] != user["id"] or msg["sender_type"] != user["user_type"]:
-            cursor.close()
-            conn.close()
-            return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+        if not msg:
+            return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}&error=message_not_found", status_code=status.HTTP_303_SEE_OTHER)
+        
+        if msg["sender_id"] != user["id"] or msg["sender_type"] != user["user_type"]:
+            return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}&error=unauthorized_delete", status_code=status.HTTP_303_SEE_OTHER)
+        
         cursor.execute("DELETE FROM messages WHERE id = %s", (message_id,))
         conn.commit()
+    except Exception as e:
+        print(f"Error deleting message: {str(e)}")
+        return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}&error=delete_failed", status_code=status.HTTP_303_SEE_OTHER)
     finally:
         cursor.close()
         conn.close()
-    return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+    
+    return RedirectResponse(url=f"/gym/messages?contact_id={contact_id}&contact_type={contact_type}&success=message_deleted", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/member/messages/delete/{message_id}", response_class=HTMLResponse)
 async def member_delete_message(request: Request, message_id: int, contact_id: int = Form(...), contact_type: str = Form(...)):
     user = get_current_user(request)
     if not user or user["user_type"] != "member":
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
         cursor.execute("SELECT * FROM messages WHERE id = %s", (message_id,))
         msg = cursor.fetchone()
-        if not msg or msg["sender_id"] != user["id"] or msg["sender_type"] != user["user_type"]:
-            cursor.close()
-            conn.close()
-            return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+        if not msg:
+            return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}&error=message_not_found", status_code=status.HTTP_303_SEE_OTHER)
+        
+        if msg["sender_id"] != user["id"] or msg["sender_type"] != user["user_type"]:
+            return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}&error=unauthorized_delete", status_code=status.HTTP_303_SEE_OTHER)
+        
         cursor.execute("DELETE FROM messages WHERE id = %s", (message_id,))
         conn.commit()
+    except Exception as e:
+        print(f"Error deleting message: {str(e)}")
+        return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}&error=delete_failed", status_code=status.HTTP_303_SEE_OTHER)
     finally:
         cursor.close()
         conn.close()
-    return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}", status_code=status.HTTP_303_SEE_OTHER)
+    
+    return RedirectResponse(url=f"/member/messages?contact_id={contact_id}&contact_type={contact_type}&success=message_deleted", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.get("/favicon.ico")
+async def favicon():
+    """Serve favicon.ico to prevent 404 errors"""
+    from fastapi.responses import Response
+    # Return a simple 1x1 transparent PNG as favicon
+    import base64
+    favicon_data = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
+    return Response(content=favicon_data, media_type="image/x-icon")
+
+# Test endpoint to check messages table
+@app.get("/api/test-messages-table")
+async def test_messages_table():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SHOW TABLES LIKE 'messages'")
+        table_exists = cursor.fetchone() is not None
+        
+        if table_exists:
+            cursor.execute("SELECT COUNT(*) as count FROM messages")
+            message_count = cursor.fetchone()["count"]
+            
+            # Get table structure
+            cursor.execute("DESCRIBE messages")
+            table_structure = cursor.fetchall()
+            
+            # Get a sample message
+            cursor.execute("SELECT * FROM messages LIMIT 1")
+            sample_message = cursor.fetchone()
+            
+            return {
+                "success": True, 
+                "table_exists": True, 
+                "message_count": message_count,
+                "table_structure": table_structure,
+                "sample_message": sample_message
+            }
+        else:
+            return {"success": False, "table_exists": False, "error": "Messages table not found"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        cursor.close()
+        conn.close()
 
 # Preferences and Free Days API Endpoints
 
@@ -5739,6 +5931,88 @@ async def add_food_manually(
         cursor.close()
         conn.close()
 
+# Get weekly nutrition progress data
+@app.get("/api/nutrition/weekly-progress/{member_id}")
+async def get_weekly_nutrition_progress(request: Request, member_id: int):
+    """Get weekly nutrition progress data for member"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    # Check access permissions
+    if user['user_type'] == 'member' and user['id'] != member_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get nutrition data for the current week (Sunday to Saturday)
+        cursor.execute("""
+            SELECT 
+                DATE(log_date) as date,
+                DAYNAME(log_date) as day_name,
+                SUM(total_calories) as calories,
+                SUM(total_protein) as protein,
+                SUM(total_carbs) as carbs,
+                SUM(total_fat) as fat
+            FROM nutrition_logs 
+            WHERE member_id = %s 
+            AND log_date >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+            AND log_date <= DATE_ADD(CURDATE(), INTERVAL 6 - WEEKDAY(CURDATE()) DAY)
+            GROUP BY DATE(log_date), DAYNAME(log_date)
+            ORDER BY date
+        """, (member_id,))
+        
+        weekly_data = cursor.fetchall()
+        
+        # Create a complete week array (Sunday to Saturday)
+        days_of_week = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        complete_week = []
+        
+        # Get the start of the current week (Sunday)
+        cursor.execute("SELECT DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY) as week_start")
+        week_start_result = cursor.fetchone()
+        week_start = week_start_result['week_start'] if week_start_result else datetime.now().date()
+        
+        for i in range(7):
+            current_date = week_start + timedelta(days=i)
+            day_name = days_of_week[i]
+            
+            # Find if we have data for this day
+            day_data = next((day for day in weekly_data if day['date'] == current_date), None)
+            
+            if day_data:
+                complete_week.append({
+                    'date': day_data['date'].strftime('%Y-%m-%d') if hasattr(day_data['date'], 'strftime') else str(day_data['date']),
+                    'day_name': day_data['day_name'],
+                    'calories': float(day_data['calories'] or 0),
+                    'protein': float(day_data['protein'] or 0),
+                    'carbs': float(day_data['carbs'] or 0),
+                    'fat': float(day_data['fat'] or 0)
+                })
+            else:
+                complete_week.append({
+                    'date': current_date.strftime('%Y-%m-%d') if hasattr(current_date, 'strftime') else str(current_date),
+                    'day_name': day_name,
+                    'calories': 0,
+                    'protein': 0,
+                    'carbs': 0,
+                    'fat': 0
+                })
+        
+        return {
+            "success": True,
+            "weekly_data": complete_week
+        }
+        
+    except Exception as e:
+        print(f"Error getting weekly nutrition progress: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
 # Get nutrition dashboard data
 @app.get("/api/nutrition/dashboard/{member_id}")
 async def get_nutrition_dashboard(request: Request, member_id: int):
@@ -5768,29 +6042,43 @@ async def get_nutrition_dashboard(request: Request, member_id: int):
         """, (member_id,))
         today_meals = cursor.fetchall()
         
-        # Get nutrition goals
-        cursor.execute("""
-            SELECT daily_calorie_goal, daily_protein_goal, daily_carbs_goal, daily_fat_goal,
-                   goal_type, dietary_restrictions, allergies
-            FROM nutrition_goals 
-            WHERE member_id = %s
-        """, (member_id,))
-        goals = cursor.fetchone() or {
-            'daily_calorie_goal': 2000,
-            'daily_protein_goal': 150,
-            'daily_carbs_goal': 250,
-            'daily_fat_goal': 70,
-            'goal_type': 'Maintenance'
-        }
+        # Get nutrition goals (handle case where table might not exist)
+        try:
+            cursor.execute("""
+                SELECT daily_calorie_goal, daily_protein_goal, daily_carbs_goal, daily_fat_goal,
+                       goal_type, dietary_restrictions, allergies
+                FROM nutrition_goals 
+                WHERE member_id = %s
+            """, (member_id,))
+            goals = cursor.fetchone() or {
+                'daily_calorie_goal': 2000,
+                'daily_protein_goal': 150,
+                'daily_carbs_goal': 250,
+                'daily_fat_goal': 70,
+                'goal_type': 'Maintenance'
+            }
+        except Exception as e:
+            print(f"Warning: nutrition_goals table not found or error: {e}")
+            goals = {
+                'daily_calorie_goal': 2000,
+                'daily_protein_goal': 150,
+                'daily_carbs_goal': 250,
+                'daily_fat_goal': 70,
+                'goal_type': 'Maintenance'
+            }
         
-        # Get recent meal analysis
-        cursor.execute("""
-            SELECT * FROM meal_analysis 
-            WHERE member_id = %s 
-            ORDER BY analysis_date DESC 
-            LIMIT 7
-        """, (member_id,))
-        weekly_analysis = cursor.fetchall()
+        # Get recent meal analysis (handle case where table might not exist)
+        try:
+            cursor.execute("""
+                SELECT * FROM meal_analysis 
+                WHERE member_id = %s 
+                ORDER BY analysis_date DESC 
+                LIMIT 7
+            """, (member_id,))
+            weekly_analysis = cursor.fetchall()
+        except Exception as e:
+            print(f"Warning: meal_analysis table not found or error: {e}")
+            weekly_analysis = []
         
         # Calculate totals for today
         total_calories = sum(meal['calories'] or 0 for meal in today_meals)
@@ -5926,23 +6214,39 @@ async def get_coach_nutrition_members(request: Request):
     
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
         
-        # Get coach's members with recent nutrition data
+        # Get coach's members with nutrition data
         cursor.execute("""
-            SELECT m.id, m.name, m.email, m.membership_type,
-                   ma.analysis_date, ma.total_calories, ma.health_score,
-                   COUNT(nl.id) as entries_today
+            SELECT 
+                m.id,
+                m.name as first_name,
+                m.name as last_name,
+                m.email,
+                m.membership_type,
+                COUNT(n.id) as nutrition_entries,
+                AVG(n.total_calories) as avg_calories,
+                AVG(n.total_protein) as avg_protein,
+                MAX(n.created_at) as last_nutrition_entry
             FROM members m
             JOIN member_coach mc ON m.id = mc.member_id
-            LEFT JOIN meal_analysis ma ON m.id = ma.member_id AND ma.analysis_date = CURDATE()
-            LEFT JOIN nutrition_logs nl ON m.id = nl.member_id AND nl.log_date = CURDATE()
-            WHERE mc.coach_id = %s AND m.membership_type IN ('VIP', 'Premium')
-            GROUP BY m.id, m.name, m.email, m.membership_type, ma.analysis_date, ma.total_calories, ma.health_score
+            LEFT JOIN nutrition_logs n ON m.id = n.member_id
+            WHERE mc.coach_id = %s
+            GROUP BY m.id, m.name, m.email, m.membership_type
             ORDER BY m.name
         """, (user['id'],))
         
         members = cursor.fetchall()
+        
+        # Convert datetime objects and split name into first and last name
+        for member in members:
+            if member['last_nutrition_entry']:
+                member['last_nutrition_entry'] = member['last_nutrition_entry'].isoformat()
+            
+            # Split the name into first and last name
+            name_parts = member['first_name'].split(' ', 1)
+            member['first_name'] = name_parts[0]
+            member['last_name'] = name_parts[1] if len(name_parts) > 1 else ''
         
         return {
             "success": True,
@@ -5956,6 +6260,853 @@ async def get_coach_nutrition_members(request: Request):
         cursor.close()
         conn.close()
 
+# Test endpoint to create sample nutrition data
+@app.get("/api/create-sample-nutrition-data")
+async def create_sample_nutrition_data():
+    """Create sample nutrition data for testing weekly progress"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get a test member (or create one if needed)
+        cursor.execute("SELECT id FROM members LIMIT 1")
+        member_result = cursor.fetchone()
+        
+        if not member_result:
+            return {"success": False, "detail": "No members found. Please create a member first."}
+        
+        member_id = member_result['id']
+        
+        # Create sample nutrition data for the past week
+        sample_data = [
+            # Yesterday
+            (member_id, 'Breakfast', 'Oatmeal with berries', 100, 350, 12, 60, 8, '2024-01-15'),
+            (member_id, 'Lunch', 'Grilled chicken salad', 150, 450, 35, 15, 25, '2024-01-15'),
+            (member_id, 'Dinner', 'Salmon with vegetables', 200, 550, 40, 20, 30, '2024-01-15'),
+            
+            # 2 days ago
+            (member_id, 'Breakfast', 'Greek yogurt with granola', 120, 320, 18, 45, 12, '2024-01-14'),
+            (member_id, 'Lunch', 'Turkey sandwich', 180, 480, 28, 55, 18, '2024-01-14'),
+            (member_id, 'Dinner', 'Pasta with meatballs', 250, 680, 25, 85, 22, '2024-01-14'),
+            
+            # 3 days ago
+            (member_id, 'Breakfast', 'Eggs and toast', 150, 420, 22, 35, 20, '2024-01-13'),
+            (member_id, 'Lunch', 'Caesar salad', 130, 380, 15, 25, 28, '2024-01-13'),
+            (member_id, 'Dinner', 'Beef stir fry', 220, 520, 32, 40, 25, '2024-01-13'),
+            
+            # 4 days ago
+            (member_id, 'Breakfast', 'Smoothie bowl', 140, 360, 15, 50, 12, '2024-01-12'),
+            (member_id, 'Lunch', 'Quinoa bowl', 160, 440, 18, 65, 16, '2024-01-12'),
+            (member_id, 'Dinner', 'Pizza slice', 200, 480, 20, 60, 18, '2024-01-12'),
+            
+            # 5 days ago
+            (member_id, 'Breakfast', 'Protein pancakes', 180, 420, 25, 55, 15, '2024-01-11'),
+            (member_id, 'Lunch', 'Tuna salad', 140, 380, 30, 20, 22, '2024-01-11'),
+            (member_id, 'Dinner', 'Chicken curry', 220, 520, 28, 45, 24, '2024-01-11'),
+            
+            # 6 days ago
+            (member_id, 'Breakfast', 'Cereal with milk', 120, 300, 12, 50, 8, '2024-01-10'),
+            (member_id, 'Lunch', 'Soup and bread', 160, 400, 15, 60, 14, '2024-01-10'),
+            (member_id, 'Dinner', 'Fish tacos', 180, 460, 22, 40, 20, '2024-01-10'),
+            
+            # 7 days ago
+            (member_id, 'Breakfast', 'Bagel with cream cheese', 200, 450, 12, 70, 16, '2024-01-09'),
+            (member_id, 'Lunch', 'Burger and fries', 250, 650, 25, 75, 28, '2024-01-09'),
+            (member_id, 'Dinner', 'Steak with potatoes', 280, 720, 35, 45, 32, '2024-01-09'),
+        ]
+        
+        # Insert sample data
+        for data in sample_data:
+            cursor.execute("""
+                INSERT INTO nutrition_logs 
+                (member_id, meal_type, custom_food_name, quantity, total_calories, total_protein, total_carbs, total_fat, log_date)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, data)
+        
+        conn.commit()
+        
+        return {
+            "success": True,
+            "message": f"Created {len(sample_data)} sample nutrition entries for member {member_id}",
+            "member_id": member_id
+        }
+        
+    except Exception as e:
+        print(f"Error creating sample nutrition data: {str(e)}")
+        return {"success": False, "detail": str(e)}
+    finally:
+        cursor.close()
+        conn.close()
+
+# Get weekly nutrition progress data
+
+# Comprehensive Coach Nutrition Management System
+
+@app.get("/coach/nutrition", response_class=HTMLResponse)
+async def get_coach_nutrition_page(request: Request):
+    """Coach nutrition management page"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        return RedirectResponse(url="/", status_code=302)
+    
+    return templates.TemplateResponse("coach/nutrition.html", {
+        "request": request,
+        "user": user
+    })
+
+@app.get("/api/coach/nutrition/dashboard")
+async def get_coach_nutrition_dashboard(request: Request):
+    """Get comprehensive nutrition dashboard for coach"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get overall nutrition statistics for coach's members
+        query = """
+            SELECT 
+                COUNT(DISTINCT m.id) as total_members,
+                COUNT(DISTINCT n.member_id) as members_with_nutrition,
+                COUNT(n.id) as total_nutrition_entries,
+                AVG(n.total_calories) as avg_calories,
+                AVG(n.total_protein) as avg_protein,
+                AVG(n.total_carbs) as avg_carbs,
+                AVG(n.total_fat) as avg_fat,
+                SUM(CASE WHEN n.total_calories > 0 THEN 1 ELSE 0 END) as days_with_entries
+            FROM members m
+            JOIN member_coach mc ON m.id = mc.member_id
+            LEFT JOIN nutrition_logs n ON m.id = n.member_id
+            WHERE mc.coach_id = %s
+        """
+        
+        cursor.execute(query, (user['id'],))
+        stats = cursor.fetchone()
+        
+        # Get recent nutrition entries
+        recent_query = """
+            SELECT 
+                n.id,
+                n.member_id,
+                m.name as first_name,
+                m.name as last_name,
+                n.meal_type,
+                COALESCE(n.custom_food_name, fi.name) as food_name,
+                n.total_calories as calories,
+                n.total_protein as protein,
+                n.total_carbs as carbs,
+                n.total_fat as fat,
+                n.created_at
+            FROM nutrition_logs n
+            JOIN members m ON n.member_id = m.id
+            JOIN member_coach mc ON m.id = mc.member_id
+            LEFT JOIN food_items fi ON n.food_item_id = fi.id
+            WHERE mc.coach_id = %s
+            ORDER BY n.created_at DESC
+            LIMIT 5
+        """
+        
+        cursor.execute(recent_query, (user['id'],))
+        recent_entries = cursor.fetchall()
+        
+        # Convert datetime objects and split names
+        for entry in recent_entries:
+            if entry['created_at']:
+                entry['created_at'] = entry['created_at'].isoformat()
+            
+            # Split the name into first and last name
+            name_parts = entry['first_name'].split(' ', 1)
+            entry['first_name'] = name_parts[0]
+            entry['last_name'] = name_parts[1] if len(name_parts) > 1 else ''
+        
+        # Get nutrition trends by member
+        trends_query = """
+            SELECT 
+                m.id,
+                m.name as first_name,
+                m.name as last_name,
+                DATE(n.created_at) as date,
+                AVG(n.total_calories) as avg_calories,
+                AVG(n.total_protein) as avg_protein,
+                AVG(n.total_carbs) as avg_carbs,
+                AVG(n.total_fat) as avg_fat,
+                COUNT(n.id) as entries_count
+            FROM members m
+            JOIN member_coach mc ON m.id = mc.member_id
+            LEFT JOIN nutrition_logs n ON m.id = n.member_id
+            WHERE mc.coach_id = %s 
+            AND n.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            GROUP BY m.id, DATE(n.created_at)
+            ORDER BY m.name, date DESC
+        """
+        
+        cursor.execute(trends_query, (user['id'],))
+        trends = cursor.fetchall()
+        
+        # Convert datetime objects and split names
+        for trend in trends:
+            if trend['date']:
+                trend['date'] = trend['date'].isoformat()
+            
+            # Split the name into first and last name
+            name_parts = trend['first_name'].split(' ', 1)
+            trend['first_name'] = name_parts[0]
+            trend['last_name'] = name_parts[1] if len(name_parts) > 1 else ''
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "stats": stats,
+            "recent_entries": recent_entries,
+            "trends": trends
+        }
+        
+    except Exception as e:
+        print(f"Error getting coach nutrition dashboard: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/api/coach/nutrition/member/{member_id}")
+async def get_coach_member_nutrition(request: Request, member_id: int):
+    """Get detailed nutrition data for a specific member"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Verify member belongs to this coach
+        member_query = """
+            SELECT m.id, m.name as first_name, m.name as last_name, m.email, m.membership_type
+            FROM members m
+            JOIN member_coach mc ON m.id = mc.member_id
+            WHERE m.id = %s AND mc.coach_id = %s
+        """
+        cursor.execute(member_query, (member_id, user['id']))
+        member = cursor.fetchone()
+        
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # Get member's nutrition data
+        nutrition_query = """
+            SELECT 
+                n.id,
+                n.meal_type,
+                COALESCE(n.custom_food_name, fi.name) as food_name,
+                n.quantity,
+                n.unit,
+                n.total_calories as calories,
+                n.total_protein as protein,
+                n.total_carbs as carbs,
+                n.total_fat as fat,
+                n.notes,
+                n.created_at
+            FROM nutrition_logs n
+            LEFT JOIN food_items fi ON n.food_item_id = fi.id
+            WHERE n.member_id = %s
+            ORDER BY n.created_at DESC
+            LIMIT 50
+        """
+        
+        cursor.execute(nutrition_query, (member_id,))
+        nutrition_entries = cursor.fetchall()
+        
+        # Convert datetime objects
+        for entry in nutrition_entries:
+            if entry['created_at']:
+                entry['created_at'] = entry['created_at'].isoformat()
+        
+        # Get weekly summary
+        weekly_query = """
+            SELECT 
+                DATE(created_at) as date,
+                SUM(total_calories) as total_calories,
+                SUM(total_protein) as total_protein,
+                SUM(total_carbs) as total_carbs,
+                SUM(total_fat) as total_fat,
+                COUNT(*) as entries_count
+            FROM nutrition_logs
+            WHERE member_id = %s 
+            AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            GROUP BY DATE(created_at)
+            ORDER BY date DESC
+        """
+        
+        cursor.execute(weekly_query, (member_id,))
+        weekly_summary = cursor.fetchall()
+        
+        # Convert datetime objects
+        for summary in weekly_summary:
+            if summary['date']:
+                summary['date'] = summary['date'].isoformat()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "member": member,
+            "nutrition_entries": nutrition_entries,
+            "weekly_summary": weekly_summary
+        }
+        
+    except Exception as e:
+        print(f"Error getting member nutrition: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/coach/nutrition/feedback")
+async def add_nutrition_feedback(
+    request: Request,
+    member_id: int = Form(...),
+    feedback_type: str = Form(...),
+    message: str = Form(...),
+    rating: int = Form(5)
+):
+    """Add nutrition feedback for a member"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Verify member belongs to this coach
+        member_query = """
+            SELECT m.id FROM members m
+            JOIN member_coach mc ON m.id = mc.member_id
+            WHERE m.id = %s AND mc.coach_id = %s
+        """
+        cursor.execute(member_query, (member_id, user['id']))
+        member = cursor.fetchone()
+        
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # Insert nutrition feedback
+        insert_query = """
+            INSERT INTO nutrition_feedback 
+            (coach_id, member_id, feedback_type, message, rating, created_at)
+            VALUES (%s, %s, %s, %s, %s, NOW())
+        """
+        
+        cursor.execute(insert_query, (
+            user['id'], member_id, feedback_type, message, rating
+        ))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": "Nutrition feedback added successfully"
+        }
+        
+    except Exception as e:
+        print(f"Error adding nutrition feedback: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/api/coach/nutrition/analytics")
+async def get_coach_nutrition_analytics(
+    request: Request,
+    time_range: str = "week",
+    member_id: int = None
+):
+    """Get nutrition analytics for coach's members"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Determine date range
+        if time_range == "week":
+            date_filter = "AND n.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+        elif time_range == "month":
+            date_filter = "AND n.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
+        elif time_range == "quarter":
+            date_filter = "AND n.created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)"
+        else:
+            date_filter = ""
+        
+        # Build member filter
+        member_filter = ""
+        if member_id:
+            member_filter = f"AND m.id = {member_id}"
+        
+        # Get nutrition analytics
+        analytics_query = f"""
+            SELECT 
+                m.id,
+                m.name as first_name,
+                m.name as last_name,
+                AVG(n.total_calories) as avg_calories,
+                AVG(n.total_protein) as avg_protein,
+                AVG(n.total_carbs) as avg_carbs,
+                AVG(n.total_fat) as avg_fat,
+                COUNT(n.id) as total_entries,
+                COUNT(DISTINCT DATE(n.created_at)) as active_days,
+                SUM(CASE WHEN n.total_calories > 0 THEN 1 ELSE 0 END) as days_with_entries
+            FROM members m
+            JOIN member_coach mc ON m.id = mc.member_id
+            LEFT JOIN nutrition_logs n ON m.id = n.member_id
+            WHERE mc.coach_id = %s {member_filter} {date_filter}
+            GROUP BY m.id
+            ORDER BY avg_calories DESC
+        """
+        
+        cursor.execute(analytics_query, (user['id'],))
+        analytics = cursor.fetchall()
+        
+        # Split names for analytics data
+        for member in analytics:
+            name_parts = member['first_name'].split(' ', 1)
+            member['first_name'] = name_parts[0]
+            member['last_name'] = name_parts[1] if len(name_parts) > 1 else ''
+        
+        # Get meal type distribution
+        meal_distribution_query = f"""
+            SELECT 
+                n.meal_type,
+                COUNT(*) as count,
+                AVG(n.total_calories) as avg_calories
+            FROM nutrition_logs n
+            JOIN members m ON n.member_id = m.id
+            JOIN member_coach mc ON m.id = mc.member_id
+            WHERE mc.coach_id = %s {member_filter} {date_filter}
+            GROUP BY n.meal_type
+            ORDER BY count DESC
+        """
+        
+        cursor.execute(meal_distribution_query, (user['id'],))
+        meal_distribution = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "analytics": analytics,
+            "meal_distribution": meal_distribution
+        }
+        
+    except Exception as e:
+        print(f"Error getting nutrition analytics: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/coach/nutrition/plan")
+async def create_nutrition_plan(
+    request: Request,
+    member_id: int = Form(...),
+    plan_name: str = Form(...),
+    daily_calories: int = Form(...),
+    daily_protein: int = Form(...),
+    daily_carbs: int = Form(...),
+    daily_fat: int = Form(...),
+    notes: str = Form("")
+):
+    """Create a nutrition plan for a member"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Verify member belongs to this coach
+        member_query = """
+            SELECT m.id FROM members m
+            JOIN member_coach mc ON m.id = mc.member_id
+            WHERE m.id = %s AND mc.coach_id = %s
+        """
+        cursor.execute(member_query, (member_id, user['id']))
+        member = cursor.fetchone()
+        
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # Insert nutrition plan
+        insert_query = """
+            INSERT INTO nutrition_plans 
+            (coach_id, member_id, plan_name, daily_calories, daily_protein, daily_carbs, daily_fat, notes, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+        """
+        
+        cursor.execute(insert_query, (
+            user['id'], member_id, plan_name, daily_calories, daily_protein, daily_carbs, daily_fat, notes
+        ))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": "Nutrition plan created successfully"
+        }
+        
+    except Exception as e:
+        print(f"Error creating nutrition plan: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/api/coach/nutrition/plans/{member_id}")
+async def get_member_nutrition_plans(request: Request, member_id: int):
+    """Get nutrition plans for a specific member"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Verify member belongs to this coach
+        member_query = """
+            SELECT m.id FROM members m
+            JOIN member_coach mc ON m.id = mc.member_id
+            WHERE m.id = %s AND mc.coach_id = %s
+        """
+        cursor.execute(member_query, (member_id, user['id']))
+        member = cursor.fetchone()
+        
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # Get nutrition plans
+        plans_query = """
+            SELECT 
+                id,
+                plan_name,
+                daily_calories,
+                daily_protein,
+                daily_carbs,
+                daily_fat,
+                notes,
+                created_at,
+                is_active
+            FROM nutrition_plans
+            WHERE member_id = %s
+            ORDER BY created_at DESC
+        """
+        
+        cursor.execute(plans_query, (member_id,))
+        plans = cursor.fetchall()
+        
+        # Convert datetime objects
+        for plan in plans:
+            if plan['created_at']:
+                plan['created_at'] = plan['created_at'].isoformat()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "plans": plans
+        }
+        
+    except Exception as e:
+        print(f"Error getting nutrition plans: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# AI Meal Planning Endpoints
+@app.post("/api/nutrition/generate-meal-plan")
+async def generate_ai_meal_plan(request: Request):
+    """Generate a personalized meal plan using AI"""
+    try:
+        # Get user from session
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        
+        # Check if user has premium membership for AI features
+        if user['user_type'] == 'member':
+            conn = get_db_connection()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            cursor.execute("SELECT membership_type FROM members WHERE id = %s", (user['id'],))
+            member = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if not member or member['membership_type'] not in ['Premium', 'VIP']:
+                raise HTTPException(status_code=403, detail="AI meal planning requires Premium or VIP membership")
+        
+        # Get request data
+        data = await request.json()
+        user_profile = data.get('user_profile', {})
+        
+        if not meal_planner:
+            raise HTTPException(status_code=503, detail="AI meal planner not available")
+        
+        # Generate meal plan
+        meal_plan = meal_planner.generate_meal_plan(user_profile)
+        
+        if 'error' in meal_plan:
+            raise HTTPException(status_code=500, detail=meal_plan['error'])
+        
+        # Save meal plan to database if user is a member
+        if user['user_type'] == 'member':
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            try:
+                cursor.execute("""
+                    INSERT INTO nutrition_plans 
+                    (member_id, plan_name, plan_data, created_at) 
+                    VALUES (%s, %s, %s, NOW())
+                """, (
+                    user['id'],
+                    f"AI Generated Plan - {datetime.now().strftime('%Y-%m-%d')}",
+                    json.dumps(meal_plan)
+                ))
+                conn.commit()
+            except Exception as e:
+                print(f"Error saving meal plan: {e}")
+            finally:
+                cursor.close()
+                conn.close()
+        
+        return meal_plan
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating meal plan: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/nutrition/generate-custom-meal")
+async def generate_custom_meal(request: Request):
+    """Generate a custom meal using AI"""
+    try:
+        # Get user from session
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        
+        # Check premium membership for members
+        if user['user_type'] == 'member':
+            conn = get_db_connection()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            cursor.execute("SELECT membership_type FROM members WHERE id = %s", (user['id'],))
+            member = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if not member or member['membership_type'] not in ['Premium', 'VIP']:
+                raise HTTPException(status_code=403, detail="AI meal generation requires Premium or VIP membership")
+        
+        # Get request data
+        data = await request.json()
+        meal_requirements = data.get('meal_requirements', {})
+        
+        if not meal_planner:
+            raise HTTPException(status_code=503, detail="AI meal planner not available")
+        
+        # Generate custom meal
+        meal = meal_planner.generate_custom_meal(meal_requirements)
+        
+        if 'error' in meal:
+            raise HTTPException(status_code=500, detail=meal['error'])
+        
+        return meal
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating custom meal: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/nutrition/analyze-photo-ai")
+async def analyze_nutrition_photo_ai(
+    request: Request,
+    file: UploadFile = File(...),
+    meal_type: str = Form(...),
+    detected_foods: str = Form("[]")
+):
+    """Analyze nutrition photo using AI"""
+    try:
+        # Get user from session
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        
+        # Check premium membership for members
+        if user['user_type'] == 'member':
+            conn = get_db_connection()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            cursor.execute("SELECT membership_type FROM members WHERE id = %s", (user['id'],))
+            member = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if not member or member['membership_type'] not in ['Premium', 'VIP']:
+                raise HTTPException(status_code=403, detail="AI photo analysis requires Premium or VIP membership")
+        
+        # Read photo data
+        photo_data = await file.read()
+        
+        # Parse detected foods
+        try:
+            detected_foods_list = json.loads(detected_foods)
+        except:
+            detected_foods_list = []
+        
+        if not meal_planner:
+            raise HTTPException(status_code=503, detail="AI meal planner not available")
+        
+        # Analyze photo with AI
+        analysis = meal_planner.analyze_nutrition_photo(photo_data, detected_foods_list)
+        
+        if 'error' in analysis:
+            raise HTTPException(status_code=500, detail=analysis['error'])
+        
+        # Save to nutrition logs if analysis is successful
+        if 'nutrition' in analysis:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            try:
+                # Save the photo
+                photo_filename = f"nutrition_ai_{user['id']}_{int(time.time())}.jpg"
+                photo_path = os.path.join("static", "images", photo_filename)
+                
+                with open(photo_path, "wb") as f:
+                    f.write(photo_data)
+                
+                # Save nutrition data
+                nutrition = analysis['nutrition']
+                cursor.execute("""
+                    INSERT INTO nutrition_logs
+                    (member_id, meal_type, food_name, quantity, unit, calories, protein, carbs, fat, photo_path, notes, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                """, (
+                    user['id'],
+                    meal_type,
+                    "AI Analyzed Meal",
+                    1,
+                    "serving",
+                    nutrition.get('calories', 0),
+                    nutrition.get('protein', 0),
+                    nutrition.get('carbs', 0),
+                    nutrition.get('fat', 0),
+                    photo_filename,
+                    f"AI Analysis: {', '.join([food['name'] for food in analysis.get('foods', [])])}"
+                ))
+                conn.commit()
+                
+                # Add AI insights
+                analysis['ai_insights'] = meal_planner.get_nutrition_insights({
+                    'calories': nutrition.get('calories', 0),
+                    'protein': nutrition.get('protein', 0),
+                    'carbs': nutrition.get('carbs', 0),
+                    'fat': nutrition.get('fat', 0),
+                    'goal': 'maintenance',
+                    'activity_level': 'moderately_active'
+                })
+                
+            except Exception as e:
+                print(f"Error saving AI nutrition analysis: {e}")
+            finally:
+                cursor.close()
+                conn.close()
+        
+        return analysis
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error analyzing nutrition photo with AI: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/nutrition/get-insights")
+async def get_nutrition_insights(request: Request):
+    """Get AI nutrition insights"""
+    try:
+        # Get user from session
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        
+        # Check premium membership for members
+        if user['user_type'] == 'member':
+            conn = get_db_connection()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            cursor.execute("SELECT membership_type FROM members WHERE id = %s", (user['id'],))
+            member = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if not member or member['membership_type'] not in ['Premium', 'VIP']:
+                raise HTTPException(status_code=403, detail="AI insights require Premium or VIP membership")
+        
+        # Get request data
+        data = await request.json()
+        nutrition_data = data.get('nutrition_data', {})
+        
+        if not meal_planner:
+            raise HTTPException(status_code=503, detail="AI meal planner not available")
+        
+        # Get insights
+        insights = meal_planner.get_nutrition_insights(nutrition_data)
+        
+        if 'error' in insights:
+            raise HTTPException(status_code=500, detail=insights['error'])
+        
+        return insights
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting nutrition insights: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/api/nutrition/calculate-needs")
+async def calculate_nutritional_needs(
+    request: Request,
+    age: int = Query(...),
+    gender: str = Query(...),
+    weight: float = Query(...),
+    height: float = Query(...),
+    activity_level: str = Query(...),
+    goal: str = Query(...)
+):
+    """Calculate nutritional needs using AI"""
+    try:
+        # Get user from session
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        
+        if not meal_planner:
+            raise HTTPException(status_code=503, detail="AI meal planner not available")
+        
+        # Calculate nutritional needs
+        needs = meal_planner.calculate_nutritional_needs(
+            age=age,
+            gender=gender,
+            weight=weight,
+            height=height,
+            activity_level=activity_level,
+            goal=goal
+        )
+        
+        return needs
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error calculating nutritional needs: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 if __name__ == "__main__":
     import uvicorn
