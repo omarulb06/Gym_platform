@@ -65,27 +65,27 @@
  </div>
 
  <!-- Add Coach Modal -->
- <div id="addCoachModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
+ <div id="addCoachModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50">
  <div class="flex items-center justify-center min-h-screen p-4">
- <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+ <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
  <div class="px-4 py-5 sm:p-4 sm:p-6">
  <h3 class="text-lg font-medium text-gray-900 mb-4">Add New Coach</h3>
  <form id="addCoachForm" class="space-y-4">
  <div>
  <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
- <input type="text" id="name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <input type="text" id="name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none">
  </div>
  <div>
  <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
- <input type="email" id="email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <input type="email" id="email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none">
  </div>
  <div>
- <label for="phone" class="block text-sm font-medium text-gray-700">Phone</label>
- <input type="tel" id="phone" name="phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+ <input type="password" id="password" name="password" required minlength="6" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none" placeholder="Minimum 6 characters">
  </div>
  <div>
  <label for="specialization" class="block text-sm font-medium text-gray-700">Specialization</label>
- <select id="specialization" name="specialization" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <select id="specialization" name="specialization" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none">
  <option value="">Select Specialization</option>
  <option value="Fitness Training">Fitness Training</option>
  <option value="Yoga">Yoga</option>
@@ -93,15 +93,11 @@
  <option value="Nutrition">Nutrition</option>
  </select>
  </div>
- <div>
- <label for="experience" class="block text-sm font-medium text-gray-700">Experience (years)</label>
- <input type="number" id="experience" name="experience" required min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
- </div>
  <div class="flex justify-end space-x-3">
- <button type="button" onclick="closeAddCoachModal()" class="bg-gray-200 text-gray-700 px-3 py-2 sm:px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:outline-none
+ <button type="button" onclick="closeAddCoachModal()" class="bg-gray-200 text-gray-700 px-3 py-2 sm:px-4 rounded-md hover:bg-gray-300 focus:outline-none">
  Cancel
  </button>
- <button type="submit" class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ <button type="submit" class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none">
  Add Coach
  </button>
  </div>
@@ -112,50 +108,47 @@
  </div>
 
  <!-- Edit Coach Modal -->
- <div id="editCoachModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
+ <div id="editCoachModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50">
  <div class="flex items-center justify-center min-h-screen p-4">
- <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+ <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all">
  <div class="px-4 py-5 sm:p-4 sm:p-6">
  <h3 class="text-lg font-medium text-gray-900 mb-4">Edit Coach</h3>
  <form id="editCoachForm" class="space-y-4">
  <input type="hidden" id="edit_coach_id">
  <div>
  <label for="edit_name" class="block text-sm font-medium text-gray-700">Name</label>
- <input type="text" id="edit_name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <input type="text" id="edit_name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none">
  </div>
  <div>
  <label for="edit_email" class="block text-sm font-medium text-gray-700">Email</label>
- <input type="email" id="edit_email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <input type="email" id="edit_email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none">
  </div>
  <div>
- <label for="edit_phone" class="block text-sm font-medium text-gray-700">Phone</label>
- <input type="tel" id="edit_phone" name="phone" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <label for="edit_password" class="block text-sm font-medium text-gray-700">New Password (Optional)</label>
+ <input type="password" id="edit_password" name="password" minlength="6" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none" placeholder="Leave blank to keep current password">
  </div>
  <div>
  <label for="edit_specialization" class="block text-sm font-medium text-gray-700">Specialization</label>
- <select id="edit_specialization" name="specialization" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
+ <select id="edit_specialization" name="specialization" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none">
  <option value="Fitness Training">Fitness Training</option>
  <option value="Yoga">Yoga</option>
  <option value="CrossFit">CrossFit</option>
  <option value="Nutrition">Nutrition</option>
  </select>
  </div>
- <div>
- <label for="edit_experience" class="block text-sm font-medium text-gray-700">Experience (years)</label>
- <input type="number" id="edit_experience" name="experience" required min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
- </div>
+
  <div>
  <label for="edit_status" class="block text-sm font-medium text-gray-700">Status</label>
- <select id="edit_status" name="status" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none
- <option value="Active">Active</option>
- <option value="Inactive">Inactive</option>
+ <select id="edit_status" name="status" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:outline-none">
+   <option value="Active">Active</option>
+   <option value="Inactive">Inactive</option>
  </select>
  </div>
  <div class="flex justify-end space-x-3">
- <button type="button" onclick="closeEditCoachModal()" class="bg-gray-200 text-gray-700 px-3 py-2 sm:px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:outline-none
+ <button type="button" onclick="closeEditCoachModal()" class="bg-gray-200 text-gray-700 px-3 py-2 sm:px-4 rounded-md hover:bg-gray-300 focus:outline-none">
  Cancel
  </button>
- <button type="submit" class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ <button type="submit" class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none">
  Save Changes
  </button>
  </div>
@@ -229,9 +222,8 @@
  const formData = {
  name: document.getElementById('name').value,
  email: document.getElementById('email').value,
- phone: document.getElementById('phone').value,
- specialization: document.getElementById('specialization').value,
- experience: document.getElementById('experience').value
+ password: document.getElementById('password').value,
+ specialization: document.getElementById('specialization').value
  };
  
  try {
@@ -290,9 +282,8 @@
  document.getElementById('edit_coach_id').value = coach.id;
  document.getElementById('edit_name').value = coach.name;
  document.getElementById('edit_email').value = coach.email;
- document.getElementById('edit_phone').value = coach.phone;
+ document.getElementById('edit_password').value = ''; // Clear password field
  document.getElementById('edit_specialization').value = coach.specialization;
- document.getElementById('edit_experience').value = coach.experience;
  document.getElementById('edit_status').value = coach.status;
  document.getElementById('editCoachModal').classList.remove('hidden');
  }
@@ -309,11 +300,15 @@
  const formData = {
  name: document.getElementById('edit_name').value,
  email: document.getElementById('edit_email').value,
- phone: document.getElementById('edit_phone').value,
  specialization: document.getElementById('edit_specialization').value,
- experience: document.getElementById('edit_experience').value,
  status: document.getElementById('edit_status').value
  };
+ 
+ // Only include password if a new one is provided
+ const newPassword = document.getElementById('edit_password').value;
+ if (newPassword && newPassword.length >= 6) {
+   formData.password = newPassword;
+ }
  
  try {
  const response = await fetch(`/api/gym/coaches/${coachId}`, {
@@ -327,6 +322,13 @@
  if (response.ok) {
  closeEditCoachModal();
  loadCoaches();
+ 
+ // Show appropriate success message
+ if (newPassword) {
+   alert('Coach updated successfully! Password has been changed.');
+ } else {
+   alert('Coach updated successfully!');
+ }
  } else {
  const error = await response.json();
  alert(error.detail || 'Error updating coach');

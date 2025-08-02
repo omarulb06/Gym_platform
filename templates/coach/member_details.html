@@ -272,188 +272,420 @@
      </div>
 {% endblock %}
 
+{% block scripts %}
 <script>
  // Get member ID from URL
- const memberId = window.location.pathname.split('/').pop();
- // Get coach ID from template context
- const coachId = "{{ user.id }}";
+const memberId = window.location.pathname.split('/').pop();
+// Get coach ID from template context
+const coachId = "{{ user.id }}";
+
+console.log('=== MEMBER DETAILS PAGE DEBUG ===');
+console.log('Member ID from URL:', memberId);
+console.log('Coach ID from template:', coachId);
+console.log('Current URL:', window.location.href);
 
  // Fetch member details
- async function fetchMemberDetails() {
- try {
- const response = await fetch(`/api/coach/members/${memberId}`);
- if (!response.ok) {
- throw new Error('Failed to fetch member details');
- }
- const data = await response.json();
- updateMemberDetails(data);
- 
- // Also fetch member preferences
- fetchMemberPreferences();
- } catch (error) {
- console.error('Error:', error);
- alert('Failed to load member details');
- }
- }
+async function fetchMemberDetails() {
+    try {
+        console.log('=== FETCHING MEMBER DETAILS ===');
+        console.log('Fetching member details for ID:', memberId);
+        console.log('API URL:', `/api/coach/members/${memberId}`);
+        
+        // Show loading states
+        console.log('Setting loading states...');
+        const nameElement = document.getElementById('memberName');
+        const emailElement = document.getElementById('memberEmail');
+        const membershipElement = document.getElementById('membershipType');
+        const totalElement = document.getElementById('totalSessions');
+        const completedElement = document.getElementById('completedSessions');
+        const lastElement = document.getElementById('lastSession');
+        
+        if (nameElement) nameElement.textContent = 'Loading...';
+        if (emailElement) emailElement.textContent = 'Loading...';
+        if (membershipElement) membershipElement.textContent = 'Loading...';
+        if (totalElement) totalElement.textContent = '...';
+        if (completedElement) completedElement.textContent = '...';
+        if (lastElement) lastElement.textContent = '...';
+        
+        console.log('Making API request...');
+        const response = await fetch(`/api/coach/members/${memberId}`);
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Response error text:', errorText);
+            throw new Error(`Failed to fetch member details (${response.status}: ${response.statusText})`);
+        }
+        
+        const data = await response.json();
+        console.log('=== RECEIVED API DATA ===');
+        console.log('Full response data:', data);
+        console.log('Member data:', data?.member);
+        console.log('Recent sessions:', data?.recent_sessions);
+        
+        if (!data || !data.member) {
+            console.error('Missing member data in response');
+            throw new Error('Invalid response: missing member data');
+        }
+        
+        console.log('Calling updateMemberDetails...');
+        updateMemberDetails(data);
+        
+        // Also fetch member preferences
+        console.log('Calling fetchMemberPreferences...');
+        fetchMemberPreferences();
+        
+        console.log('=== MEMBER DETAILS FETCH COMPLETE ===');
+    } catch (error) {
+        console.error('=== ERROR FETCHING MEMBER DETAILS ===');
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
+        // Show error states
+        console.log('Setting error states...');
+        const nameElement = document.getElementById('memberName');
+        const emailElement = document.getElementById('memberEmail');
+        const membershipElement = document.getElementById('membershipType');
+        const totalElement = document.getElementById('totalSessions');
+        const completedElement = document.getElementById('completedSessions');
+        const lastElement = document.getElementById('lastSession');
+        
+        if (nameElement) nameElement.textContent = 'Error loading';
+        if (emailElement) emailElement.textContent = 'Error loading';
+        if (membershipElement) membershipElement.textContent = 'Error';
+        if (totalElement) totalElement.textContent = '0';
+        if (completedElement) completedElement.textContent = '0';
+        if (lastElement) lastElement.textContent = 'Error';
+        
+        // Show error message to user
+        const errorMsg = error.message || 'Unknown error occurred';
+        console.log('Showing error alert:', errorMsg);
+        alert(`Failed to load member details: ${errorMsg}`);
+    }
+}
 
  // Fetch member preferences
- async function fetchMemberPreferences() {
- try {
- const response = await fetch(`/api/coach/members/${memberId}/preferences`);
- if (!response.ok) {
- throw new Error('Failed to fetch member preferences');
- }
- const data = await response.json();
- displayMemberPreferences(data);
- } catch (error) {
- console.error('Error:', error);
- document.getElementById('memberPreferences').innerHTML = '<div class="text-center text-gray-500">Failed to load preferences</div>';
- }
- }
+async function fetchMemberPreferences() {
+    console.log('=== FETCHING MEMBER PREFERENCES ===');
+    console.log('Fetching preferences for member ID:', memberId);
+    
+    try {
+        const response = await fetch(`/api/coach/members/${memberId}/preferences`);
+        console.log('Preferences response status:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Preferences response error:', errorText);
+            throw new Error('Failed to fetch member preferences');
+        }
+        
+        const data = await response.json();
+        console.log('=== RECEIVED PREFERENCES DATA ===');
+        console.log('Preferences data:', data);
+        
+        displayMemberPreferences(data);
+    } catch (error) {
+        console.error('=== ERROR FETCHING PREFERENCES ===');
+        console.error('Error:', error);
+        console.error('Error message:', error.message);
+        
+        const preferencesContainer = document.getElementById('memberPreferences');
+        if (preferencesContainer) {
+            preferencesContainer.innerHTML = '<div class="text-center text-gray-500">Failed to load preferences</div>';
+        } else {
+            console.error('Preferences container not found!');
+        }
+    }
+}
 
  // Display member preferences
- function displayMemberPreferences(data) {
- const { preferences, free_days } = data;
- const container = document.getElementById('memberPreferences');
- 
- if (!preferences && (!free_days || free_days.length === 0)) {
- container.innerHTML = '<div class="text-center text-gray-500">No preferences set</div>';
- return;
- }
- 
- const workoutTypes = preferences?.preferred_workout_types || [];
- const duration = preferences?.preferred_duration || 60;
- const timeSlots = preferences?.preferred_time_slots || [];
- const notes = preferences?.notes || '';
- 
- container.innerHTML = `
- <div class="bg-gray-50 rounded-lg p-4">
- <h3 class="text-sm font-medium text-gray-900 mb-3">Workout Preferences</h3>
- <div class="space-y-2">
- <div>
- <span class="text-sm text-gray-600">Preferred Types:</span>
- <div class="mt-1">
- ${workoutTypes.length > 0 ? 
- workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
- '<span class="text-gray-500 text-sm">None specified</span>'
- }
- </div>
- </div>
- <div>
- <span class="text-sm text-gray-600">Duration:</span>
- <span class="text-sm font-medium">${duration} minutes</span>
- </div>
- </div>
- </div>
- 
- <div class="bg-gray-50 rounded-lg p-4">
- <h3 class="text-sm font-medium text-gray-900 mb-3">Time Preferences</h3>
- <div class="space-y-2">
- <div>
- <span class="text-sm text-gray-600">Preferred Times:</span>
- <div class="mt-1">
- ${timeSlots.length > 0 ? 
- timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
- '<span class="text-gray-500 text-sm">None specified</span>'
- }
- </div>
- </div>
- </div>
- </div>
- 
- <div class="bg-gray-50 rounded-lg p-4">
- <h3 class="text-sm font-medium text-gray-900 mb-3">Weekly Availability</h3>
- <div class="grid grid-cols-2 gap-2">
- ${free_days.map(day => `
- <div class="flex items-center justify-between">
- <span class="text-sm text-gray-600">${day.day_of_week}</span>
- <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
- ${day.is_available ? 'Available' : 'Unavailable'}
- </span>
- </div>
- `).join('')}
- </div>
- </div>
- 
- ${notes ? `
- <div class="bg-gray-50 rounded-lg p-4">
- <h3 class="text-sm font-medium text-gray-900 mb-3">Notes</h3>
- <p class="text-sm text-gray-600">${notes}</p>
- </div>
- ` : ''}
- `;
- }
+function displayMemberPreferences(data) {
+    console.log('=== DISPLAYING MEMBER PREFERENCES ===');
+    console.log('Preferences data:', data);
+    
+    const { preferences, free_days } = data;
+    console.log('Extracted preferences:', preferences);
+    console.log('Extracted free_days:', free_days);
+    
+    const container = document.getElementById('memberPreferences');
+    console.log('Preferences container found:', !!container);
+    
+    if (!container) {
+        console.error('Preferences container not found!');
+        return;
+    }
+
+    if (!preferences && (!free_days || free_days.length === 0)) {
+        console.log('No preferences or free days found, showing "No preferences set" message');
+        container.innerHTML = '<div class="text-center text-gray-500">No preferences set</div>';
+        return;
+    }
+
+    const workoutTypes = preferences?.preferred_workout_types || [];
+    const duration = preferences?.preferred_duration || 60;
+    const timeSlots = preferences?.preferred_time_slots || [];
+    const notes = preferences?.notes || '';
+    
+    console.log('=== PREFERENCES TO DISPLAY ===');
+    console.log('Workout types:', workoutTypes);
+    console.log('Duration:', duration);
+    console.log('Time slots:', timeSlots);
+    console.log('Notes:', notes);
+    console.log('Free days:', free_days);
+
+    const preferencesHTML = `
+        <div class="bg-gray-50 rounded-lg p-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">Workout Preferences</h3>
+            <div class="space-y-2">
+                <div>
+                    <span class="text-sm text-gray-600">Preferred Types:</span>
+                    <div class="mt-1">
+                        ${workoutTypes.length > 0 ? 
+                            workoutTypes.map(type => `<span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded mr-1 mb-1">${type}</span>`).join('') :
+                            '<span class="text-gray-500 text-sm">None specified</span>'
+                        }
+                    </div>
+                </div>
+                <div>
+                    <span class="text-sm text-gray-600">Duration:</span>
+                    <span class="text-sm font-medium">${duration} minutes</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">Time Preferences</h3>
+            <div class="space-y-2">
+                <div>
+                    <span class="text-sm text-gray-600">Preferred Times:</span>
+                    <div class="mt-1">
+                        ${timeSlots.length > 0 ? 
+                            timeSlots.map(time => `<span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">${time}</span>`).join('') :
+                            '<span class="text-gray-500 text-sm">None specified</span>'
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg p-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">Weekly Availability</h3>
+            <div class="grid grid-cols-2 gap-2">
+                ${free_days.map(day => `
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">${day.day_of_week}</span>
+                        <span class="text-sm font-medium ${day.is_available ? 'text-green-600' : 'text-red-600'}">
+                            ${day.is_available ? 'Available' : 'Unavailable'}
+                        </span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+
+        ${notes ? `
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-gray-900 mb-3">Notes</h3>
+                <p class="text-sm text-gray-600">${notes}</p>
+            </div>
+        ` : ''}
+    `;
+    
+    console.log('Generated preferences HTML length:', preferencesHTML.length);
+    container.innerHTML = preferencesHTML;
+    console.log('Preferences HTML updated successfully');
+    console.log('=== PREFERENCES DISPLAY COMPLETE ===');
+}
 
  // Update member details in the UI
- function updateMemberDetails(data) {
- const { member, recent_sessions } = data;
- 
- // Store sessions globally for filtering
- window.allSessions = recent_sessions;
- 
- // Update basic info
- document.getElementById('memberName').textContent = member.name;
- document.getElementById('memberEmail').textContent = member.email;
- document.getElementById('membershipType').textContent = member.membership_type;
- 
- // Update stats
- document.getElementById('totalSessions').textContent = member.total_sessions;
- document.getElementById('completedSessions').textContent = member.completed_sessions;
- document.getElementById('lastSession').textContent = member.last_session || 'Never';
- 
- // Display all sessions initially
- displaySessions(recent_sessions);
- }
+function updateMemberDetails(data) {
+    console.log('=== UPDATING MEMBER DETAILS ===');
+    console.log('Input data:', data);
+    
+    const { member, recent_sessions } = data;
+    console.log('Extracted member:', member);
+    console.log('Extracted recent_sessions:', recent_sessions);
+    
+    // Store sessions globally for filtering
+    window.allSessions = recent_sessions || [];
+    console.log('Stored sessions globally:', window.allSessions);
+    
+    // Update basic info with null checks
+    const memberName = member?.name || 'Unknown';
+    const memberEmail = member?.email || 'No email';
+    const membershipType = member?.membership_type || 'Unknown';
+    
+    console.log('=== MEMBER INFO TO DISPLAY ===');
+    console.log('Member name:', memberName);
+    console.log('Member email:', memberEmail);
+    console.log('Membership type:', membershipType);
+    
+    console.log('Updating DOM elements...');
+    const nameElement = document.getElementById('memberName');
+    const emailElement = document.getElementById('memberEmail');
+    const membershipElement = document.getElementById('membershipType');
+    
+    console.log('Found elements:', {
+        nameElement: !!nameElement,
+        emailElement: !!emailElement,
+        membershipElement: !!membershipElement
+    });
+    
+    if (nameElement) {
+        nameElement.textContent = memberName;
+        console.log('Updated member name to:', memberName);
+    }
+    if (emailElement) {
+        emailElement.textContent = memberEmail;
+        console.log('Updated member email to:', memberEmail);
+    }
+    if (membershipElement) {
+        membershipElement.textContent = membershipType;
+        console.log('Updated membership type to:', membershipType);
+    }
+    
+    // Update stats with null checks and ensure they're numbers
+    const totalSessions = member?.total_sessions || 0;
+    const completedSessions = member?.completed_sessions || 0;
+    const lastSession = member?.last_session || 'Never';
+    
+    console.log('=== STATS TO DISPLAY ===');
+    console.log('Total sessions:', totalSessions, 'Type:', typeof totalSessions);
+    console.log('Completed sessions:', completedSessions, 'Type:', typeof completedSessions);
+    console.log('Last session:', lastSession, 'Type:', typeof lastSession);
+    
+    const totalElement = document.getElementById('totalSessions');
+    const completedElement = document.getElementById('completedSessions');
+    const lastElement = document.getElementById('lastSession');
+    
+    console.log('Found stat elements:', {
+        totalElement: !!totalElement,
+        completedElement: !!completedElement,
+        lastElement: !!lastElement
+    });
+    
+    if (totalElement) {
+        totalElement.textContent = totalSessions;
+        console.log('Updated total sessions to:', totalSessions);
+    }
+    if (completedElement) {
+        completedElement.textContent = completedSessions;
+        console.log('Updated completed sessions to:', completedSessions);
+    }
+    if (lastElement) {
+        lastElement.textContent = lastSession;
+        console.log('Updated last session to:', lastSession);
+    }
+    
+    console.log('Calling displaySessions...');
+    // Display all sessions initially
+    displaySessions(recent_sessions || []);
+    
+    console.log('=== MEMBER DETAILS UPDATE COMPLETE ===');
+}
 
  // Function to display sessions
- function displaySessions(sessions) {
- const sessionsContainer = document.getElementById('recentSessions');
- if (sessions.length === 0) {
- sessionsContainer.innerHTML = '<div class="text-center text-gray-500">No sessions found</div>';
- } else {
- sessionsContainer.innerHTML = sessions.map(session => `
- <div class="bg-gray-50 rounded-lg p-4">
- <div class="flex justify-between items-start">
- <div>
- <h3 class="font-medium text-gray-900">${session.date} at ${session.time}</h3>
- <p class="text-sm text-gray-500">${session.workout.type}</p>
- </div>
- <span class="px-2 py-1 text-sm rounded-full ${
- session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
- session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
- 'bg-blue-100 text-blue-800'
- }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
- </div>
- ${session.workout.exercises.length > 0 ? `
- <div class="mt-2">
- <h4 class="text-sm font-medium text-gray-700">Exercises:</h4>
- <ul class="mt-1 text-sm text-gray-600">
- ${session.workout.exercises.map(exercise => `
- <li>${exercise}</li>
- `).join('')}
- </ul>
- </div>
- ` : ''}
- </div>
- `).join('');
- }
- }
+function displaySessions(sessions) {
+    console.log('=== DISPLAYING SESSIONS ===');
+    console.log('Sessions to display:', sessions);
+    console.log('Number of sessions:', sessions.length);
+    
+    const sessionsContainer = document.getElementById('recentSessions');
+    console.log('Sessions container found:', !!sessionsContainer);
+    
+    if (!sessionsContainer) {
+        console.error('Sessions container not found!');
+        return;
+    }
+    
+    if (sessions.length === 0) {
+        console.log('No sessions to display, showing "No sessions found" message');
+        sessionsContainer.innerHTML = '<div class="text-center text-gray-500">No sessions found</div>';
+    } else {
+        console.log('Rendering sessions...');
+        sessions.forEach((session, index) => {
+            console.log(`Session ${index + 1}:`, session);
+        });
+        
+        const sessionsHTML = sessions.map(session => {
+            console.log('Processing session:', session);
+            
+            // Ensure session has required properties
+            const sessionDate = session.date || 'Unknown date';
+            const sessionTime = session.time || 'Unknown time';
+            const workoutType = session.workout?.type || 'Unknown workout';
+            const sessionStatus = session.status || 'Unknown';
+            const exercises = session.workout?.exercises || [];
+            
+            console.log('Session processed data:', {
+                date: sessionDate,
+                time: sessionTime,
+                type: workoutType,
+                status: sessionStatus,
+                exercises: exercises
+            });
+            
+            const statusClass = sessionStatus.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                               sessionStatus.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                               'bg-blue-100 text-blue-800';
+            
+            const exercisesHTML = exercises.length > 0 ? `
+                <div class="mt-2">
+                    <h4 class="text-sm font-medium text-gray-700">Exercises:</h4>
+                    <ul class="mt-1 text-sm text-gray-600">
+                        ${exercises.map(exercise => `<li>${exercise}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : '';
+            
+            return `
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-medium text-gray-900">${sessionDate} at ${sessionTime}</h3>
+                            <p class="text-sm text-gray-500">${workoutType}</p>
+                        </div>
+                        <span class="px-2 py-1 text-sm rounded-full ${statusClass}">
+                            ${sessionStatus.charAt(0).toUpperCase() + sessionStatus.slice(1)}
+                        </span>
+                    </div>
+                    ${exercisesHTML}
+                </div>
+            `;
+        }).join('');
+        
+        console.log('Generated HTML length:', sessionsHTML.length);
+        sessionsContainer.innerHTML = sessionsHTML;
+        console.log('Sessions HTML updated successfully');
+    }
+    
+    console.log('=== SESSIONS DISPLAY COMPLETE ===');
+}
 
  // Add search functionality
- document.getElementById('sessionSearch').addEventListener('input', function(e) {
- const searchTerm = e.target.value.toLowerCase();
- const filteredSessions = window.allSessions.filter(session => {
- return (
- session.workout.type.toLowerCase().includes(searchTerm) ||
- session.date.toLowerCase().includes(searchTerm) ||
- session.status.toLowerCase().includes(searchTerm) ||
- session.workout.exercises.some(exercise => 
- exercise.toLowerCase().includes(searchTerm)
- )
- );
- });
- displaySessions(filteredSessions);
- });
+document.getElementById('sessionSearch').addEventListener('input', function(e) {
+    console.log('=== SESSION SEARCH ===');
+    const searchTerm = e.target.value.toLowerCase();
+    console.log('Search term:', searchTerm);
+    console.log('Available sessions:', window.allSessions);
+    
+    const filteredSessions = window.allSessions.filter(session => {
+        const matches = (
+            session.workout.type.toLowerCase().includes(searchTerm) ||
+            session.date.toLowerCase().includes(searchTerm) ||
+            session.status.toLowerCase().includes(searchTerm) ||
+            session.workout.exercises.some(exercise => 
+                exercise.toLowerCase().includes(searchTerm)
+            )
+        );
+        console.log(`Session ${session.date} matches:`, matches);
+        return matches;
+    });
+    
+    console.log('Filtered sessions:', filteredSessions);
+    displaySessions(filteredSessions);
+});
 
  // Logout function
  function logout() {
@@ -463,17 +695,31 @@
  }
 
  // Load member details when page loads
- fetchMemberDetails();
-
- // Enhanced Modal logic with Schedule View
- const assignBtn = document.getElementById('assignBestWorkoutBtn');
- const modal = document.getElementById('assignBestWorkoutModal');
- const form = document.getElementById('assignBestWorkoutForm');
- const matchesDiv = document.getElementById('assignBestWorkoutMatches');
- 
- let currentModalWeek = new Date();
- let modalScheduleData = null;
- let modalBestMatches = [];
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DOM CONTENT LOADED ===');
+    console.log('Page loaded, starting member details fetch...');
+    console.log('Current page elements:');
+    console.log('- memberName element:', !!document.getElementById('memberName'));
+    console.log('- memberEmail element:', !!document.getElementById('memberEmail'));
+    console.log('- membershipType element:', !!document.getElementById('membershipType'));
+    console.log('- totalSessions element:', !!document.getElementById('totalSessions'));
+    console.log('- completedSessions element:', !!document.getElementById('completedSessions'));
+    console.log('- lastSession element:', !!document.getElementById('lastSession'));
+    console.log('- recentSessions element:', !!document.getElementById('recentSessions'));
+    console.log('- memberPreferences element:', !!document.getElementById('memberPreferences'));
+    
+    // Fetch member details immediately
+    fetchMemberDetails();
+    
+    // Enhanced Modal logic with Schedule View
+    const assignBtn = document.getElementById('assignBestWorkoutBtn');
+    const modal = document.getElementById('assignBestWorkoutModal');
+    const form = document.getElementById('assignBestWorkoutForm');
+    const matchesDiv = document.getElementById('assignBestWorkoutMatches');
+    
+    let currentModalWeek = new Date();
+    let modalScheduleData = null;
+    let modalBestMatches = [];
 
  // Modal week navigation
  function getModalWeekStart(date) {
@@ -869,11 +1115,13 @@
  alert(`Failed to assign session: ${result.message || 'Unknown error'}`);
  }
  } catch (error) {
- console.error('Error assigning session:', error);
- alert('Error assigning session: ' + error.message);
- }
- }
- </script>
+    console.error('Error assigning session:', error);
+    alert('Error assigning session: ' + error.message);
+}
+}
+});
+</script>
+{% endblock %}
 
  <style>
  .modal-preference-both {
