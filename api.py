@@ -6312,8 +6312,7 @@ async def get_coach_nutrition_members(request: Request):
         cursor.execute("""
             SELECT 
                 m.id,
-                m.name as first_name,
-                m.name as last_name,
+                m.name,
                 m.email,
                 m.membership_type,
                 COUNT(n.id) as nutrition_entries,
@@ -6330,15 +6329,10 @@ async def get_coach_nutrition_members(request: Request):
         
         members = cursor.fetchall()
         
-        # Convert datetime objects and split name into first and last name
+        # Convert datetime objects
         for member in members:
             if member['last_nutrition_entry']:
                 member['last_nutrition_entry'] = member['last_nutrition_entry'].isoformat()
-            
-            # Split the name into first and last name
-            name_parts = member['first_name'].split(' ', 1)
-            member['first_name'] = name_parts[0]
-            member['last_name'] = name_parts[1] if len(name_parts) > 1 else ''
         
         return {
             "success": True,
@@ -6482,8 +6476,7 @@ async def get_coach_nutrition_dashboard(request: Request):
             SELECT 
                 n.id,
                 n.member_id,
-                m.name as first_name,
-                m.name as last_name,
+                m.name,
                 n.meal_type,
                 COALESCE(n.custom_food_name, fi.name) as food_name,
                 n.total_calories as calories,
@@ -6503,22 +6496,16 @@ async def get_coach_nutrition_dashboard(request: Request):
         cursor.execute(recent_query, (user['id'],))
         recent_entries = cursor.fetchall()
         
-        # Convert datetime objects and split names
+        # Convert datetime objects
         for entry in recent_entries:
             if entry['created_at']:
                 entry['created_at'] = entry['created_at'].isoformat()
-            
-            # Split the name into first and last name
-            name_parts = entry['first_name'].split(' ', 1)
-            entry['first_name'] = name_parts[0]
-            entry['last_name'] = name_parts[1] if len(name_parts) > 1 else ''
         
         # Get nutrition trends by member
         trends_query = """
             SELECT 
                 m.id,
-                m.name as first_name,
-                m.name as last_name,
+                m.name,
                 DATE(n.created_at) as date,
                 AVG(n.total_calories) as avg_calories,
                 AVG(n.total_protein) as avg_protein,
@@ -6537,15 +6524,10 @@ async def get_coach_nutrition_dashboard(request: Request):
         cursor.execute(trends_query, (user['id'],))
         trends = cursor.fetchall()
         
-        # Convert datetime objects and split names
+        # Convert datetime objects
         for trend in trends:
             if trend['date']:
                 trend['date'] = trend['date'].isoformat()
-            
-            # Split the name into first and last name
-            name_parts = trend['first_name'].split(' ', 1)
-            trend['first_name'] = name_parts[0]
-            trend['last_name'] = name_parts[1] if len(name_parts) > 1 else ''
         
         cursor.close()
         conn.close()
@@ -6862,9 +6844,25 @@ async def get_member_nutrition_plans(request: Request, member_id: int):
         conn = get_db_connection()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
         
-        # Verify member belongs to this coach
+        print(f"Debug: Checking member {member_id} for coach {user['id']}")
+        
+        # First check if the member exists at all
+        member_exists_query = """
+            SELECT id, name, email 
+            FROM members 
+            WHERE id = %s
+        """
+        cursor.execute(member_exists_query, (member_id,))
+        member_exists = cursor.fetchone()
+        
+        if not member_exists:
+            print(f"Debug: Member {member_id} does not exist in database")
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # Then verify member belongs to this coach and get member details
         member_query = """
-            SELECT m.id FROM members m
+            SELECT m.id, m.name, m.email 
+            FROM members m
             JOIN member_coach mc ON m.id = mc.member_id
             WHERE m.id = %s AND mc.coach_id = %s
         """
@@ -6872,7 +6870,10 @@ async def get_member_nutrition_plans(request: Request, member_id: int):
         member = cursor.fetchone()
         
         if not member:
-            raise HTTPException(status_code=404, detail="Member not found")
+            print(f"Debug: Member {member_id} exists but not assigned to coach {user['id']}")
+            raise HTTPException(status_code=403, detail="Member not assigned to this coach")
+        
+        print(f"Debug: Found member {member['name']}")
         
         # Get nutrition plans
         plans_query = """
@@ -6885,7 +6886,8 @@ async def get_member_nutrition_plans(request: Request, member_id: int):
                 daily_fat,
                 notes,
                 created_at,
-                is_active
+                is_active,
+                created_at as updated_at
             FROM nutrition_plans
             WHERE member_id = %s
             ORDER BY created_at DESC
@@ -6894,22 +6896,187 @@ async def get_member_nutrition_plans(request: Request, member_id: int):
         cursor.execute(plans_query, (member_id,))
         plans = cursor.fetchall()
         
-        # Convert datetime objects
+        print(f"Debug: Found {len(plans)} nutrition plans for member {member_id}")
+        
+        # Convert datetime objects and boolean status to string
         for plan in plans:
             if plan['created_at']:
                 plan['created_at'] = plan['created_at'].isoformat()
+            if plan['updated_at']:
+                plan['updated_at'] = plan['updated_at'].isoformat()
+            
+            # Convert boolean is_active to string status
+            plan['status'] = 'active' if plan['is_active'] else 'inactive'
+            del plan['is_active']  # Remove the original boolean field
         
         cursor.close()
         conn.close()
         
         return {
             "success": True,
+            "member": member,
             "plans": plans
         }
         
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
         print(f"Error getting nutrition plans: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        print(f"Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+# Get single nutrition plan for editing
+@app.get("/api/coach/nutrition/plan/{plan_id}")
+async def get_nutrition_plan(plan_id: int, request: Request):
+    """Get a single nutrition plan for editing"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get plan and verify coach has access
+        plan_query = """
+            SELECT np.*, m.name as member_name
+            FROM nutrition_plans np
+            JOIN members m ON np.member_id = m.id
+            JOIN member_coach mc ON m.id = mc.member_id
+            WHERE np.id = %s AND mc.coach_id = %s
+        """
+        cursor.execute(plan_query, (plan_id, user['id']))
+        plan = cursor.fetchone()
+        
+        if not plan:
+            raise HTTPException(status_code=404, detail="Plan not found or access denied")
+        
+        # Convert datetime objects
+        if plan['created_at']:
+            plan['created_at'] = plan['created_at'].isoformat()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "plan": plan
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting nutrition plan: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+# Update nutrition plan
+@app.put("/api/coach/nutrition/plan/{plan_id}")
+async def update_nutrition_plan(plan_id: int, request: Request):
+    """Update a nutrition plan"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        body = await request.json()
+        plan_name = body.get('plan_name')
+        daily_calories = body.get('daily_calories')
+        daily_protein = body.get('daily_protein')
+        daily_carbs = body.get('daily_carbs')
+        daily_fat = body.get('daily_fat')
+        notes = body.get('notes', '')
+        
+        if not all([plan_name, daily_calories, daily_protein, daily_carbs, daily_fat]):
+            raise HTTPException(status_code=400, detail="All fields are required")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Verify coach has access to this plan
+        verify_query = """
+            SELECT np.id FROM nutrition_plans np
+            JOIN members m ON np.member_id = m.id
+            JOIN member_coach mc ON m.id = mc.member_id
+            WHERE np.id = %s AND mc.coach_id = %s
+        """
+        cursor.execute(verify_query, (plan_id, user['id']))
+        plan_exists = cursor.fetchone()
+        
+        if not plan_exists:
+            raise HTTPException(status_code=404, detail="Plan not found or access denied")
+        
+        # Update the plan
+        update_query = """
+            UPDATE nutrition_plans 
+            SET plan_name = %s, daily_calories = %s, daily_protein = %s, 
+                daily_carbs = %s, daily_fat = %s, notes = %s
+            WHERE id = %s
+        """
+        cursor.execute(update_query, (
+            plan_name, daily_calories, daily_protein, daily_carbs, daily_fat, notes, plan_id
+        ))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": "Nutrition plan updated successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating nutrition plan: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+# Delete nutrition plan
+@app.delete("/api/coach/nutrition/plan/{plan_id}")
+async def delete_nutrition_plan(plan_id: int, request: Request):
+    """Delete a nutrition plan"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Verify coach has access to this plan
+        verify_query = """
+            SELECT np.id FROM nutrition_plans np
+            JOIN members m ON np.member_id = m.id
+            JOIN member_coach mc ON m.id = mc.member_id
+            WHERE np.id = %s AND mc.coach_id = %s
+        """
+        cursor.execute(verify_query, (plan_id, user['id']))
+        plan_exists = cursor.fetchone()
+        
+        if not plan_exists:
+            raise HTTPException(status_code=404, detail="Plan not found or access denied")
+        
+        # Delete the plan
+        delete_query = "DELETE FROM nutrition_plans WHERE id = %s"
+        cursor.execute(delete_query, (plan_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": "Nutrition plan deleted successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting nutrition plan: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # Member nutrition plans endpoint
 @app.get("/api/member/nutrition/plans")
@@ -7148,10 +7315,9 @@ async def get_all_member_nutrition_plans(request: Request):
                 np.daily_fat,
                 np.notes,
                 np.created_at,
-                np.is_active as status,
+                np.is_active,
                 m.id as member_id,
-                m.first_name,
-                m.last_name,
+                m.name,
                 m.email
             FROM nutrition_plans np
             JOIN members m ON np.member_id = m.id
@@ -7170,16 +7336,16 @@ async def get_all_member_nutrition_plans(request: Request):
                 plan['created_at'] = plan['created_at'].isoformat()
             # Use created_at as updated_at since there's no updated_at column
             plan['updated_at'] = plan['created_at']
-            # Convert is_active to status string
-            plan['status'] = 'active' if plan['status'] else 'inactive'
+            # Convert boolean is_active to string status
+            plan['status'] = 'active' if plan['is_active'] else 'inactive'
+            del plan['is_active']  # Remove the original boolean field
             
             member_id = plan['member_id']
             if member_id not in members_plans:
                 members_plans[member_id] = {
                     'member': {
                         'id': member_id,
-                        'first_name': plan['first_name'],
-                        'last_name': plan['last_name'],
+                        'name': plan['name'],
                         'email': plan['email']
                     },
                     'plans': []
@@ -8994,6 +9160,97 @@ async def test_export():
     finally:
         if 'conn' in locals():
             conn.close()
+
+@app.get("/api/test-nutrition-tables")
+async def test_nutrition_tables():
+    """Test nutrition tables existence and structure"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Check if nutrition_plans table exists
+        cursor.execute("SHOW TABLES LIKE 'nutrition_plans'")
+        nutrition_plans_exists = cursor.fetchone()
+        
+        # Check if member_coach table exists
+        cursor.execute("SHOW TABLES LIKE 'member_coach'")
+        member_coach_exists = cursor.fetchone()
+        
+        # Check if members table exists
+        cursor.execute("SHOW TABLES LIKE 'members'")
+        members_exists = cursor.fetchone()
+        
+        # Get table structure if they exist
+        nutrition_plans_structure = None
+        if nutrition_plans_exists:
+            cursor.execute("DESCRIBE nutrition_plans")
+            nutrition_plans_structure = cursor.fetchall()
+        
+        member_coach_structure = None
+        if member_coach_exists:
+            cursor.execute("DESCRIBE member_coach")
+            member_coach_structure = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "tables": {
+                "nutrition_plans": {
+                    "exists": bool(nutrition_plans_exists),
+                    "structure": nutrition_plans_structure
+                },
+                "member_coach": {
+                    "exists": bool(member_coach_exists),
+                    "structure": member_coach_structure
+                },
+                "members": {
+                    "exists": bool(members_exists)
+                }
+            }
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/debug/members")
+async def debug_members():
+    """Debug endpoint to see all members and their coaches"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get all members with their coaches
+        query = """
+            SELECT 
+                m.id as member_id,
+                m.first_name,
+                m.last_name,
+                m.email as member_email,
+                c.id as coach_id,
+                c.name as coach_name,
+                c.email as coach_email
+            FROM members m
+            LEFT JOIN member_coach mc ON m.id = mc.member_id
+            LEFT JOIN coaches c ON mc.coach_id = c.id
+            ORDER BY m.id
+        """
+        
+        cursor.execute(query)
+        members = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "members": members,
+            "total_members": len(members)
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn

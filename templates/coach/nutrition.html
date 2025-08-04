@@ -198,11 +198,48 @@ window.addEventListener('load', function() {
             <form id="createPlanForm">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Member</label>
-                        <select name="member_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                            <option value="">Select Member</option>
-                            <!-- Members will be loaded here -->
-                        </select>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Member</label>
+                        
+                        <!-- Search and Filter Bar -->
+                        <div class="mb-4">
+                            <div class="relative">
+                                <input type="text" id="memberSearch" 
+                                       class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                       placeholder="Search members by name...">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+                                    <i class="fas fa-search text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Member Selection Cards -->
+                        <div id="memberSelectionCards" class="max-h-64 overflow-y-auto space-y-2">
+                            <!-- Member cards will be loaded here -->
+                        </div>
+                        
+                        <!-- Hidden input to store selected member -->
+                        <input type="hidden" name="member_id" id="selectedMemberId" required>
+                        
+                        <!-- Selected Member Display -->
+                        <div id="selectedMemberDisplay" class="hidden mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 id="selectedMemberName" class="font-medium text-gray-900"></h4>
+                                    <p id="selectedMemberEmail" class="text-sm text-gray-600"></p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button type="button" onclick="changeMemberSelection()" class="text-emerald-600 hover:text-emerald-800 text-sm font-medium">
+                                        <i class="fas fa-edit mr-1"></i>Change
+                                    </button>
+                                    <button type="button" onclick="clearMemberSelection()" class="text-gray-400 hover:text-gray-600">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div>
@@ -333,6 +370,65 @@ window.addEventListener('load', function() {
             <div id="coachComparisonContent">
                 <!-- Coach comparison data will be loaded here -->
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Nutrition Plan Modal -->
+<div id="editPlanModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Edit Nutrition Plan</h3>
+                <button onclick="closeModal('editPlanModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="editPlanForm" class="space-y-6">
+                <input type="hidden" id="editPlanId">
+                
+                <div>
+                    <label for="editPlanName" class="block text-sm font-medium text-gray-700 mb-2">Plan Name</label>
+                    <input type="text" id="editPlanName" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="editDailyCalories" class="block text-sm font-medium text-gray-700 mb-2">Daily Calories</label>
+                        <input type="number" id="editDailyCalories" required min="1000" max="5000" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label for="editDailyProtein" class="block text-sm font-medium text-gray-700 mb-2">Daily Protein (g)</label>
+                        <input type="number" id="editDailyProtein" required min="20" max="300" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="editDailyCarbs" class="block text-sm font-medium text-gray-700 mb-2">Daily Carbs (g)</label>
+                        <input type="number" id="editDailyCarbs" required min="50" max="500" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label for="editDailyFat" class="block text-sm font-medium text-gray-700 mb-2">Daily Fat (g)</label>
+                        <input type="number" id="editDailyFat" required min="20" max="200" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="editPlanNotes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                    <textarea id="editPlanNotes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                </div>
+                
+                <div class="flex items-center justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeModal('editPlanModal')" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium">
+                        Update Plan
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -469,9 +565,7 @@ function updateMembersTable(members) {
     }
     
     tbody.innerHTML = members.map(member => {
-        const firstName = member.first_name || '';
-        const lastName = member.last_name || '';
-        const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Member';
+        const fullName = member.name || 'Unknown Member';
         
         return `
             <tr class="hover:bg-gray-50">
@@ -507,9 +601,7 @@ function updateMembersTable(members) {
                     <button onclick="viewMemberPlans(${member.id})" class="text-purple-600 hover:text-purple-900 mr-3" title="View Nutrition Plans">
                         <i class="fas fa-clipboard-list"></i>
                     </button>
-                    <button onclick="addNutritionFeedback(${member.id})" class="text-blue-600 hover:text-blue-900" title="Add Feedback">
-                        <i class="fas fa-comment"></i>
-                    </button>
+
                 </td>
             </tr>
         `;
@@ -534,9 +626,7 @@ function updateRecentEntries(entries) {
     const recentEntries = entries.slice(0, 5);
     
     container.innerHTML = recentEntries.map(entry => {
-        const firstName = entry.first_name || '';
-        const lastName = entry.last_name || '';
-        const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Member';
+        const fullName = entry.name || 'Unknown Member';
         
         return `
             <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200">
@@ -671,6 +761,12 @@ async function viewMemberPlans(memberId) {
         const data = await response.json();
         
         if (data.success) {
+            // Add validation for required data
+            if (!data.member) {
+                console.error('API response missing member data');
+                showNotification('Error: Invalid response from server', 'error');
+                return;
+            }
             showMemberPlans(data);
         } else {
             showNotification(data.detail || 'Failed to load nutrition plans', 'error');
@@ -764,6 +860,13 @@ function showMemberPlans(data) {
     const modal = document.getElementById('memberPlansModal');
     const content = document.getElementById('memberPlansContent');
     
+    // Add error handling for missing member data
+    if (!data.member) {
+        console.error('Member data is missing from API response');
+        showNotification('Error: Member data not found', 'error');
+        return;
+    }
+    
     const member = data.member;
     const plans = data.plans || [];
     
@@ -774,7 +877,7 @@ function showMemberPlans(data) {
                     <i class="fas fa-clipboard-list text-xl"></i>
                 </div>
                 <div>
-                    <h4 class="text-lg font-semibold text-gray-900">${member.first_name} ${member.last_name}</h4>
+                    <h4 class="text-lg font-semibold text-gray-900">${member.name}</h4>
                     <p class="text-sm text-gray-600">Nutrition Plans</p>
                 </div>
             </div>
@@ -838,9 +941,6 @@ function showMemberPlans(data) {
                                             Last updated: ${new Date(plan.updated_at).toLocaleDateString()}
                                         </div>
                                         <div class="flex items-center space-x-2">
-                                            <button onclick="compareMemberWithPlan(${plan.id}, ${memberData.member.id}, ${JSON.stringify(plan).replace(/"/g, '&quot;')})" class="text-emerald-600 hover:text-emerald-800 text-sm font-medium">
-                                                <i class="fas fa-chart-line mr-1"></i>Compare Today
-                                            </button>
                                             <button onclick="editNutritionPlan(${plan.id})" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                                                 <i class="fas fa-edit mr-1"></i>Edit
                                             </button>
@@ -896,7 +996,7 @@ function showAllNutritionPlans(data) {
                                         <i class="fas fa-user text-lg"></i>
                                     </div>
                                     <div>
-                                        <h5 class="text-lg font-semibold text-gray-900">${memberData.member.first_name} ${memberData.member.last_name}</h5>
+                                        <h5 class="text-lg font-semibold text-gray-900">${memberData.member.name}</h5>
                                         <p class="text-sm text-gray-600">${memberData.member.email}</p>
                                     </div>
                                 </div>
@@ -982,30 +1082,49 @@ function addNutritionFeedback(memberId) {
 }
 
 // Edit nutrition plan
-function editNutritionPlan(planId) {
-    // Implementation for editing nutrition plan
-    console.log('Edit nutrition plan:', planId);
-    showNotification('Edit functionality coming soon!', 'info');
-}
-
-// Compare member with plan
-async function compareMemberWithPlan(planId, memberId, planData) {
+async function editNutritionPlan(planId) {
     try {
-        // Parse the plan data
-        const plan = typeof planData === 'string' ? JSON.parse(planData) : planData;
-        
-        // Get member's today nutrition data
-        const response = await fetch(`/api/coach/nutrition/member/${memberId}/today`);
+        // Get plan details
+        const response = await fetch(`/api/coach/nutrition/plan/${planId}`);
         const data = await response.json();
         
         if (data.success) {
-            showCoachComparisonModal(plan, data.member, data.today, data.meals);
+            showEditPlanModal(data.plan);
         } else {
-            showNotification(data.detail || 'Failed to load member\'s today nutrition data', 'error');
+            showNotification(data.detail || 'Failed to load plan details', 'error');
         }
     } catch (error) {
-        console.error('Error comparing member with plan:', error);
-        showNotification('Error loading comparison data', 'error');
+        console.error('Error loading plan details:', error);
+        showNotification('Error loading plan details', 'error');
+    }
+}
+
+// Delete nutrition plan
+async function deleteNutritionPlan(planId) {
+    if (!confirm('Are you sure you want to delete this nutrition plan? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/coach/nutrition/plan/${planId}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Nutrition plan deleted successfully', 'success');
+            // Refresh the current view
+            if (currentMemberId) {
+                viewMemberPlans(currentMemberId);
+            } else {
+                loadAllNutritionPlans();
+            }
+        } else {
+            showNotification(data.detail || 'Failed to delete nutrition plan', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting nutrition plan:', error);
+        showNotification('Error deleting nutrition plan', 'error');
     }
 }
 
@@ -1262,6 +1381,71 @@ function generateCoachRecommendations(plan, todayData) {
     return recommendations.map(rec => `<p class="text-sm text-blue-700">${rec}</p>`).join('');
 }
 
+// Show edit nutrition plan modal
+function showEditPlanModal(plan) {
+    const modal = document.getElementById('editPlanModal');
+    
+    // Populate form with current plan data
+    document.getElementById('editPlanId').value = plan.id;
+    document.getElementById('editPlanName').value = plan.plan_name;
+    document.getElementById('editDailyCalories').value = plan.daily_calories;
+    document.getElementById('editDailyProtein').value = plan.daily_protein;
+    document.getElementById('editDailyCarbs').value = plan.daily_carbs;
+    document.getElementById('editDailyFat').value = plan.daily_fat;
+    document.getElementById('editPlanNotes').value = plan.notes || '';
+    
+    modal.classList.remove('hidden');
+}
+
+// Handle edit plan form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const editPlanForm = document.getElementById('editPlanForm');
+    if (editPlanForm) {
+        editPlanForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const planId = document.getElementById('editPlanId').value;
+            const planData = {
+                plan_name: document.getElementById('editPlanName').value,
+                daily_calories: parseInt(document.getElementById('editDailyCalories').value),
+                daily_protein: parseInt(document.getElementById('editDailyProtein').value),
+                daily_carbs: parseInt(document.getElementById('editDailyCarbs').value),
+                daily_fat: parseInt(document.getElementById('editDailyFat').value),
+                notes: document.getElementById('editPlanNotes').value
+            };
+            
+            try {
+                const response = await fetch(`/api/coach/nutrition/plan/${planId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(planData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Nutrition plan updated successfully', 'success');
+                    closeModal('editPlanModal');
+                    
+                    // Refresh the current view
+                    if (currentMemberId) {
+                        viewMemberPlans(currentMemberId);
+                    } else {
+                        loadAllNutritionPlans();
+                    }
+                } else {
+                    showNotification(data.detail || 'Failed to update nutrition plan', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating nutrition plan:', error);
+                showNotification('Error updating nutrition plan', 'error');
+            }
+        });
+    }
+});
+
 // Delete nutrition plan
 async function deleteNutritionPlan(planId) {
     if (!confirm('Are you sure you want to delete this nutrition plan?')) {
@@ -1302,28 +1486,181 @@ function getCurrentMemberId() {
 function openCreatePlanModal() {
     document.getElementById('createPlanModal').classList.remove('hidden');
     loadMembersForPlan();
+    resetMemberSelection();
+}
+
+// Reset member selection when modal opens
+function resetMemberSelection() {
+    document.getElementById('selectedMemberId').value = '';
+    document.getElementById('selectedMemberDisplay').classList.add('hidden');
+    document.getElementById('memberSelectionCards').classList.remove('hidden');
+    document.getElementById('memberSearch').classList.remove('hidden');
+    document.getElementById('memberSearch').value = '';
 }
 
 function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
 }
 
+// Store all members for selection
+let allMembers = [];
+
 // Load members for plan creation
 async function loadMembersForPlan() {
+    const container = document.getElementById('memberSelectionCards');
+    
+    // Show loading state
+    container.innerHTML = `
+        <div class="text-center py-8">
+            <div class="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-gray-600">Loading members...</p>
+        </div>
+    `;
+    
     try {
         const response = await fetch('/api/coach/nutrition/members');
         const data = await response.json();
         
         if (data.success) {
-            const select = document.querySelector('select[name="member_id"]');
-            select.innerHTML = '<option value="">Select Member</option>' + 
-                data.members.map(member => 
-                    `<option value="${member.id}">${member.first_name} ${member.last_name}</option>`
-                ).join('');
+            allMembers = data.members;
+            renderMemberCards(allMembers);
+            setupMemberSearch();
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-8 text-red-500">
+                    <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                    <p>Failed to load members</p>
+                </div>
+            `;
         }
     } catch (error) {
         console.error('Error loading members for plan:', error);
+        container.innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                <p>Error loading members</p>
+            </div>
+        `;
     }
+}
+
+// Render member selection cards
+function renderMemberCards(members) {
+    const container = document.getElementById('memberSelectionCards');
+    
+    if (members.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-users text-gray-400 text-2xl"></i>
+                </div>
+                <h5 class="text-lg font-medium text-gray-900 mb-2">No Members Found</h5>
+                <p class="text-gray-600">No members match your search criteria.</p>
+                <button onclick="renderMemberCards(allMembers)" class="mt-3 text-emerald-600 hover:text-emerald-800 text-sm font-medium">
+                    <i class="fas fa-refresh mr-1"></i>Show All Members
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = members.map(member => `
+        <div class="member-card cursor-pointer p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-all duration-200 hover:shadow-md" 
+             data-member-id="${member.id}" 
+             onclick="selectMember(${member.id}, '${member.name}', '${member.email}')">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 text-white flex items-center justify-center shadow-sm">
+                    <span class="font-medium text-sm">${member.name.charAt(0)}</span>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-medium text-gray-900">${member.name}</h4>
+                    <p class="text-sm text-gray-600">${member.email}</p>
+                    <div class="flex items-center space-x-2 mt-1">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <i class="fas fa-user mr-1"></i>Member
+                        </span>
+                    </div>
+                </div>
+                <div class="text-emerald-500 opacity-0 transition-opacity duration-200">
+                    <i class="fas fa-check text-lg"></i>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Setup member search functionality
+function setupMemberSearch() {
+    const searchInput = document.getElementById('memberSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const filteredMembers = allMembers.filter(member => {
+                const name = member.name.toLowerCase();
+                const email = member.email.toLowerCase();
+                return name.includes(searchTerm) || email.includes(searchTerm);
+            });
+            renderMemberCards(filteredMembers);
+        });
+    }
+}
+
+// Select a member
+function selectMember(memberId, name, email) {
+    // Update hidden input
+    document.getElementById('selectedMemberId').value = memberId;
+    
+    // Update selected member display
+    document.getElementById('selectedMemberName').textContent = name;
+    document.getElementById('selectedMemberEmail').textContent = email;
+    document.getElementById('selectedMemberDisplay').classList.remove('hidden');
+    
+    // Update card styling
+    document.querySelectorAll('.member-card').forEach(card => {
+        card.classList.remove('border-emerald-500', 'bg-emerald-100');
+        card.querySelector('.text-emerald-500').classList.add('opacity-0');
+    });
+    
+    const selectedCard = document.querySelector(`[data-member-id="${memberId}"]`);
+    if (selectedCard) {
+        selectedCard.classList.add('border-emerald-500', 'bg-emerald-100');
+        selectedCard.querySelector('.text-emerald-500').classList.remove('opacity-0');
+    }
+    
+    // Hide member cards after selection
+    document.getElementById('memberSelectionCards').classList.add('hidden');
+    document.getElementById('memberSearch').classList.add('hidden');
+}
+
+// Clear member selection
+function clearMemberSelection() {
+    document.getElementById('selectedMemberId').value = '';
+    document.getElementById('selectedMemberDisplay').classList.add('hidden');
+    document.getElementById('memberSelectionCards').classList.remove('hidden');
+    document.getElementById('memberSearch').classList.remove('hidden');
+    document.getElementById('memberSearch').value = '';
+    
+    // Reset card styling
+    document.querySelectorAll('.member-card').forEach(card => {
+        card.classList.remove('border-emerald-500', 'bg-emerald-100');
+        card.querySelector('.text-emerald-500').classList.add('opacity-0');
+    });
+    
+    renderMemberCards(allMembers);
+}
+
+// Change member selection (show cards again)
+function changeMemberSelection() {
+    document.getElementById('selectedMemberDisplay').classList.add('hidden');
+    document.getElementById('memberSelectionCards').classList.remove('hidden');
+    document.getElementById('memberSearch').classList.remove('hidden');
+    document.getElementById('memberSearch').focus();
+    
+    // Reset card styling
+    document.querySelectorAll('.member-card').forEach(card => {
+        card.classList.remove('border-emerald-500', 'bg-emerald-100');
+        card.querySelector('.text-emerald-500').classList.add('opacity-0');
+    });
 }
 
 // Handle plan creation form
