@@ -6,8 +6,18 @@
  <!-- Welcome Section -->
  <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
  <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="flex justify-between items-center">
+ <div>
  <h3 class="text-lg leading-6 font-medium text-gray-900">All Sessions</h3>
  <p class="mt-1 text-sm text-gray-500">View and manage all training sessions</p>
+ </div>
+ <div class="flex items-center space-x-2">
+ <button onclick="exportSessions('xlsx')" 
+ class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
+ <i class="fas fa-file-excel mr-2"></i>Export Excel
+ </button>
+ </div>
+ </div>
  </div>
  </div>
 
@@ -316,5 +326,32 @@
  loadMembers();
  loadSessionsData();
  });
+
+ // Export sessions function
+ async function exportSessions(format) {
+ try {
+ const url = `/api/export/sessions/coach?format=${format}`;
+ const response = await fetch(url);
+ 
+ if (!response.ok) {
+ throw new Error('Failed to export sessions');
+ }
+ 
+ // Create a temporary link to download the file
+ const blob = await response.blob();
+ const url2 = window.URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url2;
+ a.download = `coach_sessions_${new Date().toISOString().split('T')[0]}.${format}`;
+ document.body.appendChild(a);
+ a.click();
+ window.URL.revokeObjectURL(url2);
+ document.body.removeChild(a);
+ 
+ } catch (error) {
+ console.error('Error exporting sessions:', error);
+ alert('Failed to export sessions. Please try again.');
+ }
+ }
 </script>
 {% endblock %} 

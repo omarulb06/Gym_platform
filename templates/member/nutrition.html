@@ -164,13 +164,19 @@ class CustomChart {
             <p class="text-gray-600 text-sm sm:text-base">Free AI-powered nutrition analysis</p>
         </div>
     </div>
-    <div class="hidden sm:flex items-center space-x-2">
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-green-400 to-emerald-400 text-white shadow-sm">
-            <i class="fas fa-crown mr-1"></i>VIP Feature
-        </span>
-        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <i class="fas fa-free-code-camp mr-1"></i>100% Free
-        </span>
+    <div class="flex items-center space-x-2">
+        <button onclick="exportNutritionData('xlsx')" 
+        class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
+        <i class="fas fa-file-excel mr-2"></i>Export Excel
+        </button>
+        <div class="hidden sm:flex items-center space-x-2">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-green-400 to-emerald-400 text-white shadow-sm">
+                <i class="fas fa-crown mr-1"></i>VIP Feature
+            </span>
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <i class="fas fa-free-code-camp mr-1"></i>100% Free
+            </span>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -223,7 +229,12 @@ class CustomChart {
                 <i class="fas fa-chart-pie text-emerald-600 mr-2"></i>
                 Today's Nutrition
             </h2>
-            <span class="text-sm text-gray-500" id="currentDate"></span>
+            <div class="flex items-center space-x-2">
+                <button onclick="viewMyNutritionPlans()" class="px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all text-sm">
+                    <i class="fas fa-clipboard-list mr-2"></i>View My Plans
+                </button>
+                <span class="text-sm text-gray-500" id="currentDate"></span>
+            </div>
         </div>
 
         <!-- Macronutrient Progress -->
@@ -300,6 +311,62 @@ class CustomChart {
                 <div class="flex-1">
                     <h4 class="text-sm font-medium text-emerald-800 mb-1">Smart Nutrition Coach</h4>
                     <p class="text-sm text-emerald-700" id="aiFeedback">Start logging your meals to get personalized nutrition advice!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Meal Planner -->
+    <div class="glass rounded-xl p-6 border border-gray-100">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-robot text-emerald-600 mr-2"></i>
+                AI Meal Planner
+            </h2>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                    <i class="fas fa-crown mr-1"></i>Premium
+                </span>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Generate Meal Plan -->
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-100">
+                <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 text-purple-600 mb-4">
+                    <i class="fas fa-calendar-alt text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Personalized Meal Plan</h3>
+                <p class="text-gray-600 text-sm mb-4">Get a complete 7-day meal plan tailored to your goals and preferences</p>
+                <button onclick="openAIMealPlanModal()" class="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all">
+                    <i class="fas fa-magic mr-2"></i>Generate Plan
+                </button>
+            </div>
+
+            <!-- Generate Custom Meal -->
+            <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-6 border border-emerald-100">
+                <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600 mb-4">
+                    <i class="fas fa-utensils text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Custom Meal Ideas</h3>
+                <p class="text-gray-600 text-sm mb-4">Get AI-powered meal suggestions based on your preferences</p>
+                <button onclick="openAICustomMealModal()" class="w-full px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all">
+                    <i class="fas fa-lightbulb mr-2"></i>Get Ideas
+                </button>
+            </div>
+        </div>
+
+        <!-- AI Features Info -->
+        <div class="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+            <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600">
+                        <i class="fas fa-info text-sm"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-medium text-blue-800 mb-1">AI-Powered Nutrition</h4>
+                    <p class="text-sm text-blue-700">Our advanced AI creates personalized meal plans and suggestions based on your goals, dietary restrictions, and preferences. Available for Premium and VIP members.</p>
                 </div>
             </div>
         </div>
@@ -588,6 +655,287 @@ class CustomChart {
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- My Nutrition Plans Modal -->
+<div id="myPlansModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">My Nutrition Plans</h3>
+                <button onclick="closeModal('myPlansModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="myPlansContent">
+                <!-- Member's nutrition plans will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Nutrition Comparison Modal -->
+<div id="comparisonModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Plan vs Today Comparison</h3>
+                <button onclick="closeModal('comparisonModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="comparisonContent">
+                <!-- Comparison data will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Meal Plan Modal -->
+<div id="aiMealPlanModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">AI Meal Plan Generator</h3>
+                <button onclick="closeModal('aiMealPlanModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="aiMealPlanForm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Plan Information -->
+                    <div class="space-y-4">
+                        <h4 class="text-md font-semibold text-gray-900 mb-3">Plan Information</h4>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Plan Name</label>
+                            <input type="text" name="plan_name" required 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                   placeholder="e.g., My Weight Loss Plan, Summer Fitness Plan">
+                            <p class="text-xs text-gray-500 mt-1">Give your meal plan a memorable name</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                                <input type="number" name="age" required min="13" max="120"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                       placeholder="25">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                                <select name="gender" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option value="">Select Gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Weight (kg)</label>
+                                <input type="number" name="weight" required step="0.1" min="30" max="300"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                       placeholder="70">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Height (cm)</label>
+                                <input type="number" name="height" required min="100" max="250"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                       placeholder="170">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Activity Level</label>
+                            <select name="activity_level" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option value="">Select Activity Level</option>
+                                <option value="sedentary">Sedentary (little or no exercise)</option>
+                                <option value="lightly_active">Lightly Active (light exercise 1-3 days/week)</option>
+                                <option value="moderately_active">Moderately Active (moderate exercise 3-5 days/week)</option>
+                                <option value="very_active">Very Active (hard exercise 6-7 days/week)</option>
+                                <option value="extremely_active">Extremely Active (very hard exercise, physical job)</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Goal</label>
+                            <select name="goal" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <option value="">Select Goal</option>
+                                <option value="weight_loss">Weight Loss</option>
+                                <option value="muscle_gain">Muscle Gain</option>
+                                <option value="maintenance">Maintenance</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Preferences -->
+                    <div class="space-y-4">
+                        <h4 class="text-md font-semibold text-gray-900 mb-3">Preferences</h4>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Dietary Restrictions</label>
+                            <textarea name="dietary_restrictions" rows="3"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                      placeholder="e.g., vegetarian, gluten-free, dairy-free..."></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Allergies</label>
+                            <textarea name="allergies" rows="2"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                      placeholder="e.g., nuts, shellfish, eggs..."></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Food Preferences</label>
+                            <textarea name="preferences" rows="3"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                      placeholder="e.g., prefer Mediterranean cuisine, love spicy food, avoid processed foods..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-3 pt-6">
+                    <button type="button" onclick="closeModal('aiMealPlanModal')" 
+                            class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" id="generateMealPlanBtn"
+                            class="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all">
+                        <i class="fas fa-magic mr-2"></i>Generate Meal Plan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- AI Custom Meal Modal -->
+<div id="aiCustomMealModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Custom Meal Ideas</h3>
+                <button onclick="closeModal('aiCustomMealModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="aiCustomMealForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Meal Type</label>
+                        <select name="meal_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Select Meal Type</option>
+                            <option value="breakfast">Breakfast</option>
+                            <option value="lunch">Lunch</option>
+                            <option value="dinner">Dinner</option>
+                            <option value="snack">Snack</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Cuisine Style</label>
+                        <select name="cuisine_style" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Any Cuisine</option>
+                            <option value="mediterranean">Mediterranean</option>
+                            <option value="asian">Asian</option>
+                            <option value="italian">Italian</option>
+                            <option value="mexican">Mexican</option>
+                            <option value="indian">Indian</option>
+                            <option value="american">American</option>
+                            <option value="vegetarian">Vegetarian</option>
+                            <option value="vegan">Vegan</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Calorie Range</label>
+                        <select name="calorie_range" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Select Calorie Range</option>
+                            <option value="low">Low (200-400 calories)</option>
+                            <option value="medium">Medium (400-600 calories)</option>
+                            <option value="high">High (600-800 calories)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Dietary Preferences</label>
+                        <textarea name="dietary_preferences" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                  placeholder="e.g., high protein, low carb, gluten-free..."></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ingredients to Include</label>
+                        <textarea name="include_ingredients" rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                  placeholder="e.g., chicken, quinoa, spinach..."></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ingredients to Avoid</label>
+                        <textarea name="exclude_ingredients" rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                  placeholder="e.g., dairy, nuts, shellfish..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-3 pt-6">
+                    <button type="button" onclick="closeModal('aiCustomMealModal')" 
+                            class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" id="generateCustomMealBtn"
+                            class="flex-1 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all">
+                        <i class="fas fa-lightbulb mr-2"></i>Generate Ideas
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- AI Meal Plan Results Modal -->
+<div id="aiMealPlanResultsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Your Personalized Meal Plan</h3>
+                <button onclick="closeModal('aiMealPlanResultsModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="aiMealPlanResults">
+                <!-- AI meal plan results will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Custom Meal Results Modal -->
+<div id="aiCustomMealResultsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Custom Meal Ideas</h3>
+                <button onclick="closeModal('aiCustomMealResultsModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="aiCustomMealResults">
+                <!-- AI custom meal results will be loaded here -->
+            </div>
         </div>
     </div>
 </div>
@@ -1098,6 +1446,391 @@ function openManualEntry() {
 
 function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
+}
+
+// View my nutrition plans
+async function viewMyNutritionPlans() {
+    try {
+        const response = await fetch('/api/member/nutrition/plans');
+        const data = await response.json();
+        
+        if (data.success) {
+            showMyNutritionPlans(data);
+        } else {
+            showNotification(data.detail || 'Failed to load nutrition plans', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading nutrition plans:', error);
+        showNotification('Error loading nutrition plans', 'error');
+    }
+}
+
+// Show my nutrition plans modal
+function showMyNutritionPlans(data) {
+    const modal = document.getElementById('myPlansModal');
+    const content = document.getElementById('myPlansContent');
+    
+    const plans = data.plans || [];
+    
+    content.innerHTML = `
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                    <i class="fas fa-clipboard-list text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900">My Nutrition Plans</h4>
+                    <p class="text-sm text-gray-600">Personalized nutrition plans from your coach</p>
+                </div>
+            </div>
+            
+            ${plans.length === 0 ? `
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-clipboard-list text-gray-400 text-2xl"></i>
+                    </div>
+                    <h5 class="text-lg font-medium text-gray-900 mb-2">No Nutrition Plans Yet</h5>
+                    <p class="text-gray-600">Your coach hasn't created any nutrition plans for you yet.</p>
+                    <p class="text-sm text-gray-500 mt-2">Contact your coach to get a personalized nutrition plan!</p>
+                </div>
+            ` : `
+                <div class="space-y-4">
+                    ${plans.map(plan => `
+                        <div class="border border-gray-200 rounded-lg p-6 bg-gradient-to-r from-purple-50 to-pink-50">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h5 class="text-lg font-semibold text-gray-900">${plan.plan_name}</h5>
+                                    <p class="text-sm text-gray-600">Created: ${new Date(plan.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                                        plan.status === 'active' ? 'bg-green-100 text-green-800' :
+                                        plan.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }">
+                                        ${plan.status.charAt(0).toUpperCase() + plan.status.slice(1)}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-purple-600">${plan.daily_calories}</div>
+                                    <div class="text-sm text-gray-600">Daily Calories</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-blue-600">${plan.daily_protein}g</div>
+                                    <div class="text-sm text-gray-600">Daily Protein</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-green-600">${plan.daily_carbs}g</div>
+                                    <div class="text-sm text-gray-600">Daily Carbs</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-orange-600">${plan.daily_fat}g</div>
+                                    <div class="text-sm text-gray-600">Daily Fat</div>
+                                </div>
+                            </div>
+                            
+                            ${plan.notes ? `
+                                <div class="mt-4 p-3 bg-white rounded-lg border border-gray-200">
+                                    <h6 class="text-sm font-medium text-gray-900 mb-2">Coach's Notes:</h6>
+                                    <p class="text-sm text-gray-700">${plan.notes}</p>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                                <div class="text-sm text-gray-600">
+                                    Last updated: ${new Date(plan.updated_at).toLocaleDateString()}
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button onclick="deleteNutritionPlan(${plan.id}, '${plan.plan_name}')" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                        <i class="fas fa-trash mr-1"></i>Delete Plan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `}
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
+
+// Compare plan with today's nutrition
+async function compareWithToday(planId, planData) {
+    try {
+        // Parse the plan data
+        const plan = typeof planData === 'string' ? JSON.parse(planData) : planData;
+        
+        // Get today's nutrition data
+        const response = await fetch('/api/member/nutrition/today');
+        const data = await response.json();
+        
+        if (data.success) {
+            showComparisonModal(plan, data.today, data.meals);
+        } else {
+            showNotification(data.detail || 'Failed to load today\'s nutrition data', 'error');
+        }
+    } catch (error) {
+        console.error('Error comparing with today:', error);
+        showNotification('Error loading comparison data', 'error');
+    }
+}
+
+// Show comparison modal
+function showComparisonModal(plan, todayData, mealsData) {
+    const modal = document.getElementById('comparisonModal');
+    const content = document.getElementById('comparisonContent');
+    
+    // Calculate percentages and differences
+    const caloriesPercent = Math.round((todayData.total_calories / plan.daily_calories) * 100);
+    const proteinPercent = Math.round((todayData.total_protein / plan.daily_protein) * 100);
+    const carbsPercent = Math.round((todayData.total_carbs / plan.daily_carbs) * 100);
+    const fatPercent = Math.round((todayData.total_fat / plan.daily_fat) * 100);
+    
+    const caloriesDiff = todayData.total_calories - plan.daily_calories;
+    const proteinDiff = todayData.total_protein - plan.daily_protein;
+    const carbsDiff = todayData.total_carbs - plan.daily_carbs;
+    const fatDiff = todayData.total_fat - plan.daily_fat;
+    
+    content.innerHTML = `
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900">${plan.plan_name}</h4>
+                    <p class="text-sm text-gray-600">Plan vs Today's Actual Intake</p>
+                </div>
+            </div>
+            
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-sm font-medium text-purple-800">Calories</h5>
+                        <span class="text-xs px-2 py-1 rounded-full ${
+                            caloriesPercent >= 90 && caloriesPercent <= 110 ? 'bg-green-100 text-green-800' :
+                            caloriesPercent < 90 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                        }">
+                            ${caloriesPercent}%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-purple-600">${Math.round(todayData.total_calories)}</div>
+                    <div class="text-sm text-purple-600">/ ${plan.daily_calories} cal</div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        ${caloriesDiff > 0 ? '+' : ''}${Math.round(caloriesDiff)} cal ${caloriesDiff > 0 ? 'over' : 'under'}
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-sm font-medium text-blue-800">Protein</h5>
+                        <span class="text-xs px-2 py-1 rounded-full ${
+                            proteinPercent >= 90 && proteinPercent <= 110 ? 'bg-green-100 text-green-800' :
+                            proteinPercent < 90 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                        }">
+                            ${proteinPercent}%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-blue-600">${Math.round(todayData.total_protein)}g</div>
+                    <div class="text-sm text-blue-600">/ ${plan.daily_protein}g</div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        ${proteinDiff > 0 ? '+' : ''}${Math.round(proteinDiff)}g ${proteinDiff > 0 ? 'over' : 'under'}
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-sm font-medium text-green-800">Carbs</h5>
+                        <span class="text-xs px-2 py-1 rounded-full ${
+                            carbsPercent >= 90 && carbsPercent <= 110 ? 'bg-green-100 text-green-800' :
+                            carbsPercent < 90 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                        }">
+                            ${carbsPercent}%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-green-600">${Math.round(todayData.total_carbs)}g</div>
+                    <div class="text-sm text-green-600">/ ${plan.daily_carbs}g</div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        ${carbsDiff > 0 ? '+' : ''}${Math.round(carbsDiff)}g ${carbsDiff > 0 ? 'over' : 'under'}
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-sm font-medium text-orange-800">Fat</h5>
+                        <span class="text-xs px-2 py-1 rounded-full ${
+                            fatPercent >= 90 && fatPercent <= 110 ? 'bg-green-100 text-green-800' :
+                            fatPercent < 90 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                        }">
+                            ${fatPercent}%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-orange-600">${Math.round(todayData.total_fat)}g</div>
+                    <div class="text-sm text-orange-600">/ ${plan.daily_fat}g</div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        ${fatDiff > 0 ? '+' : ''}${Math.round(fatDiff)}g ${fatDiff > 0 ? 'over' : 'under'}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Progress Bars -->
+            <div class="space-y-4">
+                <h5 class="text-lg font-semibold text-gray-900">Progress Towards Plan Goals</h5>
+                
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium">Calories</span>
+                            <span>${Math.round(todayData.total_calories)} / ${plan.daily_calories}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 ${
+                                caloriesPercent >= 100 ? 'bg-green-500' : 
+                                caloriesPercent >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                            }" style="width: ${Math.min(caloriesPercent, 100)}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium">Protein</span>
+                            <span>${Math.round(todayData.total_protein)}g / ${plan.daily_protein}g</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 ${
+                                proteinPercent >= 100 ? 'bg-green-500' : 
+                                proteinPercent >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                            }" style="width: ${Math.min(proteinPercent, 100)}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium">Carbs</span>
+                            <span>${Math.round(todayData.total_carbs)}g / ${plan.daily_carbs}g</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 ${
+                                carbsPercent >= 100 ? 'bg-green-500' : 
+                                carbsPercent >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                            }" style="width: ${Math.min(carbsPercent, 100)}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium">Fat</span>
+                            <span>${Math.round(todayData.total_fat)}g / ${plan.daily_fat}g</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 ${
+                                fatPercent >= 100 ? 'bg-green-500' : 
+                                fatPercent >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                            }" style="width: ${Math.min(fatPercent, 100)}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Today's Meals Breakdown -->
+            <div class="space-y-4">
+                <h5 class="text-lg font-semibold text-gray-900">Today's Meals Breakdown</h5>
+                
+                ${mealsData.length === 0 ? `
+                    <div class="text-center py-6 bg-gray-50 rounded-lg">
+                        <i class="fas fa-utensils text-gray-400 text-2xl mb-2"></i>
+                        <p class="text-gray-600">No meals logged today yet</p>
+                        <p class="text-sm text-gray-500">Start logging your meals to see the breakdown</p>
+                    </div>
+                ` : `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        ${mealsData.map(meal => `
+                            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h6 class="font-medium text-gray-900">${meal.meal_type}</h6>
+                                    <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                                        ${meal.entries_count} items
+                                    </span>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Calories:</span>
+                                        <span class="font-medium">${Math.round(meal.total_calories)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Protein:</span>
+                                        <span class="font-medium">${Math.round(meal.total_protein)}g</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Carbs:</span>
+                                        <span class="font-medium">${Math.round(meal.total_carbs)}g</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Fat:</span>
+                                        <span class="font-medium">${Math.round(meal.total_fat)}g</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            </div>
+            
+            <!-- Recommendations -->
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-4 border border-emerald-200">
+                <h5 class="text-lg font-semibold text-emerald-800 mb-3">Smart Recommendations</h5>
+                <div class="space-y-2">
+                    ${generateRecommendations(plan, todayData)}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
+
+// Generate smart recommendations based on comparison
+function generateRecommendations(plan, todayData) {
+    const recommendations = [];
+    
+    const caloriesPercent = (todayData.total_calories / plan.daily_calories) * 100;
+    const proteinPercent = (todayData.total_protein / plan.daily_protein) * 100;
+    const carbsPercent = (todayData.total_carbs / plan.daily_carbs) * 100;
+    const fatPercent = (todayData.total_fat / plan.daily_fat) * 100;
+    
+    if (caloriesPercent < 80) {
+        recommendations.push('🍽️ <strong>Add more calories:</strong> Consider having a healthy snack or increasing portion sizes.');
+    } else if (caloriesPercent > 120) {
+        recommendations.push('⚖️ <strong>Reduce calorie intake:</strong> Try smaller portions or choose lower-calorie options.');
+    }
+    
+    if (proteinPercent < 80) {
+        recommendations.push('🥩 <strong>Increase protein:</strong> Add lean meats, fish, eggs, or plant-based protein sources.');
+    }
+    
+    if (carbsPercent < 80) {
+        recommendations.push('🍞 <strong>Add more carbs:</strong> Include whole grains, fruits, or starchy vegetables.');
+    } else if (carbsPercent > 120) {
+        recommendations.push('🌾 <strong>Reduce carbs:</strong> Consider replacing some carbs with protein or healthy fats.');
+    }
+    
+    if (fatPercent < 80) {
+        recommendations.push('🥑 <strong>Add healthy fats:</strong> Include nuts, avocados, or olive oil in your meals.');
+    } else if (fatPercent > 120) {
+        recommendations.push('💧 <strong>Reduce fat intake:</strong> Choose leaner protein sources and limit added fats.');
+    }
+    
+    if (recommendations.length === 0) {
+        recommendations.push('🎉 <strong>Great job!</strong> You\'re staying close to your nutrition plan goals.');
+    }
+    
+    return recommendations.map(rec => `<p class="text-sm text-emerald-700">${rec}</p>`).join('');
 }
 
 // Photo analysis form
@@ -1782,482 +2515,6 @@ function checkChartHealth() {
         console.log('- chart instance properties:', Object.keys(window.weeklyChart));
     }
 }
-</script>
-<!-- AI Meal Planning Section -->
-<div class="bg-white rounded-lg shadow-md p-6 mb-6">
-    <h3 class="text-xl font-semibold text-gray-800 mb-4">🤖 AI Meal Planning</h3>
-    
-    <!-- AI Features Status -->
-    <div id="ai-status" class="mb-4 p-3 rounded-lg bg-gray-50">
-        <div class="flex items-center">
-            <div id="ai-status-indicator" class="w-3 h-3 rounded-full bg-yellow-400 mr-2"></div>
-            <span id="ai-status-text" class="text-sm text-gray-600">Checking AI availability...</span>
-        </div>
-    </div>
-    
-    <!-- AI Meal Plan Generator -->
-    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6">
-            <h4 class="text-lg font-medium text-gray-800 mb-3">📋 Generate AI Meal Plan</h4>
-            <form id="meal-plan-form" class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Age</label>
-                        <input type="number" id="age" name="age" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                        <select id="gender" name="gender" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                            <option value="">Select</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
-                        <input type="number" id="weight" name="weight" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
-                        <input type="number" id="height" name="height" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Activity Level</label>
-                    <select id="activity-level" name="activity_level" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                        <option value="">Select</option>
-                        <option value="sedentary">Sedentary</option>
-                        <option value="lightly_active">Lightly Active</option>
-                        <option value="moderately_active">Moderately Active</option>
-                        <option value="very_active">Very Active</option>
-                        <option value="extremely_active">Extremely Active</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Goal</label>
-                    <select id="goal" name="goal" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                        <option value="">Select</option>
-                        <option value="weight_loss">Weight Loss</option>
-                        <option value="muscle_gain">Muscle Gain</option>
-                        <option value="maintenance">Maintenance</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Dietary Restrictions</label>
-                    <input type="text" id="dietary-restrictions" name="dietary_restrictions" placeholder="e.g., vegetarian, gluten-free" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
-                    <input type="text" id="allergies" name="allergies" placeholder="e.g., nuts, dairy" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Preferences</label>
-                    <input type="text" id="preferences" name="preferences" placeholder="e.g., high protein, low carb" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 font-medium text-lg">
-                    🚀 Generate 7-Day AI Meal Plan
-                </button>
-            </form>
-        </div>
-        
-
-    </div>
-    
-    <!-- AI Results Section -->
-    <div id="ai-results" class="mt-6 hidden">
-        <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h4 class="text-xl font-semibold text-gray-800">🤖 AI Generated Results</h4>
-                <button onclick="closeAIResults()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <div id="ai-results-content" class="space-y-6">
-                <!-- Results will be populated here -->
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-// AI Meal Planning JavaScript
-let aiStatus = 'checking';
-
-// Check AI availability on page load
-document.addEventListener('DOMContentLoaded', function() {
-    checkAIStatus();
-    setupAIForms();
-});
-
-function checkAIStatus() {
-    const statusIndicator = document.getElementById('ai-status-indicator');
-    const statusText = document.getElementById('ai-status-text');
-    
-    // Check if user has premium membership
-    fetch('/api/user')
-        .then(response => response.json())
-        .then(user => {
-            if (user.membership_type && ['Premium', 'VIP'].includes(user.membership_type)) {
-                aiStatus = 'available';
-                statusIndicator.className = 'w-3 h-3 rounded-full bg-green-400 mr-2';
-                statusText.textContent = '✅ AI features available for Premium/VIP members';
-            } else {
-                aiStatus = 'premium_required';
-                statusIndicator.className = 'w-3 h-3 rounded-full bg-red-400 mr-2';
-                statusText.textContent = '🔒 AI features require Premium or VIP membership';
-            }
-        })
-        .catch(error => {
-            console.error('Error checking AI status:', error);
-            aiStatus = 'error';
-            statusIndicator.className = 'w-3 h-3 rounded-full bg-red-400 mr-2';
-            statusText.textContent = '❌ Error checking AI availability';
-        });
-}
-
-function setupAIForms() {
-    // Meal Plan Form
-    document.getElementById('meal-plan-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (aiStatus !== 'available') {
-            alert('AI features require Premium or VIP membership');
-            return;
-        }
-        generateMealPlan();
-    });
-}
-
-function generateMealPlan() {
-    const form = document.getElementById('meal-plan-form');
-    const formData = new FormData(form);
-    
-    const userProfile = {
-        age: parseInt(formData.get('age')),
-        gender: formData.get('gender'),
-        weight: parseFloat(formData.get('weight')),
-        height: parseFloat(formData.get('height')),
-        activity_level: formData.get('activity_level'),
-        goal: formData.get('goal'),
-        dietary_restrictions: formData.get('dietary_restrictions') || 'none',
-        allergies: formData.get('allergies') || 'none',
-        preferences: formData.get('preferences') || 'none'
-    };
-    
-    showLoading('Generating AI meal plan...');
-    
-    fetch('/api/nutrition/generate-meal-plan', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_profile: userProfile })
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideLoading();
-        if (data.error) {
-            showError('Error generating meal plan: ' + data.error);
-        } else {
-            displayMealPlan(data);
-        }
-    })
-    .catch(error => {
-        hideLoading();
-        showError('Error generating meal plan: ' + error.message);
-    });
-}
-
-
-
-function displayMealPlan(data) {
-    const resultsDiv = document.getElementById('ai-results-content');
-    
-    let html = `
-        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6">
-            <div class="flex items-center justify-between mb-4">
-                <h5 class="text-2xl font-bold text-blue-800">📋 7-Day AI Meal Plan</h5>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    <i class="fas fa-robot mr-1"></i>AI Generated
-                </span>
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="bg-white rounded-lg p-4 shadow-sm">
-                    <h6 class="font-semibold text-blue-700 mb-3 flex items-center">
-                        <i class="fas fa-chart-pie mr-2"></i>Daily Targets
-                    </h6>
-                    <div class="space-y-2 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Calories:</span>
-                            <span class="font-medium text-blue-600">${data.nutritional_needs?.daily_calories || 'N/A'} kcal</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Protein:</span>
-                            <span class="font-medium text-blue-600">${data.nutritional_needs?.daily_protein || 'N/A'}g</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Carbs:</span>
-                            <span class="font-medium text-blue-600">${data.nutritional_needs?.daily_carbs || 'N/A'}g</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Fat:</span>
-                            <span class="font-medium text-blue-600">${data.nutritional_needs?.daily_fat || 'N/A'}g</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-lg p-4 shadow-sm">
-                    <h6 class="font-semibold text-blue-700 mb-3 flex items-center">
-                        <i class="fas fa-star mr-2"></i>Plan Features
-                    </h6>
-                    <ul class="text-sm text-blue-600 space-y-2">
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>7-day comprehensive plan</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Shopping list included</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Meal prep tips</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Substitution options</li>
-                    </ul>
-                </div>
-                <div class="bg-white rounded-lg p-4 shadow-sm">
-                    <h6 class="font-semibold text-blue-700 mb-3 flex items-center">
-                        <i class="fas fa-lightbulb mr-2"></i>AI Insights
-                    </h6>
-                    <p class="text-sm text-blue-600 leading-relaxed">
-                        Personalized meal plan optimized for your goals, preferences, and dietary requirements. 
-                        Each meal is carefully balanced for optimal nutrition and satisfaction.
-                    </p>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    if (data.meal_plan) {
-        const days = Object.keys(data.meal_plan);
-        html += `
-            <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <!-- Day Navigation -->
-                <div class="flex items-center justify-between mb-6">
-                    <h5 class="text-xl font-bold text-gray-800">7-Day Meal Plan</h5>
-                    <div class="flex items-center space-x-2">
-                        <button onclick="previousDay()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" id="prevBtn">
-                            <i class="fas fa-chevron-left text-gray-600"></i>
-                        </button>
-                        <span class="text-sm font-medium text-gray-600">
-                            Day <span id="currentDayNum">1</span> of 7
-                        </span>
-                        <button onclick="nextDay()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" id="nextBtn">
-                            <i class="fas fa-chevron-right text-gray-600"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Day Indicators -->
-                <div class="flex justify-center space-x-2 mb-6">
-                    ${days.map((day, index) => `
-                        <button onclick="goToDay(${index})" 
-                                class="day-indicator w-3 h-3 rounded-full transition-all duration-200 ${index === 0 ? 'bg-blue-500' : 'bg-gray-300 hover:bg-gray-400'}"
-                                data-day="${index}">
-                        </button>
-                    `).join('')}
-                </div>
-                
-                <!-- Meal Plan Slider -->
-                <div class="relative overflow-hidden">
-                    <div id="mealPlanSlider" class="flex transition-transform duration-300 ease-in-out" style="width: ${days.length * 100}%;">
-        `;
-        
-        days.forEach((day, dayIndex) => {
-            const dayData = data.meal_plan[day];
-            html += `
-                <div class="day-slide w-full" style="width: ${100 / days.length}%;" data-day="${dayIndex}">
-                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-4">
-                        <div class="flex items-center justify-between mb-4">
-                            <h6 class="text-2xl font-bold text-gray-800 capitalize">${day.replace('_', ' ')}</h6>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                <i class="fas fa-calendar-day mr-1"></i>Day ${dayIndex + 1}
-                            </span>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            `;
-            
-            const mealTypes = [
-                { key: 'breakfast', icon: 'fa-sun', color: 'yellow', title: 'Breakfast' },
-                { key: 'lunch', icon: 'fa-hamburger', color: 'orange', title: 'Lunch' },
-                { key: 'dinner', icon: 'fa-utensils', color: 'purple', title: 'Dinner' },
-                { key: 'snack_1', icon: 'fa-cookie-bite', color: 'green', title: 'Snack 1' },
-                { key: 'snack_2', icon: 'fa-apple-alt', color: 'red', title: 'Snack 2' }
-            ];
-            
-            mealTypes.forEach(mealType => {
-                if (dayData[mealType.key]) {
-                    const mealData = dayData[mealType.key];
-                    const colorClasses = {
-                        yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-                        orange: 'bg-orange-50 border-orange-200 text-orange-800',
-                        purple: 'bg-purple-50 border-purple-200 text-purple-800',
-                        green: 'bg-green-50 border-green-200 text-green-800',
-                        red: 'bg-red-50 border-red-200 text-red-800'
-                    };
-                    
-                    html += `
-                        <div class="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition-all duration-200">
-                            <div class="flex items-center justify-between mb-3">
-                                <h7 class="font-semibold text-gray-800 flex items-center">
-                                    <i class="fas ${mealType.icon} mr-2 text-${mealType.color}-500"></i>
-                                    ${mealType.title}
-                                </h7>
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colorClasses[mealType.color]}">
-                                    ${mealData.nutrition?.calories || 'N/A'} cal
-                                </span>
-                            </div>
-                            <div class="space-y-3">
-                                <p class="text-sm font-medium text-gray-700 leading-relaxed">${mealData.name}</p>
-                                <div class="grid grid-cols-3 gap-3 text-xs">
-                                    <div class="text-center bg-blue-50 rounded-lg p-2">
-                                        <div class="font-bold text-blue-600 text-sm">${mealData.nutrition?.protein || 'N/A'}g</div>
-                                        <div class="text-blue-700">Protein</div>
-                                    </div>
-                                    <div class="text-center bg-orange-50 rounded-lg p-2">
-                                        <div class="font-bold text-orange-600 text-sm">${mealData.nutrition?.carbs || 'N/A'}g</div>
-                                        <div class="text-orange-700">Carbs</div>
-                                    </div>
-                                    <div class="text-center bg-red-50 rounded-lg p-2">
-                                        <div class="font-bold text-red-600 text-sm">${mealData.nutrition?.fat || 'N/A'}g</div>
-                                        <div class="text-red-700">Fat</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-            
-            html += `
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        html += `
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    if (data.shopping_list && data.shopping_list.length > 0) {
-        html += `
-            <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h6 class="text-xl font-bold text-green-800 flex items-center">
-                        <i class="fas fa-shopping-cart mr-2"></i>Shopping List
-                    </h6>
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                        ${data.shopping_list.length} items
-                    </span>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    ${data.shopping_list.map((item, index) => `
-                        <div class="bg-white rounded-lg p-3 shadow-sm flex items-center">
-                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium mr-3">
-                                ${index + 1}
-                            </span>
-                            <span class="text-sm font-medium text-gray-700">${item}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    resultsDiv.innerHTML = html;
-    document.getElementById('ai-results').classList.remove('hidden');
-}
-
-
-
-function closeAIResults() {
-    document.getElementById('ai-results').classList.add('hidden');
-}
-
-function showLoading(message) {
-    // You can implement a loading indicator here
-    console.log('Loading:', message);
-}
-
-function hideLoading() {
-    // Hide loading indicator
-    console.log('Loading complete');
-}
-
-function showError(message) {
-    alert('Error: ' + message);
-}
-
-// Meal Plan Slider Functions
-let currentDayIndex = 0;
-let totalDays = 7;
-
-function nextDay() {
-    if (currentDayIndex < totalDays - 1) {
-        currentDayIndex++;
-        updateSlider();
-    }
-}
-
-function previousDay() {
-    if (currentDayIndex > 0) {
-        currentDayIndex--;
-        updateSlider();
-    }
-}
-
-function goToDay(dayIndex) {
-    currentDayIndex = dayIndex;
-    updateSlider();
-}
-
-function updateSlider() {
-    const slider = document.getElementById('mealPlanSlider');
-    const currentDayNum = document.getElementById('currentDayNum');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const indicators = document.querySelectorAll('.day-indicator');
-    
-    if (slider) {
-        // Update slider position
-        const translateX = -(currentDayIndex * (100 / totalDays));
-        slider.style.transform = `translateX(${translateX}%)`;
-        
-        // Update day number
-        if (currentDayNum) {
-            currentDayNum.textContent = currentDayIndex + 1;
-        }
-        
-        // Update navigation buttons
-        if (prevBtn) {
-            prevBtn.disabled = currentDayIndex === 0;
-            prevBtn.style.opacity = currentDayIndex === 0 ? '0.5' : '1';
-        }
-        
-        if (nextBtn) {
-            nextBtn.disabled = currentDayIndex === totalDays - 1;
-            nextBtn.style.opacity = currentDayIndex === totalDays - 1 ? '0.5' : '1';
-        }
-        
-        // Update indicators
-        indicators.forEach((indicator, index) => {
-            if (index === currentDayIndex) {
-                indicator.classList.remove('bg-gray-300', 'hover:bg-gray-400');
-                indicator.classList.add('bg-blue-500');
-            } else {
-                indicator.classList.remove('bg-blue-500');
-                indicator.classList.add('bg-gray-300', 'hover:bg-gray-400');
-            }
-        });
-    }
-}
 
 // Keyboard navigation
 document.addEventListener('keydown', function(e) {
@@ -2269,6 +2526,526 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+// Export nutrition data function
+async function exportNutritionData(format) {
+    try {
+        const url = `/api/export/nutrition/member?format=${format}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error('Failed to export nutrition data');
+        }
+        
+        // Create a temporary link to download the file
+        const blob = await response.blob();
+        const url2 = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url2;
+        a.download = `member_nutrition_${new Date().toISOString().split('T')[0]}.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url2);
+        document.body.removeChild(a);
+        
+    } catch (error) {
+        console.error('Error exporting nutrition data:', error);
+        alert('Failed to export nutrition data. Please try again.');
+    }
+}
+
+// AI Meal Planner Functions
+function openAIMealPlanModal() {
+    document.getElementById('aiMealPlanModal').classList.remove('hidden');
+}
+
+function openAICustomMealModal() {
+    document.getElementById('aiCustomMealModal').classList.remove('hidden');
+}
+
+// Handle AI Meal Plan Form Submission
+document.getElementById('aiMealPlanForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('generateMealPlanBtn');
+    const originalText = submitBtn.innerHTML;
+    
+    try {
+        // Show loading state
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+        submitBtn.disabled = true;
+        
+        // Get form data
+        const formData = new FormData(this);
+        const planName = formData.get('plan_name');
+        const userProfile = {
+            age: parseInt(formData.get('age')),
+            gender: formData.get('gender'),
+            weight: parseFloat(formData.get('weight')),
+            height: parseFloat(formData.get('height')),
+            activity_level: formData.get('activity_level'),
+            goal: formData.get('goal'),
+            dietary_restrictions: formData.get('dietary_restrictions') || '',
+            allergies: formData.get('allergies') || '',
+            preferences: formData.get('preferences') || ''
+        };
+        
+        // Call AI meal plan API
+        const response = await fetch('/api/nutrition/generate-meal-plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                user_profile: userProfile,
+                plan_name: planName
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to generate meal plan');
+        }
+        
+        const mealPlan = await response.json();
+        
+        // Show results
+        showAIMealPlanResults(mealPlan);
+        
+        // Close the form modal
+        closeModal('aiMealPlanModal');
+        
+    } catch (error) {
+        console.error('Error generating meal plan:', error);
+        alert('Error: ' + error.message);
+    } finally {
+        // Reset button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+// Handle AI Custom Meal Form Submission
+document.getElementById('aiCustomMealForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('generateCustomMealBtn');
+    const originalText = submitBtn.innerHTML;
+    
+    try {
+        // Show loading state
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+        submitBtn.disabled = true;
+        
+        // Get form data
+        const formData = new FormData(this);
+        const mealRequirements = {
+            meal_type: formData.get('meal_type'),
+            cuisine_style: formData.get('cuisine_style') || '',
+            calorie_range: formData.get('calorie_range'),
+            dietary_preferences: formData.get('dietary_preferences') || '',
+            include_ingredients: formData.get('include_ingredients') || '',
+            exclude_ingredients: formData.get('exclude_ingredients') || ''
+        };
+        
+        // Call AI custom meal API
+        const response = await fetch('/api/nutrition/generate-custom-meal', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ meal_requirements: mealRequirements })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to generate custom meal');
+        }
+        
+        const customMeal = await response.json();
+        
+        // Show results
+        showAICustomMealResults(customMeal);
+        
+        // Close the form modal
+        closeModal('aiCustomMealModal');
+        
+    } catch (error) {
+        console.error('Error generating custom meal:', error);
+        alert('Error: ' + error.message);
+    } finally {
+        // Reset button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+// Show AI Meal Plan Results
+function showAIMealPlanResults(mealPlan) {
+    const resultsContainer = document.getElementById('aiMealPlanResults');
+    
+    // Get the plan name from the form
+    const planNameInput = document.querySelector('#aiMealPlanForm input[name="plan_name"]');
+    const planName = planNameInput ? planNameInput.value : 'Your Personalized Meal Plan';
+    
+    let html = `
+        <div class="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
+            <h4 class="text-lg font-semibold text-purple-800 mb-2">${planName}</h4>
+            <p class="text-purple-700">Based on your profile and preferences, here's your complete 7-day meal plan:</p>
+        </div>
+    `;
+    
+    // Add nutritional targets if available
+    if (mealPlan.nutritional_needs) {
+        const needs = mealPlan.nutritional_needs;
+        html += `
+            <div class="mb-6 bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-3">
+                    <h5 class="font-semibold">Daily Nutritional Targets</h5>
+                </div>
+                <div class="p-4">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600">${needs.daily_calories || 2000}</div>
+                            <div class="text-sm text-purple-700">Daily Calories</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">${needs.daily_protein || 150}g</div>
+                            <div class="text-sm text-blue-700">Daily Protein</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">${needs.daily_carbs || 250}g</div>
+                            <div class="text-sm text-green-700">Daily Carbs</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-orange-600">${needs.daily_fat || 70}g</div>
+                            <div class="text-sm text-orange-700">Daily Fat</div>
+                        </div>
+                    </div>
+                    ${needs.bmr ? `
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div class="text-center">
+                                    <div class="text-lg font-semibold text-gray-700">${needs.bmr}</div>
+                                    <div class="text-gray-600">BMR (Basal Metabolic Rate)</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-lg font-semibold text-gray-700">${needs.tdee}</div>
+                                    <div class="text-gray-600">TDEE (Total Daily Energy Expenditure)</div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add each day
+    for (let i = 1; i <= 7; i++) {
+        const day = mealPlan.meal_plan[`day_${i}`];
+        if (day) {
+            html += `
+                <div class="mb-6 bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3">
+                        <h5 class="font-semibold">Day ${i}</h5>
+                    </div>
+                    <div class="p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${generateMealHTML(day.breakfast, 'Breakfast')}
+                            ${generateMealHTML(day.lunch, 'Lunch')}
+                            ${generateMealHTML(day.dinner, 'Dinner')}
+                            ${generateMealHTML(day.snack_1, 'Snack 1')}
+                            ${generateMealHTML(day.snack_2, 'Snack 2')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Add shopping list if available
+    if (mealPlan.shopping_list) {
+        html += `
+            <div class="mb-6 bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-3">
+                    <h5 class="font-semibold">Shopping List</h5>
+                </div>
+                <div class="p-4">
+                    <ul class="space-y-2">
+                        ${mealPlan.shopping_list.map(item => `<li class="flex items-center"><i class="fas fa-check text-emerald-600 mr-2"></i>${item}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add meal prep tips if available
+    if (mealPlan.meal_prep_tips) {
+        html += `
+            <div class="mb-6 bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-3">
+                    <h5 class="font-semibold">Meal Prep Tips</h5>
+                </div>
+                <div class="p-4">
+                    <ul class="space-y-2">
+                        ${mealPlan.meal_prep_tips.map(tip => `<li class="flex items-start"><i class="fas fa-lightbulb text-blue-600 mr-2 mt-1"></i>${tip}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+    
+    resultsContainer.innerHTML = html;
+    document.getElementById('aiMealPlanResultsModal').classList.remove('hidden');
+}
+
+// Show AI Custom Meal Results
+function showAICustomMealResults(customMeal) {
+    const resultsContainer = document.getElementById('aiCustomMealResults');
+    
+    let html = `
+        <div class="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-4 border border-emerald-100">
+            <h4 class="text-lg font-semibold text-emerald-800 mb-2">Custom Meal Ideas</h4>
+            <p class="text-emerald-700">Based on your preferences, here are some meal suggestions:</p>
+        </div>
+    `;
+    
+    if (customMeal.meals && customMeal.meals.length > 0) {
+        customMeal.meals.forEach((meal, index) => {
+            html += `
+                <div class="mb-4 bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-3">
+                        <h5 class="font-semibold">Meal Idea ${index + 1}</h5>
+                    </div>
+                    <div class="p-4">
+                        ${generateMealHTML(meal, 'Custom Meal')}
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        // Fallback meals when AI doesn't return results
+        const fallbackMeals = getFallbackMeals();
+        html += `
+            <div class="mb-4 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                <div class="flex items-center mb-2">
+                    <i class="fas fa-lightbulb text-yellow-600 mr-2"></i>
+                    <span class="text-sm font-medium text-yellow-800">AI suggestions not available. Here are some healthy meal ideas:</span>
+                </div>
+            </div>
+        `;
+        
+        fallbackMeals.forEach((meal, index) => {
+            html += `
+                <div class="mb-4 bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-4 py-3">
+                        <h5 class="font-semibold">Healthy Meal Idea ${index + 1}</h5>
+                    </div>
+                    <div class="p-4">
+                        ${generateMealHTML(meal, 'Fallback Meal')}
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    resultsContainer.innerHTML = html;
+    document.getElementById('aiCustomMealResultsModal').classList.remove('hidden');
+}
+
+// Fallback meals function
+function getFallbackMeals() {
+    const fallbackMeals = [
+        {
+            name: "Mediterranean Quinoa Bowl",
+            ingredients: [
+                "1 cup cooked quinoa",
+                "1/2 cup cherry tomatoes, halved",
+                "1/4 cup cucumber, diced",
+                "1/4 cup red onion, finely chopped",
+                "1/4 cup kalamata olives, sliced",
+                "2 tbsp feta cheese, crumbled",
+                "2 tbsp extra virgin olive oil",
+                "1 tbsp lemon juice",
+                "1 tsp dried oregano",
+                "Salt and pepper to taste"
+            ],
+            nutrition: {
+                calories: 320,
+                protein: 12,
+                carbs: 45,
+                fat: 14
+            }
+        },
+        {
+            name: "Grilled Chicken with Roasted Vegetables",
+            ingredients: [
+                "6 oz boneless, skinless chicken breast",
+                "1 cup broccoli florets",
+                "1 cup cauliflower florets",
+                "1/2 cup carrots, sliced",
+                "2 tbsp olive oil",
+                "1 tsp garlic powder",
+                "1 tsp paprika",
+                "Salt and pepper to taste",
+                "1 tbsp fresh herbs (rosemary, thyme, or parsley)"
+            ],
+            nutrition: {
+                calories: 380,
+                protein: 35,
+                carbs: 18,
+                fat: 16
+            }
+        },
+        {
+            name: "Protein-Packed Greek Yogurt Parfait",
+            ingredients: [
+                "1 cup Greek yogurt (2% fat)",
+                "1/4 cup granola",
+                "1/4 cup mixed berries (strawberries, blueberries, raspberries)",
+                "1 tbsp honey",
+                "1 tbsp chopped almonds",
+                "1 tsp chia seeds"
+            ],
+            nutrition: {
+                calories: 280,
+                protein: 22,
+                carbs: 32,
+                fat: 8
+            }
+        },
+        {
+            name: "Asian-Inspired Salmon with Brown Rice",
+            ingredients: [
+                "5 oz salmon fillet",
+                "1/2 cup cooked brown rice",
+                "1 cup steamed bok choy",
+                "1/4 cup edamame",
+                "2 tbsp soy sauce (low sodium)",
+                "1 tbsp sesame oil",
+                "1 tsp ginger, minced",
+                "1 clove garlic, minced",
+                "1 tbsp sesame seeds"
+            ],
+            nutrition: {
+                calories: 420,
+                protein: 38,
+                carbs: 35,
+                fat: 18
+            }
+        },
+        {
+            name: "Vegetarian Lentil Curry",
+            ingredients: [
+                "1/2 cup cooked lentils",
+                "1/2 cup cooked basmati rice",
+                "1/4 cup coconut milk",
+                "1/2 cup spinach",
+                "1/4 cup diced tomatoes",
+                "1/4 cup diced onions",
+                "1 tsp curry powder",
+                "1/2 tsp turmeric",
+                "1/2 tsp cumin",
+                "1 tbsp olive oil",
+                "Salt to taste"
+            ],
+            nutrition: {
+                calories: 350,
+                protein: 16,
+                carbs: 55,
+                fat: 12
+            }
+        }
+    ];
+    
+    // Return 3 random meals from the fallback list
+    const shuffled = fallbackMeals.sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 3);
+}
+
+// Delete nutrition plan function
+async function deleteNutritionPlan(planId, planName) {
+    if (!confirm(`Are you sure you want to delete the plan "${planName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/member/nutrition/plans/${planId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to delete nutrition plan');
+        }
+        
+        const result = await response.json();
+        
+        // Show success message
+        alert('Nutrition plan deleted successfully!');
+        
+        // Refresh the nutrition plans modal
+        viewMyNutritionPlans();
+        
+    } catch (error) {
+        console.error('Error deleting nutrition plan:', error);
+        alert('Error: ' + error.message);
+    }
+}
+
+// Helper function to generate meal HTML
+function generateMealHTML(meal, mealType) {
+    if (!meal || !meal.name) {
+        return `
+            <div class="bg-gray-50 rounded-lg p-3">
+                <h6 class="font-medium text-gray-700 mb-2">${mealType}</h6>
+                <p class="text-gray-500 text-sm">No meal data available</p>
+            </div>
+        `;
+    }
+    
+    const nutrition = meal.nutrition || {};
+    const ingredients = meal.ingredients || [];
+    
+    return `
+        <div class="bg-gray-50 rounded-lg p-3">
+            <h6 class="font-medium text-gray-700 mb-2">${mealType}</h6>
+            <h6 class="font-semibold text-gray-900 mb-2">${meal.name}</h6>
+            
+            ${ingredients.length > 0 ? `
+                <div class="mb-2">
+                    <p class="text-xs font-medium text-gray-600 mb-1">Ingredients:</p>
+                    <ul class="text-xs text-gray-600 space-y-1">
+                        ${ingredients.map(ingredient => `<li>• ${ingredient}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+            
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="bg-purple-100 rounded p-2">
+                    <div class="font-medium text-purple-800">${nutrition.calories || 0}</div>
+                    <div class="text-purple-600">calories</div>
+                </div>
+                <div class="bg-blue-100 rounded p-2">
+                    <div class="font-medium text-blue-800">${nutrition.protein || 0}g</div>
+                    <div class="text-blue-600">protein</div>
+                </div>
+                <div class="bg-orange-100 rounded p-2">
+                    <div class="font-medium text-orange-800">${nutrition.carbs || 0}g</div>
+                    <div class="text-orange-600">carbs</div>
+                </div>
+                <div class="bg-red-100 rounded p-2">
+                    <div class="font-medium text-red-800">${nutrition.fat || 0}g</div>
+                    <div class="text-red-600">fat</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
 </script>
 
 {% endblock %} 

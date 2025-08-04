@@ -11,6 +11,61 @@
  </div>
  </div>
 
+ <!-- Weekly Schedule Section -->
+ <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+ <div class="flex justify-between items-center mb-4 sm:mb-6">
+ <h2 class="text-lg font-medium text-gray-900">Weekly Schedule</h2>
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="flex items-center space-x-2">
+ <input type="date" 
+ id="startDate" 
+ class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+ <span class="text-gray-500">to</span>
+ <input type="date" 
+ id="endDate" 
+ class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+ <button onclick="loadSchedule()" 
+ class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ <i class="fas fa-search mr-2"></i>Search
+ </button>
+ </div>
+ <div class="flex items-center space-x-2">
+ <button onclick="exportSchedule('xlsx')" 
+ class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
+ <i class="fas fa-file-excel mr-2"></i>Export Excel
+ </button>
+ </div>
+ </div>
+ </div>
+
+ <div class="grid grid-cols-7 gap-4" id="weeklySchedule">
+ <!-- Days will be populated here -->
+ </div>
+ </div>
+
+ <!-- Sessions Table -->
+ <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+ <table class="min-w-full responsive-table divide-y divide-gray-200">
+ <thead>
+ <tr>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+ </tr>
+ </thead>
+ <tbody class="bg-white divide-y divide-gray-200" id="sessions-table">
+ <!-- Sessions will be populated here -->
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+
  <!-- Preferences and Free Days Section -->
  <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
  <div class="flex justify-between items-center mb-4 sm:mb-6">
@@ -158,69 +213,6 @@
  </button>
  </div>
  </form>
- </div>
- </div>
-
- <!-- Weekly Schedule -->
- <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
- <div class="flex justify-between items-center mb-4 sm:mb-6">
- <h2 class="text-lg font-medium text-gray-900">Weekly Schedule</h2>
- <div class="flex items-center space-x-2 sm:space-x-4">
- <div class="flex items-center space-x-2">
- <input type="date" 
- id="startDate" 
- class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
- <span class="text-gray-500">to</span>
- <input type="date" 
- id="endDate" 
- class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
- <button onclick="loadSchedule()" 
- class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
- <i class="fas fa-search mr-2"></i>Search
- </button>
- </div>
- <div class="flex items-center space-x-2">
- <button onclick="exportSchedule('csv')" 
- class="bg-green-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-green-700 focus:outline-none focus:outline-none
- <i class="fas fa-download mr-2"></i>Export CSV
- </button>
- <button onclick="exportSchedule('excel')" 
- class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
- <i class="fas fa-file-excel mr-2"></i>Export Excel
- </button>
- <button onclick="exportSchedule('pdf')" 
- class="bg-red-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-red-700 focus:outline-none focus:outline-none
- <i class="fas fa-file-pdf mr-2"></i>Export PDF
- </button>
- </div>
- </div>
- </div>
-
- <div class="grid grid-cols-7 gap-4" id="weeklySchedule">
- <!-- Days will be populated here -->
- </div>
- </div>
-
- <!-- Sessions Table -->
- <div class="bg-white shadow rounded-lg">
- <div class="px-4 py-5 sm:p-4 sm:p-6">
- <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
- <table class="min-w-full responsive-table divide-y divide-gray-200">
- <thead>
- <tr>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
- </tr>
- </thead>
- <tbody class="bg-white divide-y divide-gray-200" id="sessions-table">
- <!-- Sessions will be populated here -->
- </tbody>
- </table>
- </div>
  </div>
  </div>
 
@@ -763,6 +755,23 @@
  // Handle form submission
  document.getElementById('preferencesFormElement').addEventListener('submit', async function(e) {
  e.preventDefault();
+ 
+ // Only proceed if the preferences form is actually visible
+ const preferencesForm = document.getElementById('preferencesForm');
+ if (preferencesForm.classList.contains('hidden')) {
+ return; // Don't process if form is hidden
+ }
+ 
+ // Additional check: ensure the event was triggered by a submit button within this form
+ const submitButton = e.submitter;
+ if (!submitButton || submitButton.type !== 'submit' || !preferencesForm.contains(submitButton)) {
+ return; // Don't process if not triggered by a proper submit button in this form
+ }
+ 
+ // Extra check: ensure it's the "Save Preferences" button specifically
+ if (!submitButton.textContent.includes('Save Preferences')) {
+ return; // Don't process if not the save preferences button
+ }
  
  // Collect form data
  const workoutTypes = Array.from(document.querySelectorAll('input[name="workout_types"]:checked')).map(cb => cb.value);

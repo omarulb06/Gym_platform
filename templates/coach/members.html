@@ -15,6 +15,7 @@
  <!-- Welcome Section -->
  <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl mb-6 sm:mb-8 border border-white/20 hover:shadow-2xl transition-all duration-300 animate-scale-in">
  <div class="px-8 py-8 sm:p-10">
+ <div class="flex justify-between items-center">
  <div class="flex items-center space-x-2 sm:space-x-4">
  <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
  <i class="fas fa-users text-lg sm:text-xl lg:text-2xl"></i>
@@ -22,6 +23,13 @@
  <div>
  <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Member Management</h3>
  <p class="text-gray-600 mt-1">Track progress and manage your coaching clients</p>
+ </div>
+ </div>
+ <div class="flex items-center space-x-2">
+ <button onclick="exportMembers('xlsx')" 
+ class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
+ <i class="fas fa-file-excel mr-2"></i>Export Excel
+ </button>
  </div>
  </div>
  </div>
@@ -166,5 +174,32 @@
 
  // Load data when page loads
  document.addEventListener('DOMContentLoaded', () => loadMembersData());
+
+ // Export members function
+ async function exportMembers(format) {
+ try {
+ const url = `/api/export/members/coach?format=${format}`;
+ const response = await fetch(url);
+ 
+ if (!response.ok) {
+ throw new Error('Failed to export members');
+ }
+ 
+ // Create a temporary link to download the file
+ const blob = await response.blob();
+ const url2 = window.URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url2;
+ a.download = `coach_members_${new Date().toISOString().split('T')[0]}.${format}`;
+ document.body.appendChild(a);
+ a.click();
+ window.URL.revokeObjectURL(url2);
+ document.body.removeChild(a);
+ 
+ } catch (error) {
+ console.error('Error exporting members:', error);
+ alert('Failed to export members. Please try again.');
+ }
+ }
 </script>
 {% endblock %} 
