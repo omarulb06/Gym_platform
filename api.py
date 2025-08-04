@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request, Depends, Form, status, WebS
 
 import pymysql
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, StreamingResponse
 from datetime import datetime, timedelta, time as dt_time
 import time
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -18,6 +18,8 @@ import cv2
 import torch
 from transformers import AutoImageProcessor, SiglipForImageClassification
 import requests
+import pandas as pd
+import io
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -162,6 +164,7 @@ def get_current_user(request: Request) -> Optional[dict]:
         
         user = active_sessions.get(session_id)
         print(f"User from session: {user}")  # Debug log
+        print(f"Active sessions: {active_sessions}")  # Debug log
         return user
     except Exception as e:
         print(f"Error in get_current_user: {str(e)}")  # Debug log
@@ -169,18 +172,22 @@ def get_current_user(request: Request) -> Optional[dict]:
 
 # FastAPI dependency version of get_current_user
 def get_current_user_dependency(request: Request) -> dict:
+    print(f"get_current_user_dependency called")  # Debug log
     user = get_current_user(request)
+    print(f"User from get_current_user: {user}")  # Debug log
     if not user:
+        print("No user found, raising 401")  # Debug log
         raise HTTPException(status_code=401, detail="Not authenticated")
+    print(f"Returning user: {user}")  # Debug log
     return user
 
 # Database connection
 def get_db_connection():
     return pymysql.connect(
-        host="localhost",
-        user="root",
-        password="omaromar",
-        database="trainer_app",
+        host=os.environ.get("DB_HOST", "localhost"),
+        user=os.environ.get("DB_USER", "root"),
+        password=os.environ.get("DB_PASSWORD", "omaromar"),
+        database=os.environ.get("DB_NAME", "trainer_app"),
         cursorclass=pymysql.cursors.DictCursor
     )
 
@@ -6904,7 +6911,305 @@ async def get_member_nutrition_plans(request: Request, member_id: int):
         print(f"Error getting nutrition plans: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+# Member nutrition plans endpoint
+@app.get("/api/member/nutrition/plans")
+async def get_member_nutrition_plans_for_current_user(request: Request):
+    """Get nutrition plans for the current member user"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'member':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get nutrition plans for the current member
+        plans_query = """
+            SELECT 
+                id,
+                plan_name,
+                daily_calories,
+                daily_protein,
+                daily_carbs,
+                daily_fat,
+                notes,
+                created_at,
+                is_active as status
+            FROM nutrition_plans
+            WHERE member_id = %s
+            ORDER BY created_at DESC
+        """
+        
+        cursor.execute(plans_query, (user['id'],))
+        plans = cursor.fetchall()
+        
+        # Convert datetime objects
+        for plan in plans:
+            if plan['created_at']:
+                plan['created_at'] = plan['created_at'].isoformat()
+            # Use created_at as updated_at since there's no updated_at column
+            plan['updated_at'] = plan['created_at']
+            # Convert is_active to status string
+            plan['status'] = 'active' if plan['status'] else 'inactive'
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "plans": plans
+        }
+        
+    except Exception as e:
+        print(f"Error getting member nutrition plans: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# Member today's nutrition data endpoint
+@app.get("/api/member/nutrition/today")
+async def get_member_today_nutrition(request: Request):
+    """Get today's nutrition data for the current member user"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'member':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get today's nutrition entries for the member
+        today_query = """
+            SELECT 
+                SUM(calories) as total_calories,
+                SUM(protein) as total_protein,
+                SUM(carbs) as total_carbs,
+                SUM(fat) as total_fat,
+                COUNT(*) as entries_count
+            FROM nutrition_entries
+            WHERE member_id = %s 
+            AND DATE(created_at) = CURDATE()
+        """
+        
+        cursor.execute(today_query, (user['id'],))
+        today_data = cursor.fetchone()
+        
+        # Get today's meals breakdown
+        meals_query = """
+            SELECT 
+                meal_type,
+                SUM(calories) as total_calories,
+                SUM(protein) as total_protein,
+                SUM(carbs) as total_carbs,
+                SUM(fat) as total_fat,
+                COUNT(*) as entries_count
+            FROM nutrition_entries
+            WHERE member_id = %s 
+            AND DATE(created_at) = CURDATE()
+            GROUP BY meal_type
+            ORDER BY 
+                CASE meal_type
+                    WHEN 'Breakfast' THEN 1
+                    WHEN 'Lunch' THEN 2
+                    WHEN 'Dinner' THEN 3
+                    WHEN 'Snack' THEN 4
+                    ELSE 5
+                END
+        """
+        
+        cursor.execute(meals_query, (user['id'],))
+        meals_data = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "today": {
+                "total_calories": float(today_data['total_calories'] or 0),
+                "total_protein": float(today_data['total_protein'] or 0),
+                "total_carbs": float(today_data['total_carbs'] or 0),
+                "total_fat": float(today_data['total_fat'] or 0),
+                "entries_count": int(today_data['entries_count'] or 0)
+            },
+            "meals": meals_data
+        }
+        
+    except Exception as e:
+        print(f"Error getting member today's nutrition: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# Coach member today's nutrition data endpoint
+@app.get("/api/coach/nutrition/member/{member_id}/today")
+async def get_coach_member_today_nutrition(request: Request, member_id: int):
+    """Get today's nutrition data for a specific member (coach access)"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Verify coach has access to this member
+        coach_member_query = """
+            SELECT m.id, m.first_name, m.last_name, m.email
+            FROM members m
+            JOIN member_coach mc ON m.id = mc.member_id
+            WHERE mc.coach_id = %s AND m.id = %s
+        """
+        
+        cursor.execute(coach_member_query, (user['id'], member_id))
+        member = cursor.fetchone()
+        
+        if not member:
+            raise HTTPException(status_code=403, detail="Access denied to this member")
+        
+        # Get today's nutrition entries for the member
+        today_query = """
+            SELECT 
+                SUM(calories) as total_calories,
+                SUM(protein) as total_protein,
+                SUM(carbs) as total_carbs,
+                SUM(fat) as total_fat,
+                COUNT(*) as entries_count
+            FROM nutrition_entries
+            WHERE member_id = %s 
+            AND DATE(created_at) = CURDATE()
+        """
+        
+        cursor.execute(today_query, (member_id,))
+        today_data = cursor.fetchone()
+        
+        # Get today's meals breakdown
+        meals_query = """
+            SELECT 
+                meal_type,
+                SUM(calories) as total_calories,
+                SUM(protein) as total_protein,
+                SUM(carbs) as total_carbs,
+                SUM(fat) as total_fat,
+                COUNT(*) as entries_count
+            FROM nutrition_entries
+            WHERE member_id = %s 
+            AND DATE(created_at) = CURDATE()
+            GROUP BY meal_type
+            ORDER BY 
+                CASE meal_type
+                    WHEN 'Breakfast' THEN 1
+                    WHEN 'Lunch' THEN 2
+                    WHEN 'Dinner' THEN 3
+                    WHEN 'Snack' THEN 4
+                    ELSE 5
+                END
+        """
+        
+        cursor.execute(meals_query, (member_id,))
+        meals_data = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "member": member,
+            "today": {
+                "total_calories": float(today_data['total_calories'] or 0),
+                "total_protein": float(today_data['total_protein'] or 0),
+                "total_carbs": float(today_data['total_carbs'] or 0),
+                "total_fat": float(today_data['total_fat'] or 0),
+                "entries_count": int(today_data['entries_count'] or 0)
+            },
+            "meals": meals_data
+        }
+        
+    except Exception as e:
+        print(f"Error getting coach member today's nutrition: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# Coach nutrition plans for all members endpoint
+@app.get("/api/coach/nutrition/all-plans")
+async def get_all_member_nutrition_plans(request: Request):
+    """Get nutrition plans for all coach's members"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get all nutrition plans for coach's members
+        plans_query = """
+            SELECT 
+                np.id,
+                np.plan_name,
+                np.daily_calories,
+                np.daily_protein,
+                np.daily_carbs,
+                np.daily_fat,
+                np.notes,
+                np.created_at,
+                np.is_active as status,
+                m.id as member_id,
+                m.first_name,
+                m.last_name,
+                m.email
+            FROM nutrition_plans np
+            JOIN members m ON np.member_id = m.id
+            JOIN member_coach mc ON m.id = mc.member_id
+            WHERE mc.coach_id = %s
+            ORDER BY np.created_at DESC
+        """
+        
+        cursor.execute(plans_query, (user['id'],))
+        plans = cursor.fetchall()
+        
+        # Convert datetime objects and organize by member
+        members_plans = {}
+        for plan in plans:
+            if plan['created_at']:
+                plan['created_at'] = plan['created_at'].isoformat()
+            # Use created_at as updated_at since there's no updated_at column
+            plan['updated_at'] = plan['created_at']
+            # Convert is_active to status string
+            plan['status'] = 'active' if plan['status'] else 'inactive'
+            
+            member_id = plan['member_id']
+            if member_id not in members_plans:
+                members_plans[member_id] = {
+                    'member': {
+                        'id': member_id,
+                        'first_name': plan['first_name'],
+                        'last_name': plan['last_name'],
+                        'email': plan['email']
+                    },
+                    'plans': []
+                }
+            members_plans[member_id]['plans'].append(plan)
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "members_plans": list(members_plans.values())
+        }
+        
+    except Exception as e:
+        print(f"Error getting all member nutrition plans: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 # AI Meal Planning Endpoints
+@app.get("/api/nutrition/ai-status")
+async def get_ai_meal_planner_status():
+    """Check if AI meal planner is available"""
+    try:
+        if meal_planner and meal_planner.is_available():
+            return {"status": "available", "message": "AI meal planner is ready"}
+        else:
+            return {"status": "unavailable", "message": "AI meal planner not available. Check GEMINI_API_KEY configuration."}
+    except Exception as e:
+        return {"status": "error", "message": f"Error checking AI status: {str(e)}"}
+
 @app.post("/api/nutrition/generate-meal-plan")
 async def generate_ai_meal_plan(request: Request):
     """Generate a personalized meal plan using AI"""
@@ -6929,15 +7234,102 @@ async def generate_ai_meal_plan(request: Request):
         # Get request data
         data = await request.json()
         user_profile = data.get('user_profile', {})
+        plan_name = data.get('plan_name', f"AI Generated Plan - {datetime.now().strftime('%Y-%m-%d')}")
         
-        if not meal_planner:
-            raise HTTPException(status_code=503, detail="AI meal planner not available")
+        if not meal_planner or not meal_planner.is_available():
+            # Provide a fallback meal plan when AI is not available
+            fallback_plan = {
+                "meal_plan": {
+                    "day_1": {
+                        "breakfast": {"name": "Oatmeal with Berries", "ingredients": ["Oatmeal", "Mixed berries", "Honey"], "nutrition": {"calories": 300, "protein": 8, "carbs": 55, "fat": 5}},
+                        "lunch": {"name": "Grilled Chicken Salad", "ingredients": ["Chicken breast", "Mixed greens", "Olive oil"], "nutrition": {"calories": 400, "protein": 35, "carbs": 10, "fat": 20}},
+                        "dinner": {"name": "Salmon with Vegetables", "ingredients": ["Salmon fillet", "Broccoli", "Quinoa"], "nutrition": {"calories": 500, "protein": 40, "carbs": 30, "fat": 25}},
+                        "snack_1": {"name": "Greek Yogurt", "ingredients": ["Greek yogurt", "Nuts"], "nutrition": {"calories": 200, "protein": 15, "carbs": 10, "fat": 10}},
+                        "snack_2": {"name": "Apple with Peanut Butter", "ingredients": ["Apple", "Peanut butter"], "nutrition": {"calories": 150, "protein": 5, "carbs": 20, "fat": 8}}
+                    },
+                    "day_2": {
+                        "breakfast": {"name": "Greek Yogurt Parfait", "ingredients": ["Greek yogurt", "Granola", "Banana"], "nutrition": {"calories": 350, "protein": 20, "carbs": 45, "fat": 8}},
+                        "lunch": {"name": "Turkey Wrap", "ingredients": ["Turkey breast", "Whole wheat tortilla", "Avocado"], "nutrition": {"calories": 450, "protein": 30, "carbs": 35, "fat": 22}},
+                        "dinner": {"name": "Lean Beef Stir Fry", "ingredients": ["Lean beef", "Brown rice", "Mixed vegetables"], "nutrition": {"calories": 550, "protein": 45, "carbs": 40, "fat": 20}},
+                        "snack_1": {"name": "Protein Smoothie", "ingredients": ["Protein powder", "Almond milk", "Berries"], "nutrition": {"calories": 180, "protein": 25, "carbs": 15, "fat": 3}},
+                        "snack_2": {"name": "Mixed Nuts", "ingredients": ["Almonds", "Walnuts", "Cashews"], "nutrition": {"calories": 170, "protein": 6, "carbs": 8, "fat": 15}}
+                    },
+                    "day_3": {
+                        "breakfast": {"name": "Protein Pancakes", "ingredients": ["Protein powder", "Oats", "Eggs", "Banana"], "nutrition": {"calories": 400, "protein": 25, "carbs": 50, "fat": 12}},
+                        "lunch": {"name": "Tuna Salad", "ingredients": ["Tuna", "Mixed greens", "Olive oil", "Cucumber"], "nutrition": {"calories": 380, "protein": 35, "carbs": 8, "fat": 18}},
+                        "dinner": {"name": "Chicken Breast with Sweet Potato", "ingredients": ["Chicken breast", "Sweet potato", "Green beans"], "nutrition": {"calories": 520, "protein": 42, "carbs": 45, "fat": 18}},
+                        "snack_1": {"name": "Cottage Cheese", "ingredients": ["Cottage cheese", "Pineapple"], "nutrition": {"calories": 160, "protein": 18, "carbs": 12, "fat": 4}},
+                        "snack_2": {"name": "Dark Chocolate", "ingredients": ["Dark chocolate", "Almonds"], "nutrition": {"calories": 140, "protein": 4, "carbs": 12, "fat": 10}}
+                    },
+                    "day_4": {
+                        "breakfast": {"name": "Egg White Omelette", "ingredients": ["Egg whites", "Spinach", "Mushrooms", "Cheese"], "nutrition": {"calories": 280, "protein": 22, "carbs": 6, "fat": 18}},
+                        "lunch": {"name": "Quinoa Bowl", "ingredients": ["Quinoa", "Chickpeas", "Vegetables", "Tahini"], "nutrition": {"calories": 420, "protein": 18, "carbs": 55, "fat": 16}},
+                        "dinner": {"name": "Cod with Rice", "ingredients": ["Cod fillet", "Brown rice", "Asparagus"], "nutrition": {"calories": 480, "protein": 38, "carbs": 42, "fat": 16}},
+                        "snack_1": {"name": "Protein Bar", "ingredients": ["Protein bar"], "nutrition": {"calories": 200, "protein": 20, "carbs": 15, "fat": 8}},
+                        "snack_2": {"name": "Orange", "ingredients": ["Orange"], "nutrition": {"calories": 80, "protein": 2, "carbs": 18, "fat": 0}}
+                    },
+                    "day_5": {
+                        "breakfast": {"name": "Smoothie Bowl", "ingredients": ["Frozen berries", "Greek yogurt", "Granola", "Chia seeds"], "nutrition": {"calories": 320, "protein": 18, "carbs": 42, "fat": 10}},
+                        "lunch": {"name": "Lentil Soup", "ingredients": ["Lentils", "Vegetables", "Chicken broth"], "nutrition": {"calories": 350, "protein": 20, "carbs": 45, "fat": 8}},
+                        "dinner": {"name": "Pork Tenderloin", "ingredients": ["Pork tenderloin", "Mashed potatoes", "Carrots"], "nutrition": {"calories": 540, "protein": 44, "carbs": 38, "fat": 22}},
+                        "snack_1": {"name": "Hummus with Carrots", "ingredients": ["Hummus", "Carrots"], "nutrition": {"calories": 150, "protein": 6, "carbs": 18, "fat": 8}},
+                        "snack_2": {"name": "Trail Mix", "ingredients": ["Nuts", "Dried fruits", "Seeds"], "nutrition": {"calories": 180, "protein": 5, "carbs": 15, "fat": 12}}
+                    },
+                    "day_6": {
+                        "breakfast": {"name": "Avocado Toast", "ingredients": ["Whole grain bread", "Avocado", "Eggs"], "nutrition": {"calories": 380, "protein": 16, "carbs": 32, "fat": 22}},
+                        "lunch": {"name": "Chicken Caesar Salad", "ingredients": ["Chicken breast", "Romaine lettuce", "Parmesan", "Croutons"], "nutrition": {"calories": 420, "protein": 32, "carbs": 15, "fat": 24}},
+                        "dinner": {"name": "Shrimp Scampi", "ingredients": ["Shrimp", "Whole wheat pasta", "Garlic", "Olive oil"], "nutrition": {"calories": 480, "protein": 36, "carbs": 45, "fat": 18}},
+                        "snack_1": {"name": "Protein Shake", "ingredients": ["Protein powder", "Milk", "Banana"], "nutrition": {"calories": 220, "protein": 28, "carbs": 20, "fat": 4}},
+                        "snack_2": {"name": "Grapes", "ingredients": ["Grapes"], "nutrition": {"calories": 90, "protein": 1, "carbs": 22, "fat": 0}}
+                    },
+                    "day_7": {
+                        "breakfast": {"name": "Breakfast Burrito", "ingredients": ["Eggs", "Turkey", "Whole wheat tortilla", "Cheese"], "nutrition": {"calories": 360, "protein": 24, "carbs": 28, "fat": 18}},
+                        "lunch": {"name": "Mediterranean Bowl", "ingredients": ["Falafel", "Couscous", "Cucumber", "Tzatziki"], "nutrition": {"calories": 440, "protein": 16, "carbs": 48, "fat": 20}},
+                        "dinner": {"name": "Baked Chicken", "ingredients": ["Chicken breast", "Wild rice", "Broccoli"], "nutrition": {"calories": 500, "protein": 42, "carbs": 40, "fat": 18}},
+                        "snack_1": {"name": "Yogurt with Berries", "ingredients": ["Greek yogurt", "Mixed berries", "Honey"], "nutrition": {"calories": 160, "protein": 16, "carbs": 18, "fat": 4}},
+                        "snack_2": {"name": "Almond Butter Toast", "ingredients": ["Whole grain bread", "Almond butter"], "nutrition": {"calories": 200, "protein": 8, "carbs": 20, "fat": 10}}
+                    }
+                },
+                "nutritional_needs": {
+                    "daily_calories": 2000,
+                    "daily_protein": 150,
+                    "daily_carbs": 250,
+                    "daily_fat": 70
+                },
+                "shopping_list": [
+                    "Oatmeal", "Berries", "Honey", "Chicken breast", "Salmon", "Turkey breast", "Lean beef", "Cod", "Pork tenderloin", "Shrimp",
+                    "Eggs", "Egg whites", "Greek yogurt", "Cottage cheese", "Milk", "Almond milk", "Cheese", "Parmesan",
+                    "Mixed greens", "Spinach", "Romaine lettuce", "Broccoli", "Green beans", "Asparagus", "Carrots", "Cucumber", "Mushrooms",
+                    "Sweet potato", "Brown rice", "Wild rice", "Quinoa", "Couscous", "Whole wheat tortilla", "Whole grain bread",
+                    "Olive oil", "Avocado", "Almonds", "Walnuts", "Cashews", "Peanut butter", "Almond butter", "Tahini", "Hummus",
+                    "Protein powder", "Granola", "Banana", "Apple", "Orange", "Grapes", "Pineapple", "Dark chocolate",
+                    "Chia seeds", "Dried fruits", "Seeds", "Croutons", "Tzatziki", "Falafel", "Chickpeas", "Lentils", "Chicken broth"
+                ],
+                "meal_prep_tips": [
+                    "Prepare oatmeal and smoothie ingredients the night before",
+                    "Cook chicken and beef in bulk for the week",
+                    "Wash and cut all vegetables ahead of time",
+                    "Pre-cook quinoa and rice for easy meal assembly",
+                    "Make protein shakes and smoothies in advance",
+                    "Portion out snacks for the week",
+                    "Prepare salad ingredients and store separately"
+                ],
+                "note": "This is a 7-day sample meal plan. For personalized AI-generated plans, please ensure GEMINI_API_KEY is configured."
+            }
+            meal_plan = fallback_plan
+        else:
+            # Generate meal plan using AI
+            meal_plan = meal_planner.generate_meal_plan(user_profile)
+            
+            if 'error' in meal_plan:
+                raise HTTPException(status_code=500, detail=meal_plan['error'])
         
-        # Generate meal plan
-        meal_plan = meal_planner.generate_meal_plan(user_profile)
-        
-        if 'error' in meal_plan:
-            raise HTTPException(status_code=500, detail=meal_plan['error'])
+        # Extract nutritional needs from the meal plan
+        nutritional_needs = meal_plan.get('nutritional_needs', {})
+        daily_calories = nutritional_needs.get('daily_calories', 2000)
+        daily_protein = nutritional_needs.get('daily_protein', 150)
+        daily_carbs = nutritional_needs.get('daily_carbs', 250)
+        daily_fat = nutritional_needs.get('daily_fat', 70)
         
         # Save meal plan to database if user is a member
         if user['user_type'] == 'member':
@@ -6947,11 +7339,15 @@ async def generate_ai_meal_plan(request: Request):
             try:
                 cursor.execute("""
                     INSERT INTO nutrition_plans 
-                    (member_id, plan_name, plan_data, created_at) 
-                    VALUES (%s, %s, %s, NOW())
+                    (member_id, plan_name, daily_calories, daily_protein, daily_carbs, daily_fat, plan_data, created_at) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
                 """, (
                     user['id'],
-                    f"AI Generated Plan - {datetime.now().strftime('%Y-%m-%d')}",
+                    plan_name,
+                    daily_calories,
+                    daily_protein,
+                    daily_carbs,
+                    daily_fat,
                     json.dumps(meal_plan)
                 ))
                 conn.commit()
@@ -6967,6 +7363,51 @@ async def generate_ai_meal_plan(request: Request):
         raise
     except Exception as e:
         print(f"Error generating meal plan: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.delete("/api/member/nutrition/plans/{plan_id}")
+async def delete_member_nutrition_plan(plan_id: int, request: Request):
+    """Delete a nutrition plan for the current member"""
+    try:
+        # Get user from session
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        
+        if user['user_type'] != 'member':
+            raise HTTPException(status_code=403, detail="Only members can delete their own plans")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if plan exists and belongs to the current member
+            cursor.execute("""
+                SELECT id FROM nutrition_plans 
+                WHERE id = %s AND member_id = %s
+            """, (plan_id, user['id']))
+            
+            plan = cursor.fetchone()
+            if not plan:
+                raise HTTPException(status_code=404, detail="Plan not found or access denied")
+            
+            # Delete the plan
+            cursor.execute("DELETE FROM nutrition_plans WHERE id = %s", (plan_id,))
+            conn.commit()
+            
+            return {"success": True, "message": "Nutrition plan deleted successfully"}
+            
+        except Exception as e:
+            print(f"Error deleting nutrition plan: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting nutrition plan: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/nutrition/generate-custom-meal")
@@ -6994,16 +7435,57 @@ async def generate_custom_meal(request: Request):
         data = await request.json()
         meal_requirements = data.get('meal_requirements', {})
         
-        if not meal_planner:
-            raise HTTPException(status_code=503, detail="AI meal planner not available")
-        
-        # Generate custom meal
-        meal = meal_planner.generate_custom_meal(meal_requirements)
-        
-        if 'error' in meal:
-            raise HTTPException(status_code=500, detail=meal['error'])
-        
-        return meal
+        if not meal_planner or not meal_planner.is_available():
+            # Provide a fallback custom meal when AI is not available
+            meal_type = meal_requirements.get('meal_type', 'lunch')
+            dietary_restrictions = meal_requirements.get('dietary_restrictions', [])
+            calorie_target = meal_requirements.get('calorie_target', 500)
+            
+            # Generate a fallback meal based on requirements
+            fallback_meal = {
+                "meal": {
+                    "name": f"Healthy {meal_type.title()}",
+                    "ingredients": [
+                        "Lean protein (chicken, fish, or tofu)",
+                        "Whole grains (brown rice, quinoa, or whole wheat pasta)",
+                        "Fresh vegetables",
+                        "Healthy fats (olive oil, avocado, or nuts)",
+                        "Herbs and spices for flavor"
+                    ],
+                    "nutrition": {
+                        "calories": calorie_target,
+                        "protein": int(calorie_target * 0.3 / 4),  # 30% protein
+                        "carbs": int(calorie_target * 0.45 / 4),   # 45% carbs
+                        "fat": int(calorie_target * 0.25 / 9)      # 25% fat
+                    },
+                    "instructions": [
+                        "Choose a lean protein source based on your preferences",
+                        "Cook with minimal oil using healthy cooking methods",
+                        "Include a variety of colorful vegetables",
+                        "Season with herbs and spices instead of salt",
+                        "Serve with a small portion of whole grains"
+                    ]
+                },
+                "nutritional_info": {
+                    "calories": calorie_target,
+                    "protein": f"{int(calorie_target * 0.3 / 4)}g",
+                    "carbs": f"{int(calorie_target * 0.45 / 4)}g",
+                    "fat": f"{int(calorie_target * 0.25 / 9)}g",
+                    "fiber": "8-12g",
+                    "sodium": "<500mg"
+                },
+                "dietary_notes": f"This meal is designed to be {', '.join(dietary_restrictions) if dietary_restrictions else 'flexible'} and can be adapted to various dietary preferences.",
+                "note": "This is a sample meal suggestion. For personalized AI-generated meals, please ensure GEMINI_API_KEY is configured."
+            }
+            return fallback_meal
+        else:
+            # Generate custom meal using AI
+            meal = meal_planner.generate_custom_meal(meal_requirements)
+            
+            if 'error' in meal:
+                raise HTTPException(status_code=500, detail=meal['error'])
+            
+            return meal
         
     except HTTPException:
         raise
@@ -7542,6 +8024,976 @@ async def delete_gym_coach(coach_id: int, request: Request):
     finally:
         cursor.close()
         conn.close()
+
+# Excel Export Endpoints
+
+@app.get("/api/export/schedule/coach")
+async def export_coach_schedule(
+    format: str = "xlsx",
+    start_date: str = None,
+    end_date: str = None,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Export coach schedule data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get coach ID from current user
+        coach_id = current_user.get('id')
+        
+        # Build query with filters
+        query = """
+        SELECT 
+            m.name as member_name,
+            m.email as member_email,
+            s.session_date,
+            s.session_time,
+            s.notes as workout_type,
+            s.status,
+            s.duration,
+            s.notes
+        FROM sessions s
+        JOIN members m ON s.member_id = m.id
+        WHERE s.coach_id = %s
+        """
+        params = [coach_id]
+        
+        if start_date and end_date:
+            query += " AND s.session_date BETWEEN %s AND %s"
+            params.extend([start_date, end_date])
+        
+        query += " ORDER BY s.session_date, s.session_time"
+        
+        cursor.execute(query, params)
+        sessions = cursor.fetchall()
+        
+        if not sessions:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['member_name', 'member_email', 'session_date', 'session_time', 'workout_type', 'status', 'duration', 'notes'])
+        else:
+            df = pd.DataFrame(sessions)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Coach Schedule', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"coach_schedule_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/schedule/member")
+async def export_member_schedule(
+    format: str = "xlsx",
+    start_date: str = None,
+    end_date: str = None,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Export member schedule data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get member ID from current user
+        member_id = current_user.get('id')  # Changed from 'user_id' to 'id'
+        
+        # Build query with filters
+        query = """
+        SELECT 
+            c.name as coach_name,
+            c.email as coach_email,
+            s.session_date,
+            s.session_time,
+            s.notes as workout_type,
+            s.status,
+            s.duration,
+            s.notes
+        FROM sessions s
+        JOIN coaches c ON s.coach_id = c.id
+        WHERE s.member_id = %s
+        """
+        params = [member_id]
+        
+        if start_date and end_date:
+            query += " AND s.session_date BETWEEN %s AND %s"
+            params.extend([start_date, end_date])
+        
+        query += " ORDER BY s.session_date, s.session_time"
+        
+        cursor.execute(query, params)
+        sessions = cursor.fetchall()
+        
+        if not sessions:
+            raise HTTPException(status_code=404, detail="No sessions found")
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(sessions)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='My Schedule', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"member_schedule_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/sessions/coach")
+async def export_coach_sessions(
+    format: str = "xlsx",
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Export coach sessions data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get coach ID from current user
+        coach_id = current_user.get('id')  # Changed from 'user_id' to 'id'
+        
+        query = """
+        SELECT 
+            m.name as member_name,
+            m.email as member_email,
+            s.session_date,
+            s.session_time,
+            s.notes as workout_type,
+            s.status,
+            s.duration,
+            s.notes,
+            s.created_at
+        FROM sessions s
+        JOIN members m ON s.member_id = m.id
+        WHERE s.coach_id = %s
+        ORDER BY s.session_date DESC, s.session_time DESC
+        """
+        
+        cursor.execute(query, [coach_id])
+        sessions = cursor.fetchall()
+        
+        # Convert to DataFrame
+        if not sessions:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['member_name', 'member_email', 'session_date', 'session_time', 'workout_type', 'status', 'duration', 'notes', 'created_at'])
+        else:
+            df = pd.DataFrame(sessions)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Coach Sessions', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"coach_sessions_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/sessions/gym")
+async def export_gym_sessions(
+    format: str = "xlsx",
+    request: Request = None
+):
+    """Export gym sessions data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        query = """
+        SELECT 
+            m.name as member_name,
+            m.email as member_email,
+            c.name as coach_name,
+            c.email as coach_email,
+            s.session_date,
+            s.session_time,
+            s.notes as workout_type,
+            s.status,
+            s.duration,
+            s.notes,
+            s.created_at
+        FROM sessions s
+        JOIN members m ON s.member_id = m.id
+        JOIN coaches c ON s.coach_id = c.id
+        ORDER BY s.session_date DESC, s.session_time DESC
+        """
+        
+        cursor.execute(query)
+        sessions = cursor.fetchall()
+        
+        # Convert to DataFrame
+        if not sessions:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['member_name', 'member_email', 'coach_name', 'coach_email', 'session_date', 'session_time', 'workout_type', 'status', 'duration', 'notes', 'created_at'])
+        else:
+            df = pd.DataFrame(sessions)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Gym Sessions', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"gym_sessions_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/members/coach")
+async def export_coach_members(
+    format: str = "xlsx",
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Export coach members data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get coach ID from current user
+        coach_id = current_user.get('id')
+        
+        query = """
+        SELECT 
+            m.name,
+            m.email,
+            m.membership_type,
+            m.join_date,
+            COUNT(s.id) as total_sessions,
+            COUNT(CASE WHEN s.status = 'Completed' THEN 1 END) as completed_sessions,
+            MAX(s.session_date) as last_session_date
+        FROM members m
+        JOIN member_coach mc ON m.id = mc.member_id
+        LEFT JOIN sessions s ON m.id = s.member_id AND s.coach_id = %s
+        WHERE mc.coach_id = %s
+        GROUP BY m.id, m.name, m.email, m.membership_type, m.join_date
+        ORDER BY m.name
+        """
+        
+        cursor.execute(query, [coach_id, coach_id])
+        members = cursor.fetchall()
+        
+        # Convert to DataFrame
+        if not members:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['name', 'email', 'membership_type', 'join_date', 'total_sessions', 'completed_sessions', 'last_session_date'])
+        else:
+            df = pd.DataFrame(members)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Coach Members', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"coach_members_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/members/gym")
+async def export_gym_members(
+    format: str = "xlsx",
+    request: Request = None
+):
+    """Export gym members data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        query = """
+        SELECT 
+            m.name,
+            m.email,
+            m.membership_type,
+            m.created_at,
+            c.name as coach_name,
+            c.email as coach_email,
+            COUNT(s.id) as total_sessions,
+            COUNT(CASE WHEN s.status = 'completed' THEN 1 END) as completed_sessions,
+            MAX(s.session_date) as last_session_date
+        FROM members m
+        LEFT JOIN member_coach mc ON m.id = mc.member_id
+        LEFT JOIN coaches c ON mc.coach_id = c.id
+        LEFT JOIN sessions s ON m.id = s.member_id
+        GROUP BY m.id, m.name, m.email, m.membership_type, m.created_at, c.name, c.email
+        ORDER BY m.name
+        """
+        
+        cursor.execute(query)
+        members = cursor.fetchall()
+        
+        # Convert to DataFrame
+        if not members:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['name', 'email', 'membership_type', 'created_at', 'coach_name', 'coach_email', 'total_sessions', 'completed_sessions', 'last_session_date'])
+        else:
+            df = pd.DataFrame(members)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Gym Members', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"gym_members_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/coaches/gym")
+async def export_gym_coaches(
+    format: str = "xlsx",
+    request: Request = None
+):
+    """Export gym coaches data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        query = """
+        SELECT 
+            c.name,
+            c.email,
+            c.specialization,
+            c.status,
+            c.created_at,
+            COUNT(DISTINCT m.id) as assigned_members,
+            COUNT(s.id) as total_sessions,
+            COUNT(CASE WHEN s.status = 'completed' THEN 1 END) as completed_sessions
+        FROM coaches c
+        LEFT JOIN members m ON c.id = m.coach_id
+        LEFT JOIN sessions s ON c.id = s.coach_id
+        GROUP BY c.id, c.name, c.email, c.specialization, c.status, c.created_at
+        ORDER BY c.name
+        """
+        
+        cursor.execute(query)
+        coaches = cursor.fetchall()
+        
+        # Convert to DataFrame
+        if not coaches:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['name', 'email', 'specialization', 'status', 'created_at', 'assigned_members', 'total_sessions', 'completed_sessions'])
+        else:
+            df = pd.DataFrame(coaches)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Gym Coaches', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"gym_coaches_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/progress/coach")
+async def export_coach_progress(
+    format: str = "xlsx",
+    time_range: str = "month",
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Export coach progress data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get coach ID from current user
+        coach_id = current_user.get('id')  # Changed from 'user_id' to 'id'
+        
+        # Calculate date range
+        end_date = datetime.now()
+        if time_range == "week":
+            start_date = end_date - timedelta(days=7)
+        elif time_range == "month":
+            start_date = end_date - timedelta(days=30)
+        elif time_range == "quarter":
+            start_date = end_date - timedelta(days=90)
+        else:
+            start_date = end_date - timedelta(days=365)
+        
+        query = """
+        SELECT 
+            m.name as member_name,
+            m.email as member_email,
+            s.session_date,
+            s.session_time,
+            s.notes as workout_type,
+            s.status,
+            s.duration,
+            s.notes
+        FROM sessions s
+        JOIN members m ON s.member_id = m.id
+        WHERE s.coach_id = %s AND s.session_date >= %s
+        ORDER BY s.session_date DESC, s.session_time DESC
+        """
+        
+        cursor.execute(query, [coach_id, start_date.strftime('%Y-%m-%d')])
+        sessions = cursor.fetchall()
+        
+        if not sessions:
+            raise HTTPException(status_code=404, detail="No progress data found")
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(sessions)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Coach Progress', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"coach_progress_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/progress/member")
+async def export_member_progress(
+    format: str = "xlsx",
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Export member progress data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get member ID from current user
+        member_id = current_user.get('id')  # Changed from 'user_id' to 'id'
+        
+        query = """
+        SELECT 
+            c.name as coach_name,
+            c.email as coach_email,
+            s.session_date,
+            s.session_time,
+            s.notes as workout_type,
+            s.status,
+            s.duration,
+            s.notes
+        FROM sessions s
+        JOIN coaches c ON s.coach_id = c.id
+        WHERE s.member_id = %s
+        ORDER BY s.session_date DESC, s.session_time DESC
+        """
+        
+        cursor.execute(query, [member_id])
+        sessions = cursor.fetchall()
+        
+        if not sessions:
+            raise HTTPException(status_code=404, detail="No progress data found")
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(sessions)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='My Progress', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"member_progress_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/nutrition/coach")
+async def export_coach_nutrition(
+    format: str = "xlsx",
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Export coach nutrition data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get coach ID from current user
+        coach_id = current_user.get('id')
+        
+        query = """
+        SELECT 
+            m.name as member_name,
+            m.email as member_email,
+            nl.created_at as entry_date,
+            nl.meal_type,
+            COALESCE(nl.custom_food_name, fi.name) as food_name,
+            nl.quantity,
+            nl.unit,
+            nl.total_calories as calories,
+            nl.total_protein as protein,
+            nl.total_carbs as carbs,
+            nl.total_fat as fat,
+            nl.notes
+        FROM nutrition_logs nl
+        JOIN members m ON nl.member_id = m.id
+        JOIN member_coach mc ON m.id = mc.member_id
+        LEFT JOIN food_items fi ON nl.food_item_id = fi.id
+        WHERE mc.coach_id = %s
+        ORDER BY nl.created_at DESC, nl.meal_type
+        """
+        
+        cursor.execute(query, [coach_id])
+        entries = cursor.fetchall()
+        
+        if not entries:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['member_name', 'member_email', 'entry_date', 'meal_type', 'food_name', 'quantity', 'unit', 'calories', 'protein', 'carbs', 'fat', 'notes'])
+        else:
+            df = pd.DataFrame(entries)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Coach Nutrition', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"coach_nutrition_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/nutrition/member")
+async def export_member_nutrition(
+    format: str = "xlsx",
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Export member nutrition data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get member ID from current user
+        member_id = current_user.get('id')  # Changed from 'user_id' to 'id'
+        
+        query = """
+        SELECT 
+            created_at as entry_date,
+            meal_type,
+            COALESCE(custom_food_name, fi.name) as food_name,
+            quantity,
+            unit,
+            total_calories as calories,
+            total_protein as protein,
+            total_carbs as carbs,
+            total_fat as fat,
+            notes
+        FROM nutrition_logs nl
+        LEFT JOIN food_items fi ON nl.food_item_id = fi.id
+        WHERE nl.member_id = %s
+        ORDER BY nl.created_at DESC, nl.meal_type
+        """
+        
+        cursor.execute(query, [member_id])
+        entries = cursor.fetchall()
+        
+        if not entries:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['entry_date', 'meal_type', 'food_name', 'quantity', 'unit', 'calories', 'protein', 'carbs', 'fat', 'notes'])
+        else:
+            df = pd.DataFrame(entries)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='My Nutrition', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"member_nutrition_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/dashboard/coach")
+async def export_coach_dashboard(
+    format: str = "xlsx",
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Export coach dashboard data to Excel"""
+    try:
+        print(f"Export dashboard called with current_user: {current_user}")  # Debug log
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get coach ID from current user
+        coach_id = current_user.get('id')  # Changed from 'user_id' to 'id'
+        print(f"Coach ID: {coach_id}")  # Debug log
+        
+        # Get recent sessions
+        query = """
+        SELECT 
+            m.name as member_name,
+            m.email as member_email,
+            s.session_date,
+            s.session_time,
+            s.notes as workout_type,
+            s.status,
+            s.duration
+        FROM sessions s
+        JOIN members m ON s.member_id = m.id
+        WHERE s.coach_id = %s
+        ORDER BY s.session_date DESC, s.session_time DESC
+        LIMIT 50
+        """
+        
+        print(f"Executing query with coach_id: {coach_id}")  # Debug log
+        cursor.execute(query, [coach_id])
+        sessions = cursor.fetchall()
+        print(f"Found {len(sessions)} sessions")  # Debug log
+        
+        # Convert to DataFrame
+        if not sessions:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['member_name', 'member_email', 'session_date', 'session_time', 'workout_type', 'status', 'duration'])
+            print("Created empty DataFrame")  # Debug log
+        else:
+            df = pd.DataFrame(sessions)
+            print(f"Created DataFrame with {len(df)} rows")  # Debug log
+        
+        # Create Excel file in memory
+        print("Creating Excel file...")  # Debug log
+        output = io.BytesIO()
+        try:
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='Coach Dashboard', index=False)
+            print("Excel file created successfully")  # Debug log
+        except Exception as e:
+            print(f"Error creating Excel file: {str(e)}")  # Debug log
+            raise
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"coach_dashboard_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        print(f"Export failed with error: {str(e)}")  # Debug log
+        print(f"Error type: {type(e)}")  # Debug log
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")  # Debug log
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/dashboard/member")
+async def export_member_dashboard(
+    format: str = "xlsx",
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Export member dashboard data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get member ID from current user
+        member_id = current_user.get('id')  # Changed from 'user_id' to 'id'
+        
+        # Get recent sessions
+        query = """
+        SELECT 
+            c.name as coach_name,
+            c.email as coach_email,
+            s.session_date,
+            s.session_time,
+            s.notes as workout_type,
+            s.status,
+            s.duration
+        FROM sessions s
+        JOIN coaches c ON s.coach_id = c.id
+        WHERE s.member_id = %s
+        ORDER BY s.session_date DESC, s.session_time DESC
+        LIMIT 50
+        """
+        
+        cursor.execute(query, [member_id])
+        sessions = cursor.fetchall()
+        
+        # Convert to DataFrame
+        if not sessions:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['coach_name', 'coach_email', 'session_date', 'session_time', 'workout_type', 'status', 'duration'])
+        else:
+            df = pd.DataFrame(sessions)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='My Dashboard', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"member_dashboard_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/dashboard/gym")
+async def export_gym_dashboard(
+    format: str = "xlsx",
+    request: Request = None
+):
+    """Export gym dashboard data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get recent sessions
+        query = """
+        SELECT 
+            m.name as member_name,
+            m.email as member_email,
+            c.name as coach_name,
+            c.email as coach_email,
+            s.session_date,
+            s.session_time,
+            s.notes as workout_type,
+            s.status,
+            s.duration
+        FROM sessions s
+        JOIN members m ON s.member_id = m.id
+        JOIN coaches c ON s.coach_id = c.id
+        ORDER BY s.session_date DESC, s.session_time DESC
+        LIMIT 50
+        """
+        
+        cursor.execute(query)
+        sessions = cursor.fetchall()
+        
+        # Convert to DataFrame
+        if not sessions:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['member_name', 'member_email', 'coach_name', 'coach_email', 'session_date', 'session_time', 'workout_type', 'status', 'duration'])
+        else:
+            df = pd.DataFrame(sessions)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Gym Dashboard', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"gym_dashboard_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/export/analytics/gym")
+async def export_gym_analytics(
+    format: str = "xlsx",
+    request: Request = None
+):
+    """Export gym analytics data to Excel"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get coach performance data
+        query = """
+        SELECT 
+            c.name as coach_name,
+            c.email as coach_email,
+            c.specialization,
+            COUNT(s.id) as total_sessions,
+            COUNT(CASE WHEN s.status = 'completed' THEN 1 END) as completed_sessions,
+            COUNT(DISTINCT s.member_id) as unique_members,
+            ROUND(COUNT(CASE WHEN s.status = 'completed' THEN 1 END) * 100.0 / COUNT(s.id), 2) as completion_rate
+        FROM coaches c
+        LEFT JOIN sessions s ON c.id = s.coach_id
+        GROUP BY c.id, c.name, c.email, c.specialization
+        ORDER BY total_sessions DESC
+        """
+        
+        cursor.execute(query)
+        analytics = cursor.fetchall()
+        
+        # Convert to DataFrame
+        if not analytics:
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['coach_name', 'coach_email', 'specialization', 'total_sessions', 'completed_sessions', 'unique_members', 'completion_rate'])
+        else:
+            df = pd.DataFrame(analytics)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Gym Analytics', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"gym_analytics_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.get("/api/test-export")
+async def test_export():
+    """Test export functionality without authentication"""
+    try:
+        print("Test export called")  # Debug log
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Create a simple test DataFrame
+        test_data = [
+            {"name": "Test Member", "email": "test@example.com", "session_date": "2024-01-01", "session_time": "10:00", "workout_type": "Strength", "status": "completed", "duration": 60}
+        ]
+        
+        df = pd.DataFrame(test_data)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Test Export', index=False)
+        
+        output.seek(0)
+        
+        # Return Excel file
+        return StreamingResponse(
+            io.BytesIO(output.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=test_export_{datetime.now().strftime('%Y%m%d')}.xlsx"}
+        )
+        
+    except Exception as e:
+        print(f"Test export error: {str(e)}")  # Debug log
+        raise HTTPException(status_code=500, detail=f"Test export failed: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 if __name__ == "__main__":
     import uvicorn

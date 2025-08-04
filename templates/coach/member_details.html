@@ -954,7 +954,7 @@ document.addEventListener('DOMContentLoaded', function() {
  });
  }
 
- function closeAssignBestWorkoutModal() {
+ window.closeAssignBestWorkoutModal = function() {
  modal.classList.add('hidden');
  document.getElementById('modalBestMatches').classList.add('hidden');
  modalBestMatches = [];

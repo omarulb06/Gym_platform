@@ -85,11 +85,15 @@
  <!-- Recent Sessions -->
  <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl border border-white/20 hover:shadow-2xl transition-all duration-300 animate-fade-in">
  <div class="px-8 py-8 sm:p-10">
- <div class="flex items-center space-x-2 sm:space-x-4 mb-4 sm:mb-6">
- <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+ <div class="flex justify-between items-center mb-4 sm:mb-6">
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center text-white shadow-lg">
  <i class="fas fa-history text-xl"></i>
  </div>
  <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Recent Sessions</h3>
+ </div>
+ <div class="flex items-center space-x-2">
+ </div>
  </div>
  <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
  <table class="min-w-full responsive-table divide-y divide-gray-200/50">
@@ -377,5 +381,32 @@
  // Initialize role buttons
  updateRoleButtons();
  });
+
+ // Export dashboard function
+ async function exportDashboard(format) {
+ try {
+ const url = `/api/export/dashboard/coach?format=${format}`;
+ const response = await fetch(url);
+ 
+ if (!response.ok) {
+ throw new Error('Failed to export dashboard data');
+ }
+ 
+ // Create a temporary link to download the file
+ const blob = await response.blob();
+ const url2 = window.URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url2;
+ a.download = `coach_dashboard_${new Date().toISOString().split('T')[0]}.${format}`;
+ document.body.appendChild(a);
+ a.click();
+ window.URL.revokeObjectURL(url2);
+ document.body.removeChild(a);
+ 
+ } catch (error) {
+ console.error('Error exporting dashboard data:', error);
+ alert('Failed to export dashboard data. Please try again.');
+ }
+ }
 </script>
 {% endblock %} 

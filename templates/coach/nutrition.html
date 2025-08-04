@@ -42,9 +42,6 @@ window.addEventListener('load', function() {
         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-sm">
             <i class="fas fa-chart-line mr-1"></i>Analytics
         </span>
-        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <i class="fas fa-users mr-1"></i>{{ stats.total_members if stats else 0 }} Members
-        </span>
     </div>
 </div>
 {% endblock %}
@@ -109,7 +106,11 @@ window.addEventListener('load', function() {
                 <i class="fas fa-users text-emerald-600 mr-2"></i>
                 Member Nutrition Overview
             </h2>
-            <div class="flex space-x-2">
+            <div class="flex items-center space-x-2">
+                <button onclick="exportNutrition('xlsx')" 
+                class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
+                <i class="fas fa-file-excel mr-2"></i>Export Excel
+                </button>
                 <select id="timeRangeFilter" class="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     <option value="week">This Week</option>
                     <option value="month">This Month</option>
@@ -167,9 +168,14 @@ window.addEventListener('load', function() {
                 <i class="fas fa-clipboard-list text-emerald-600 mr-2"></i>
                 Nutrition Plans
             </h2>
-            <button onclick="openCreatePlanModal()" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all">
-                <i class="fas fa-plus mr-2"></i>Create Plan
-            </button>
+            <div class="flex items-center space-x-2">
+                <button onclick="viewAllNutritionPlans()" class="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all">
+                    <i class="fas fa-clipboard-list mr-2"></i>View All Plans
+                </button>
+                <button onclick="openCreatePlanModal()" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all">
+                    <i class="fas fa-plus mr-2"></i>Create Plan
+                </button>
+            </div>
         </div>
 
         <div id="nutritionPlans">
@@ -272,6 +278,60 @@ window.addEventListener('load', function() {
             
             <div id="memberDetailsContent">
                 <!-- Member details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Member Nutrition Plans Modal -->
+<div id="memberPlansModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Member Nutrition Plans</h3>
+                <button onclick="closeModal('memberPlansModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="memberPlansContent">
+                <!-- Member nutrition plans will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- All Nutrition Plans Modal -->
+<div id="allPlansModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">All Member Nutrition Plans</h3>
+                <button onclick="closeModal('allPlansModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="allPlansContent">
+                <!-- All nutrition plans will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Coach Comparison Modal -->
+<div id="coachComparisonModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Member Plan vs Today Comparison</h3>
+                <button onclick="closeModal('coachComparisonModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="coachComparisonContent">
+                <!-- Coach comparison data will be loaded here -->
             </div>
         </div>
     </div>
@@ -441,10 +501,13 @@ function updateMembersTable(members) {
                     ${member.last_nutrition_entry ? new Date(member.last_nutrition_entry).toLocaleDateString() : 'Never'}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onclick="viewMemberNutrition(${member.id})" class="text-emerald-600 hover:text-emerald-900 mr-3">
+                    <button onclick="viewMemberNutrition(${member.id})" class="text-emerald-600 hover:text-emerald-900 mr-3" title="View Nutrition Details">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button onclick="addNutritionFeedback(${member.id})" class="text-blue-600 hover:text-blue-900">
+                    <button onclick="viewMemberPlans(${member.id})" class="text-purple-600 hover:text-purple-900 mr-3" title="View Nutrition Plans">
+                        <i class="fas fa-clipboard-list"></i>
+                    </button>
+                    <button onclick="addNutritionFeedback(${member.id})" class="text-blue-600 hover:text-blue-900" title="Add Feedback">
                         <i class="fas fa-comment"></i>
                     </button>
                 </td>
@@ -598,6 +661,43 @@ async function viewMemberNutrition(memberId) {
     }
 }
 
+// View member nutrition plans
+async function viewMemberPlans(memberId) {
+    try {
+        // Store the current member ID for use in other functions
+        currentMemberId = memberId;
+        
+        const response = await fetch(`/api/coach/nutrition/plans/${memberId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            showMemberPlans(data);
+        } else {
+            showNotification(data.detail || 'Failed to load nutrition plans', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading member nutrition plans:', error);
+        showNotification('Error loading nutrition plans', 'error');
+    }
+}
+
+// View all nutrition plans for all members
+async function viewAllNutritionPlans() {
+    try {
+        const response = await fetch('/api/coach/nutrition/all-plans');
+        const data = await response.json();
+        
+        if (data.success) {
+            showAllNutritionPlans(data);
+        } else {
+            showNotification(data.detail || 'Failed to load all nutrition plans', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading all nutrition plans:', error);
+        showNotification('Error loading all nutrition plans', 'error');
+    }
+}
+
 // Show member details modal
 function showMemberDetails(data) {
     const modal = document.getElementById('memberDetailsModal');
@@ -659,10 +759,543 @@ function showMemberDetails(data) {
     modal.classList.remove('hidden');
 }
 
+// Show member nutrition plans modal
+function showMemberPlans(data) {
+    const modal = document.getElementById('memberPlansModal');
+    const content = document.getElementById('memberPlansContent');
+    
+    const member = data.member;
+    const plans = data.plans || [];
+    
+    content.innerHTML = `
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                    <i class="fas fa-clipboard-list text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900">${member.first_name} ${member.last_name}</h4>
+                    <p class="text-sm text-gray-600">Nutrition Plans</p>
+                </div>
+            </div>
+            
+            ${plans.length === 0 ? `
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-clipboard-list text-gray-400 text-2xl"></i>
+                    </div>
+                    <h5 class="text-lg font-medium text-gray-900 mb-2">No Nutrition Plans</h5>
+                    <p class="text-gray-600">This member doesn't have any nutrition plans yet.</p>
+                </div>
+            ` : `
+                <div class="space-y-4">
+                    ${plans.map(plan => `
+                        <div class="border border-gray-200 rounded-lg p-6 bg-gradient-to-r from-purple-50 to-blue-50">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h5 class="text-lg font-semibold text-gray-900">${plan.plan_name}</h5>
+                                    <p class="text-sm text-gray-600">Created: ${new Date(plan.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                                        plan.status === 'active' ? 'bg-green-100 text-green-800' :
+                                        plan.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }">
+                                        ${plan.status.charAt(0).toUpperCase() + plan.status.slice(1)}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-purple-600">${plan.daily_calories}</div>
+                                    <div class="text-sm text-gray-600">Daily Calories</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-blue-600">${plan.daily_protein}g</div>
+                                    <div class="text-sm text-gray-600">Daily Protein</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-green-600">${plan.daily_carbs}g</div>
+                                    <div class="text-sm text-gray-600">Daily Carbs</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-orange-600">${plan.daily_fat}g</div>
+                                    <div class="text-sm text-gray-600">Daily Fat</div>
+                                </div>
+                            </div>
+                            
+                            ${plan.notes ? `
+                                <div class="mt-4 p-3 bg-white rounded-lg border border-gray-200">
+                                    <h6 class="text-sm font-medium text-gray-900 mb-2">Notes:</h6>
+                                    <p class="text-sm text-gray-700">${plan.notes}</p>
+                                </div>
+                            ` : ''}
+                            
+                                                                <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                                        <div class="text-sm text-gray-600">
+                                            Last updated: ${new Date(plan.updated_at).toLocaleDateString()}
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <button onclick="compareMemberWithPlan(${plan.id}, ${memberData.member.id}, ${JSON.stringify(plan).replace(/"/g, '&quot;')})" class="text-emerald-600 hover:text-emerald-800 text-sm font-medium">
+                                                <i class="fas fa-chart-line mr-1"></i>Compare Today
+                                            </button>
+                                            <button onclick="editNutritionPlan(${plan.id})" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                                <i class="fas fa-edit mr-1"></i>Edit
+                                            </button>
+                                            <button onclick="deleteNutritionPlan(${plan.id})" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                                <i class="fas fa-trash mr-1"></i>Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `}
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
+
+// Show all nutrition plans modal
+function showAllNutritionPlans(data) {
+    const modal = document.getElementById('allPlansModal');
+    const content = document.getElementById('allPlansContent');
+    
+    const membersPlans = data.members_plans || [];
+    
+    content.innerHTML = `
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                    <i class="fas fa-clipboard-list text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900">All Member Nutrition Plans</h4>
+                    <p class="text-sm text-gray-600">View all nutrition plans for all your members</p>
+                </div>
+            </div>
+            
+            ${membersPlans.length === 0 ? `
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-clipboard-list text-gray-400 text-2xl"></i>
+                    </div>
+                    <h5 class="text-lg font-medium text-gray-900 mb-2">No Nutrition Plans Found</h5>
+                    <p class="text-gray-600">No nutrition plans have been created for any members yet.</p>
+                </div>
+            ` : `
+                <div class="space-y-6">
+                    ${membersPlans.map(memberData => `
+                        <div class="border border-gray-200 rounded-lg p-6 bg-gradient-to-r from-purple-50 to-pink-50">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                                        <i class="fas fa-user text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="text-lg font-semibold text-gray-900">${memberData.member.first_name} ${memberData.member.last_name}</h5>
+                                        <p class="text-sm text-gray-600">${memberData.member.email}</p>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    ${memberData.plans.length} plan${memberData.plans.length !== 1 ? 's' : ''}
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                ${memberData.plans.map(plan => `
+                                    <div class="border border-gray-200 rounded-lg p-4 bg-white">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div>
+                                                <h6 class="font-medium text-gray-900">${plan.plan_name}</h6>
+                                                <p class="text-xs text-gray-600">Created: ${new Date(plan.created_at).toLocaleDateString()}</p>
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                                                    plan.status === 'active' ? 'bg-green-100 text-green-800' :
+                                                    plan.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                                }">
+                                                    ${plan.status.charAt(0).toUpperCase() + plan.status.slice(1)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="grid grid-cols-4 gap-2 text-sm">
+                                            <div class="text-center">
+                                                <div class="font-bold text-purple-600">${plan.daily_calories}</div>
+                                                <div class="text-xs text-gray-600">Calories</div>
+                                            </div>
+                                            <div class="text-center">
+                                                <div class="font-bold text-blue-600">${plan.daily_protein}g</div>
+                                                <div class="text-xs text-gray-600">Protein</div>
+                                            </div>
+                                            <div class="text-center">
+                                                <div class="font-bold text-green-600">${plan.daily_carbs}g</div>
+                                                <div class="text-xs text-gray-600">Carbs</div>
+                                            </div>
+                                            <div class="text-center">
+                                                <div class="font-bold text-orange-600">${plan.daily_fat}g</div>
+                                                <div class="text-xs text-gray-600">Fat</div>
+                                            </div>
+                                        </div>
+                                        
+                                        ${plan.notes ? `
+                                            <div class="mt-3 p-2 bg-gray-50 rounded text-xs">
+                                                <span class="font-medium">Notes:</span> ${plan.notes}
+                                            </div>
+                                        ` : ''}
+                                        
+                                        <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                                            <div class="text-xs text-gray-500">
+                                                Updated: ${new Date(plan.updated_at).toLocaleDateString()}
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                <button onclick="editNutritionPlan(${plan.id})" class="text-blue-600 hover:text-blue-800 text-xs font-medium">
+                                                    <i class="fas fa-edit mr-1"></i>Edit
+                                                </button>
+                                                <button onclick="deleteNutritionPlan(${plan.id})" class="text-red-600 hover:text-red-800 text-xs font-medium">
+                                                    <i class="fas fa-trash mr-1"></i>Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `}
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
+
 // Add nutrition feedback
 function addNutritionFeedback(memberId) {
     // Implementation for adding nutrition feedback
     console.log('Add nutrition feedback for member:', memberId);
+}
+
+// Edit nutrition plan
+function editNutritionPlan(planId) {
+    // Implementation for editing nutrition plan
+    console.log('Edit nutrition plan:', planId);
+    showNotification('Edit functionality coming soon!', 'info');
+}
+
+// Compare member with plan
+async function compareMemberWithPlan(planId, memberId, planData) {
+    try {
+        // Parse the plan data
+        const plan = typeof planData === 'string' ? JSON.parse(planData) : planData;
+        
+        // Get member's today nutrition data
+        const response = await fetch(`/api/coach/nutrition/member/${memberId}/today`);
+        const data = await response.json();
+        
+        if (data.success) {
+            showCoachComparisonModal(plan, data.member, data.today, data.meals);
+        } else {
+            showNotification(data.detail || 'Failed to load member\'s today nutrition data', 'error');
+        }
+    } catch (error) {
+        console.error('Error comparing member with plan:', error);
+        showNotification('Error loading comparison data', 'error');
+    }
+}
+
+// Show coach comparison modal
+function showCoachComparisonModal(plan, member, todayData, mealsData) {
+    const modal = document.getElementById('coachComparisonModal');
+    const content = document.getElementById('coachComparisonContent');
+    
+    // Calculate percentages and differences
+    const caloriesPercent = Math.round((todayData.total_calories / plan.daily_calories) * 100);
+    const proteinPercent = Math.round((todayData.total_protein / plan.daily_protein) * 100);
+    const carbsPercent = Math.round((todayData.total_carbs / plan.daily_carbs) * 100);
+    const fatPercent = Math.round((todayData.total_fat / plan.daily_fat) * 100);
+    
+    const caloriesDiff = todayData.total_calories - plan.daily_calories;
+    const proteinDiff = todayData.total_protein - plan.daily_protein;
+    const carbsDiff = todayData.total_carbs - plan.daily_carbs;
+    const fatDiff = todayData.total_fat - plan.daily_fat;
+    
+    content.innerHTML = `
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900">${member.first_name} ${member.last_name}</h4>
+                    <p class="text-sm text-gray-600">${plan.plan_name} vs Today's Actual Intake</p>
+                </div>
+            </div>
+            
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-sm font-medium text-purple-800">Calories</h5>
+                        <span class="text-xs px-2 py-1 rounded-full ${
+                            caloriesPercent >= 90 && caloriesPercent <= 110 ? 'bg-green-100 text-green-800' :
+                            caloriesPercent < 90 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                        }">
+                            ${caloriesPercent}%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-purple-600">${Math.round(todayData.total_calories)}</div>
+                    <div class="text-sm text-purple-600">/ ${plan.daily_calories} cal</div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        ${caloriesDiff > 0 ? '+' : ''}${Math.round(caloriesDiff)} cal ${caloriesDiff > 0 ? 'over' : 'under'}
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-sm font-medium text-blue-800">Protein</h5>
+                        <span class="text-xs px-2 py-1 rounded-full ${
+                            proteinPercent >= 90 && proteinPercent <= 110 ? 'bg-green-100 text-green-800' :
+                            proteinPercent < 90 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                        }">
+                            ${proteinPercent}%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-blue-600">${Math.round(todayData.total_protein)}g</div>
+                    <div class="text-sm text-blue-600">/ ${plan.daily_protein}g</div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        ${proteinDiff > 0 ? '+' : ''}${Math.round(proteinDiff)}g ${proteinDiff > 0 ? 'over' : 'under'}
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-sm font-medium text-green-800">Carbs</h5>
+                        <span class="text-xs px-2 py-1 rounded-full ${
+                            carbsPercent >= 90 && carbsPercent <= 110 ? 'bg-green-100 text-green-800' :
+                            carbsPercent < 90 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                        }">
+                            ${carbsPercent}%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-green-600">${Math.round(todayData.total_carbs)}g</div>
+                    <div class="text-sm text-green-600">/ ${plan.daily_carbs}g</div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        ${carbsDiff > 0 ? '+' : ''}${Math.round(carbsDiff)}g ${carbsDiff > 0 ? 'over' : 'under'}
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <h5 class="text-sm font-medium text-orange-800">Fat</h5>
+                        <span class="text-xs px-2 py-1 rounded-full ${
+                            fatPercent >= 90 && fatPercent <= 110 ? 'bg-green-100 text-green-800' :
+                            fatPercent < 90 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                        }">
+                            ${fatPercent}%
+                        </span>
+                    </div>
+                    <div class="text-2xl font-bold text-orange-600">${Math.round(todayData.total_fat)}g</div>
+                    <div class="text-sm text-orange-600">/ ${plan.daily_fat}g</div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        ${fatDiff > 0 ? '+' : ''}${Math.round(fatDiff)}g ${fatDiff > 0 ? 'over' : 'under'}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Progress Bars -->
+            <div class="space-y-4">
+                <h5 class="text-lg font-semibold text-gray-900">Progress Towards Plan Goals</h5>
+                
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium">Calories</span>
+                            <span>${Math.round(todayData.total_calories)} / ${plan.daily_calories}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 ${
+                                caloriesPercent >= 100 ? 'bg-green-500' : 
+                                caloriesPercent >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                            }" style="width: ${Math.min(caloriesPercent, 100)}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium">Protein</span>
+                            <span>${Math.round(todayData.total_protein)}g / ${plan.daily_protein}g</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 ${
+                                proteinPercent >= 100 ? 'bg-green-500' : 
+                                proteinPercent >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                            }" style="width: ${Math.min(proteinPercent, 100)}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium">Carbs</span>
+                            <span>${Math.round(todayData.total_carbs)}g / ${plan.daily_carbs}g</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 ${
+                                carbsPercent >= 100 ? 'bg-green-500' : 
+                                carbsPercent >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                            }" style="width: ${Math.min(carbsPercent, 100)}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium">Fat</span>
+                            <span>${Math.round(todayData.total_fat)}g / ${plan.daily_fat}g</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="h-3 rounded-full transition-all duration-500 ${
+                                fatPercent >= 100 ? 'bg-green-500' : 
+                                fatPercent >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                            }" style="width: ${Math.min(fatPercent, 100)}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Today's Meals Breakdown -->
+            <div class="space-y-4">
+                <h5 class="text-lg font-semibold text-gray-900">Today's Meals Breakdown</h5>
+                
+                ${mealsData.length === 0 ? `
+                    <div class="text-center py-6 bg-gray-50 rounded-lg">
+                        <i class="fas fa-utensils text-gray-400 text-2xl mb-2"></i>
+                        <p class="text-gray-600">No meals logged today yet</p>
+                        <p class="text-sm text-gray-500">Member hasn't logged any meals today</p>
+                    </div>
+                ` : `
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        ${mealsData.map(meal => `
+                            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h6 class="font-medium text-gray-900">${meal.meal_type}</h6>
+                                    <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                                        ${meal.entries_count} items
+                                    </span>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Calories:</span>
+                                        <span class="font-medium">${Math.round(meal.total_calories)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Protein:</span>
+                                        <span class="font-medium">${Math.round(meal.total_protein)}g</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Carbs:</span>
+                                        <span class="font-medium">${Math.round(meal.total_carbs)}g</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Fat:</span>
+                                        <span class="font-medium">${Math.round(meal.total_fat)}g</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            </div>
+            
+            <!-- Coach Recommendations -->
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                <h5 class="text-lg font-semibold text-blue-800 mb-3">Coach Insights</h5>
+                <div class="space-y-2">
+                    ${generateCoachRecommendations(plan, todayData)}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
+
+// Generate coach recommendations based on comparison
+function generateCoachRecommendations(plan, todayData) {
+    const recommendations = [];
+    
+    const caloriesPercent = (todayData.total_calories / plan.daily_calories) * 100;
+    const proteinPercent = (todayData.total_protein / plan.daily_protein) * 100;
+    const carbsPercent = (todayData.total_carbs / plan.daily_carbs) * 100;
+    const fatPercent = (todayData.total_fat / plan.daily_fat) * 100;
+    
+    if (caloriesPercent < 70) {
+        recommendations.push('⚠️ <strong>Significantly under calories:</strong> Consider reaching out to discuss meal planning strategies.');
+    } else if (caloriesPercent > 130) {
+        recommendations.push('⚠️ <strong>Significantly over calories:</strong> May need guidance on portion control and meal timing.');
+    }
+    
+    if (proteinPercent < 70) {
+        recommendations.push('🥩 <strong>Low protein intake:</strong> Suggest protein-rich snacks or meal additions.');
+    }
+    
+    if (carbsPercent < 70) {
+        recommendations.push('🍞 <strong>Low carb intake:</strong> Recommend whole grain options and fruits.');
+    } else if (carbsPercent > 130) {
+        recommendations.push('🌾 <strong>High carb intake:</strong> Consider suggesting protein/fat alternatives.');
+    }
+    
+    if (fatPercent < 70) {
+        recommendations.push('🥑 <strong>Low fat intake:</strong> Suggest healthy fat sources like nuts and avocados.');
+    } else if (fatPercent > 130) {
+        recommendations.push('💧 <strong>High fat intake:</strong> Recommend leaner protein sources.');
+    }
+    
+    if (recommendations.length === 0) {
+        recommendations.push('✅ <strong>Great progress!</strong> Member is following the nutrition plan well.');
+    }
+    
+    return recommendations.map(rec => `<p class="text-sm text-blue-700">${rec}</p>`).join('');
+}
+
+// Delete nutrition plan
+async function deleteNutritionPlan(planId) {
+    if (!confirm('Are you sure you want to delete this nutrition plan?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/coach/nutrition/plan/${planId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Nutrition plan deleted successfully!', 'success');
+            // Refresh the plans modal
+            const currentMemberId = getCurrentMemberId();
+            if (currentMemberId) {
+                viewMemberPlans(currentMemberId);
+            }
+        } else {
+            showNotification(data.detail || 'Failed to delete plan', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting nutrition plan:', error);
+        showNotification('Error deleting nutrition plan', 'error');
+    }
+}
+
+// Helper function to get current member ID (you might need to store this when opening the modal)
+let currentMemberId = null;
+
+function getCurrentMemberId() {
+    return currentMemberId;
 }
 
 // Modal functions
@@ -775,5 +1408,32 @@ window.addEventListener('resize', function() {
         mealTypeChart.resize();
     }
 });
+
+// Export nutrition function
+async function exportNutrition(format) {
+    try {
+        const url = `/api/export/nutrition/coach?format=${format}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error('Failed to export nutrition data');
+        }
+        
+        // Create a temporary link to download the file
+        const blob = await response.blob();
+        const url2 = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url2;
+        a.download = `coach_nutrition_${new Date().toISOString().split('T')[0]}.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url2);
+        document.body.removeChild(a);
+        
+    } catch (error) {
+        console.error('Error exporting nutrition data:', error);
+        alert('Failed to export nutrition data. Please try again.');
+    }
+}
 </script>
 {% endblock %} 
