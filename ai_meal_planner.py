@@ -51,6 +51,10 @@ class AIMealPlanner:
         self.meal_plan_prompt = self._load_meal_plan_prompt()
         self.custom_meal_prompt = self._load_custom_meal_prompt()
     
+    def is_available(self) -> bool:
+        """Check if the AI meal planner is available and ready to use"""
+        return self.model is not None and GEMINI_API_KEY is not None
+    
     def _load_meal_plan_prompt(self) -> str:
         """Load the meal planning prompt template"""
         return """You are a professional nutritionist and meal planner. Create a personalized meal plan based on the following information:
