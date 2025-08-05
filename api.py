@@ -16,16 +16,546 @@ import random
 import numpy as np
 import cv2
 import torch
-from transformers import AutoImageProcessor, SiglipForImageClassification
+from transformers import AutoImageProcessor, AutoModelForImageClassification, SiglipForImageClassification
+from PIL import Image
 import requests
 import pandas as pd
 import io
+
+# Import food detection routes
+try:
+    from routes.food_detect import router as food_detect_router
+    FOOD_DETECT_AVAILABLE = True
+except ImportError:
+    FOOD_DETECT_AVAILABLE = False
+    print("Warning: Food detection routes not available")
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+
+# USDA Database Integration
+USDA_API_BASE_URL = "https://api.nal.usda.gov/fdc/v1"
+USDA_API_KEY = os.environ.get("USDA_API_KEY", "DEMO_KEY")
+
+def get_usda_api_key() -> str:
+    """Get USDA API key from environment or use demo key"""
+    api_key = os.environ.get('USDA_API_KEY')
+    if not api_key:
+        print("Warning: No USDA API key found. Using DEMO_KEY with rate limits.")
+        return 'DEMO_KEY'
+    return api_key
+
+def search_usda_foods(query: str, max_results: int = 5) -> List[Dict]:
+    """
+    Search for foods in USDA database
+    Returns list of food items with basic info
+    """
+    api_key = get_usda_api_key()
+    url = f"{USDA_API_BASE_URL}/foods/search"
+    
+    params = {
+        'api_key': api_key,
+        'query': query,
+        'pageSize': max_results,
+        'dataType': ['Foundation', 'SR Legacy'],  # Most comprehensive data
+        'sortBy': 'dataType.keyword',
+        'sortOrder': 'asc'
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        foods = []
+        for food in data.get('foods', []):
+            foods.append({
+                'fdc_id': food.get('fdcId'),
+                'name': food.get('description', ''),
+                'brand': food.get('brandOwner', ''),
+                'category': food.get('foodCategory', ''),
+                'data_type': food.get('dataType', ''),
+                'published_date': food.get('publishedDate', '')
+            })
+        
+        return foods
+    except Exception as e:
+        print(f"Error searching USDA foods: {e}")
+        return []
+
+def get_usda_food_details(fdc_id: int) -> Optional[Dict]:
+    """
+    Get detailed nutrition information for a specific food
+    Returns comprehensive nutrition data
+    """
+    api_key = get_usda_api_key()
+    url = f"{USDA_API_BASE_URL}/food/{fdc_id}"
+    
+    params = {
+        'api_key': api_key,
+        'format': 'full',
+        'nutrients': '203,204,205,208,269'  # Protein, Fat, Carbs, Calories, Sugar
+    }
+    
+    print(f"🔍 Getting details for FDC ID: {fdc_id}")
+    print(f"🌐 URL: {url}")
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        print(f"✅ USDA API response received")
+        print(f"📊 Food name: {data.get('description', 'Unknown')}")
+        print(f"📊 Nutrients found: {len(data.get('foodNutrients', []))}")
+        
+        # Extract nutrition data
+        nutrition_data = {
+            'fdc_id': fdc_id,
+            'name': data.get('description', ''),
+            'brand': data.get('brandOwner', ''),
+            'category': data.get('foodCategory', ''),
+            'serving_size': 100,  # Default to 100g
+            'calories': 0,
+            'protein': 0,
+            'carbs': 0,
+            'fat': 0,
+            'fiber': 0,
+            'sugar': 0,
+            'sodium': 0,
+            'vitamin_c': 0,
+            'calcium': 0,
+            'iron': 0
+        }
+        
+        # Process nutrients
+        for nutrient in data.get('foodNutrients', []):
+            nutrient_id = nutrient.get('nutrient', {}).get('id')
+            value = nutrient.get('amount', 0)
+            nutrient_name = nutrient.get('nutrient', {}).get('name', 'Unknown')
+            
+            print(f"📊 Processing nutrient: {nutrient_name} (ID: {nutrient_id}) = {value}")
+            
+            # Map nutrient IDs to our fields (updated based on actual USDA API response)
+            if nutrient_id == 1003:  # Protein
+                nutrition_data['protein'] = int(round(value))
+                print(f"✅ Protein: {nutrition_data['protein']}")
+            elif nutrient_id == 1004:  # Total lipid (fat)
+                nutrition_data['fat'] = int(round(value))
+                print(f"✅ Fat: {nutrition_data['fat']}")
+            elif nutrient_id == 1005:  # Carbohydrate
+                nutrition_data['carbs'] = int(round(value))
+                print(f"✅ Carbs: {nutrition_data['carbs']}")
+            elif nutrient_id == 2000:  # Total Sugars
+                nutrition_data['sugar'] = int(round(value))
+                print(f"✅ Sugar: {nutrition_data['sugar']}")
+            # Also check for alternative IDs
+            elif nutrient_id == 203:  # Protein (alternative)
+                nutrition_data['protein'] = int(round(value))
+                print(f"✅ Protein (alt): {nutrition_data['protein']}")
+            elif nutrient_id == 204:  # Total lipid (fat) (alternative)
+                nutrition_data['fat'] = int(round(value))
+                print(f"✅ Fat (alt): {nutrition_data['fat']}")
+            elif nutrient_id == 205:  # Carbohydrate (alternative)
+                nutrition_data['carbs'] = int(round(value))
+                print(f"✅ Carbs (alt): {nutrition_data['carbs']}")
+            elif nutrient_id == 208:  # Energy (kcal) (alternative)
+                nutrition_data['calories'] = int(round(value))
+                print(f"✅ Calories: {nutrition_data['calories']}")
+            elif nutrient_id == 291:  # Fiber
+                nutrition_data['fiber'] = int(round(value))
+            elif nutrient_id == 269:  # Sugars (alternative)
+                nutrition_data['sugar'] = int(round(value))
+            elif nutrient_id == 307:  # Sodium
+                nutrition_data['sodium'] = int(round(value))
+            elif nutrient_id == 401:  # Vitamin C
+                nutrition_data['vitamin_c'] = int(round(value))
+            elif nutrient_id == 301:  # Calcium
+                nutrition_data['calcium'] = int(round(value))
+            elif nutrient_id == 303:  # Iron
+                nutrition_data['iron'] = int(round(value))
+        
+        # Calculate calories if not found (4 calories per gram of protein/carbs, 9 per gram of fat)
+        if nutrition_data['calories'] == 0:
+            calculated_calories = (nutrition_data['protein'] * 4) + (nutrition_data['carbs'] * 4) + (nutrition_data['fat'] * 9)
+            nutrition_data['calories'] = int(round(calculated_calories))
+            print(f"📊 Calculated calories: {nutrition_data['calories']} (protein: {nutrition_data['protein']}g, carbs: {nutrition_data['carbs']}g, fat: {nutrition_data['fat']}g)")
+        
+        print(f"📊 Final nutrition data: {nutrition_data}")
+        return nutrition_data
+        
+    except Exception as e:
+        print(f"Error getting USDA food details: {e}")
+        return None
+
+# Initialize food classification model
+FOOD_MODEL_NAME = "Kaludi/food-category-classification-v2.0"
+food_processor = None
+food_model = None
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def load_food_classification_model():
+    """Load the food classification model from Hugging Face"""
+    global food_processor, food_model
+    try:
+        print(f"Loading food classification model: {FOOD_MODEL_NAME}")
+        food_processor = AutoImageProcessor.from_pretrained(FOOD_MODEL_NAME)
+        food_model = AutoModelForImageClassification.from_pretrained(FOOD_MODEL_NAME)
+        food_model.to(device)
+        food_model.eval()
+        print("Food classification model loaded successfully")
+    except Exception as e:
+        print(f"Error loading food classification model: {e}")
+        # Fallback to a simpler model
+        try:
+            fallback_model = "Shresthadev403/food-image-classification"
+            print(f"Loading fallback model: {fallback_model}")
+            food_processor = AutoImageProcessor.from_pretrained(fallback_model)
+            food_model = AutoModelForImageClassification.from_pretrained(fallback_model)
+            food_model.to(device)
+            food_model.eval()
+            print("Fallback food classification model loaded successfully")
+        except Exception as e2:
+            print(f"Error loading fallback model: {e2}")
+            food_processor = None
+            food_model = None
+
+def classify_food_image(image_data: bytes) -> Dict:
+    """
+    Classify food in an image using Hugging Face model
+    Returns the detected food type and confidence
+    """
+    if food_model is None or food_processor is None:
+        return {"error": "Food classification model not loaded"}
+    
+    try:
+        # Convert bytes to PIL Image
+        from PIL import Image
+        image = Image.open(io.BytesIO(image_data))
+        
+        # Preprocess image
+        inputs = food_processor(images=image, return_tensors="pt")
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        
+        # Get predictions
+        with torch.no_grad():
+            outputs = food_model(**inputs)
+            logits = outputs.logits
+            probabilities = torch.nn.functional.softmax(logits, dim=-1)
+        
+        # Get top predictions
+        top_probs, top_indices = torch.topk(probabilities, 3)
+        
+        predictions = []
+        for i in range(len(top_indices[0])):
+            label_id = top_indices[0][i].item()
+            confidence = top_probs[0][i].item()
+            label = food_model.config.id2label.get(label_id, f"class_{label_id}")
+            predictions.append({
+                "food_type": label,
+                "confidence": confidence,
+                "label_id": label_id
+            })
+        
+        return {
+            "success": True,
+            "predictions": predictions,
+            "top_prediction": predictions[0] if predictions else None
+        }
+        
+    except Exception as e:
+        print(f"Error classifying food image: {e}")
+        return {"error": f"Error classifying image: {str(e)}"}
+
+def search_usda_foods_enhanced(query: str, max_results: int = 5) -> List[Dict]:
+    """
+    Enhanced search for foods in USDA database with better matching
+    """
+    api_key = get_usda_api_key()
+    url = f"{USDA_API_BASE_URL}/foods/search"
+    
+    params = {
+        'api_key': api_key,
+        'query': query,
+        'pageSize': max_results,
+        'dataType': ['Foundation', 'SR Legacy'],
+        'sortBy': 'dataType.keyword',
+        'sortOrder': 'asc'
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        foods = []
+        for food in data.get('foods', []):
+            # Extract nutrition info if available
+            nutrition_info = {}
+            for nutrient in food.get('foodNutrients', []):
+                nutrient_id = nutrient.get('nutrientId')
+                if nutrient_id == 203:  # Protein
+                    nutrition_info['protein'] = nutrient.get('value', 0)
+                elif nutrient_id == 204:  # Fat
+                    nutrition_info['fat'] = nutrient.get('value', 0)
+                elif nutrient_id == 205:  # Carbohydrates
+                    nutrition_info['carbs'] = nutrient.get('value', 0)
+                elif nutrient_id == 208:  # Calories
+                    nutrition_info['calories'] = nutrient.get('value', 0)
+            
+            foods.append({
+                'fdc_id': food.get('fdcId'),
+                'name': food.get('description', ''),
+                'brand': food.get('brandOwner', ''),
+                'category': food.get('foodCategory', ''),
+                'data_type': food.get('dataType', ''),
+                'published_date': food.get('publishedDate', ''),
+                'nutrition': nutrition_info
+            })
+        
+        return foods
+    except Exception as e:
+        print(f"Error searching USDA foods: {e}")
+        return []
+
+def get_food_nutrition_from_usda(food_name: str) -> Optional[Dict]:
+    """
+    Get nutrition information for a food from USDA database
+    Returns the first matching food with complete nutrition data
+    """
+    try:
+        # Search for the food
+        foods = search_usda_foods_enhanced(food_name, max_results=10)
+        
+        if not foods:
+            return None
+        
+        # Find the first food with complete nutrition data
+        for food in foods:
+            nutrition = food.get('nutrition', {})
+            if nutrition.get('calories') and nutrition.get('protein') is not None:
+                return {
+                    'fdc_id': food['fdc_id'],
+                    'name': food['name'],
+                    'brand': food['brand'],
+                    'calories': nutrition.get('calories', 0),
+                    'protein': nutrition.get('protein', 0),
+                    'carbs': nutrition.get('carbs', 0),
+                    'fat': nutrition.get('fat', 0),
+                    'source': 'USDA'
+                }
+        
+        # If no complete nutrition data, return the first result with partial data
+        if foods:
+            first_food = foods[0]
+            nutrition = first_food.get('nutrition', {})
+            return {
+                'fdc_id': first_food['fdc_id'],
+                'name': first_food['name'],
+                'brand': first_food['brand'],
+                'calories': nutrition.get('calories', 0),
+                'protein': nutrition.get('protein', 0),
+                'carbs': nutrition.get('carbs', 0),
+                'fat': nutrition.get('fat', 0),
+                'source': 'USDA (partial data)'
+            }
+        
+        return None
+        
+    except Exception as e:
+        print(f"Error getting nutrition from USDA: {e}")
+        return None
+
+def analyze_food_photo_enhanced(image_data: bytes) -> Dict:
+    """
+    Enhanced food photo analysis using Hugging Face model + USDA database
+    """
+    try:
+        # Step 1: Classify the food using the Hugging Face model
+        classification_result = classify_food_image(image_data)
+        
+        if "error" in classification_result:
+            return classification_result
+        
+        # Step 2: Get the top prediction
+        top_prediction = classification_result.get("top_prediction")
+        if not top_prediction:
+            return {"error": "No food detected in image"}
+        
+        detected_food_type = top_prediction["food_type"]
+        confidence = top_prediction["confidence"]
+        
+        # Step 3: Search USDA database for the detected food
+        nutrition_data = get_food_nutrition_from_usda(detected_food_type)
+        
+        if nutrition_data:
+            return {
+                "success": True,
+                "detected_food": detected_food_type,
+                "confidence": confidence,
+                "nutrition": nutrition_data,
+                "analysis_method": "AI + USDA Database"
+            }
+        else:
+            # Fallback to estimated nutrition based on food type
+            estimated_nutrition = get_estimated_nutrition(detected_food_type)
+            return {
+                "success": True,
+                "detected_food": detected_food_type,
+                "confidence": confidence,
+                "nutrition": estimated_nutrition,
+                "analysis_method": "AI + Estimated Nutrition"
+            }
+            
+    except Exception as e:
+        print(f"Error in enhanced food analysis: {e}")
+        return {"error": f"Analysis failed: {str(e)}"}
+
+def get_estimated_nutrition(food_type: str) -> Dict:
+    """
+    Get estimated nutrition for common food types
+    """
+    # Common food nutrition estimates (per 100g)
+    food_nutrition = {
+        "apple": {"calories": 52, "protein": 0.3, "carbs": 14, "fat": 0.2},
+        "banana": {"calories": 89, "protein": 1.1, "carbs": 23, "fat": 0.3},
+        "orange": {"calories": 47, "protein": 0.9, "carbs": 12, "fat": 0.1},
+        "bread": {"calories": 265, "protein": 9, "carbs": 49, "fat": 3.2},
+        "rice": {"calories": 130, "protein": 2.7, "carbs": 28, "fat": 0.3},
+        "chicken": {"calories": 165, "protein": 31, "carbs": 0, "fat": 3.6},
+        "beef": {"calories": 250, "protein": 26, "carbs": 0, "fat": 15},
+        "fish": {"calories": 100, "protein": 20, "carbs": 0, "fat": 2.5},
+        "pasta": {"calories": 131, "protein": 5, "carbs": 25, "fat": 1.1},
+        "pizza": {"calories": 266, "protein": 11, "carbs": 33, "fat": 10},
+        "salad": {"calories": 20, "protein": 2, "carbs": 4, "fat": 0.2},
+        "soup": {"calories": 50, "protein": 3, "carbs": 8, "fat": 1},
+        "sandwich": {"calories": 300, "protein": 15, "carbs": 35, "fat": 12},
+        "cake": {"calories": 257, "protein": 4, "carbs": 45, "fat": 8},
+        "cookie": {"calories": 502, "protein": 6, "carbs": 65, "fat": 24},
+        "ice cream": {"calories": 207, "protein": 3.5, "carbs": 24, "fat": 11},
+        "milk": {"calories": 42, "protein": 3.4, "carbs": 5, "fat": 1},
+        "cheese": {"calories": 113, "protein": 7, "carbs": 1, "fat": 9},
+        "egg": {"calories": 155, "protein": 13, "carbs": 1.1, "fat": 11},
+        "potato": {"calories": 77, "protein": 2, "carbs": 17, "fat": 0.1}
+    }
+    
+    # Try to find a match (case insensitive)
+    food_type_lower = food_type.lower()
+    for food_name, nutrition in food_nutrition.items():
+        if food_name in food_type_lower or food_type_lower in food_name:
+            return {
+                "name": food_type,
+                "calories": nutrition["calories"],
+                "protein": nutrition["protein"],
+                "carbs": nutrition["carbs"],
+                "fat": nutrition["fat"],
+                "source": "Estimated"
+            }
+    
+    # Default nutrition for unknown foods
+    return {
+        "name": food_type,
+        "calories": 200,
+        "protein": 8,
+        "carbs": 25,
+        "fat": 8,
+        "source": "Estimated (default)"
+    }
+
+def search_and_get_nutrition(food_name: str) -> Optional[Dict]:
+    """
+    Search for food and get nutrition data in one call
+    Returns nutrition data for the best match
+    """
+    print(f"🔍 Searching for nutrition data for: {food_name}")
+    
+    # Search for foods
+    foods = search_usda_foods(food_name, max_results=3)
+    print(f"📊 Found {len(foods)} foods in search")
+    
+    if not foods:
+        print("❌ No foods found in search")
+        return None
+    
+    # Get details for the first (best) match
+    best_match = foods[0]
+    print(f"🎯 Best match: {best_match['name']} (FDC ID: {best_match['fdc_id']})")
+    
+    nutrition_data = get_usda_food_details(best_match['fdc_id'])
+    
+    if nutrition_data:
+        nutrition_data['search_name'] = food_name
+        nutrition_data['matched_name'] = best_match['name']
+        nutrition_data['confidence'] = 0.9  # High confidence for USDA data
+        print(f"✅ Nutrition data retrieved: {nutrition_data['name']}")
+        print(f"📊 Calories: {nutrition_data['calories']}, Protein: {nutrition_data['protein']}, Carbs: {nutrition_data['carbs']}, Fat: {nutrition_data['fat']}")
+    else:
+        print("❌ Could not get nutrition details")
+    
+    return nutrition_data
+
+def get_fallback_nutrition(food_name: str) -> Dict:
+    """
+    Fallback nutrition data when USDA lookup fails
+    Returns estimated nutrition based on food type
+    """
+    food_name_lower = food_name.lower()
+    
+    # Simple food type detection and estimation
+    if any(word in food_name_lower for word in ['apple', 'banana', 'orange', 'fruit']):
+        return {
+            'name': food_name,
+            'calories': 60,
+            'protein': 1,
+            'carbs': 15,
+            'fat': 0,
+            'fiber': 2,
+            'confidence': 0.3
+        }
+    elif any(word in food_name_lower for word in ['chicken', 'beef', 'pork', 'meat', 'steak']):
+        return {
+            'name': food_name,
+            'calories': 250,
+            'protein': 25,
+            'carbs': 0,
+            'fat': 15,
+            'fiber': 0,
+            'confidence': 0.3
+        }
+    elif any(word in food_name_lower for word in ['bread', 'pasta', 'rice', 'grain']):
+        return {
+            'name': food_name,
+            'calories': 250,
+            'protein': 8,
+            'carbs': 45,
+            'fat': 2,
+            'fiber': 3,
+            'confidence': 0.3
+        }
+    elif any(word in food_name_lower for word in ['vegetable', 'broccoli', 'carrot', 'salad']):
+        return {
+            'name': food_name,
+            'calories': 30,
+            'protein': 2,
+            'carbs': 6,
+            'fat': 0,
+            'fiber': 2,
+            'confidence': 0.3
+        }
+    else:
+        # Generic fallback
+        return {
+            'name': food_name,
+            'calories': 200,
+            'protein': 8,
+            'carbs': 25,
+            'fat': 8,
+            'fiber': 2,
+            'confidence': 0.2
+        }
 
 # Import AI meal planner
 try:
@@ -63,6 +593,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include food detection routes if available
+if FOOD_DETECT_AVAILABLE:
+    app.include_router(food_detect_router)
+    print("✅ Food detection routes included")
+else:
+    print("⚠️ Food detection routes not available")
 
 security = HTTPBasic()
 
@@ -191,311 +728,7 @@ def get_db_connection():
         cursorclass=pymysql.cursors.DictCursor
     )
 
-# Initialize database tables
-def init_db():
-    connection = get_db_connection()
-    cursor = connection.cursor()
-    
-    try:
-        # Create gyms table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS gyms (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                email VARCHAR(100) UNIQUE NOT NULL,
-                password VARCHAR(100) NOT NULL,
-                address VARCHAR(200),
-                phone VARCHAR(20),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Create coaches table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS coaches (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                gym_id INT NOT NULL,
-                name VARCHAR(100) NOT NULL,
-                email VARCHAR(100) UNIQUE NOT NULL,
-                password VARCHAR(100) NOT NULL,
-                specialization VARCHAR(100),
-                experience INT DEFAULT 0,
-                role_level ENUM('Junior Coach', 'Senior Coach', 'Head Coach', 'Personal Trainer', 'Specialist') DEFAULT 'Senior Coach',
-                status ENUM('Active', 'Inactive') DEFAULT 'Active',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (gym_id) REFERENCES gyms(id)
-            )
-        """)
-        
-        # Create members table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS members (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                gym_id INT NOT NULL,
-                name VARCHAR(100) NOT NULL,
-                email VARCHAR(100) UNIQUE NOT NULL,
-                password VARCHAR(100) NOT NULL,
-                membership_type ENUM('Basic', 'Premium', 'VIP') DEFAULT 'Basic',
-                join_date DATE DEFAULT (CURRENT_DATE),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (gym_id) REFERENCES gyms(id)
-            )
-        """)
-        
-        # Create member_coach table (many-to-many relationship)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS member_coach (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                member_id INT NOT NULL,
-                coach_id INT NOT NULL,
-                assigned_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (member_id) REFERENCES members(id),
-                FOREIGN KEY (coach_id) REFERENCES coaches(id),
-                UNIQUE KEY unique_member_coach (member_id, coach_id)
-            )
-        """)
-        
-        # Create sessions table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS sessions (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                gym_id INT NOT NULL,
-                coach_id INT NOT NULL,
-                member_id INT NOT NULL,
-                session_date DATE NOT NULL,
-                session_time TIME NOT NULL,
-                duration INT NOT NULL,  -- in minutes
-                status ENUM('Scheduled', 'Completed', 'Cancelled') DEFAULT 'Scheduled',
-                notes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (gym_id) REFERENCES gyms(id),
-                FOREIGN KEY (coach_id) REFERENCES coaches(id),
-                FOREIGN KEY (member_id) REFERENCES members(id)
-            )
-        """)
 
-        # Create AI Calorie Tracker tables
-        
-        # Food items database
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS food_items (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(200) NOT NULL,
-                brand VARCHAR(100),
-                barcode VARCHAR(50),
-                calories_per_100g DECIMAL(7,2) NOT NULL,
-                protein_per_100g DECIMAL(7,2) DEFAULT 0,
-                carbs_per_100g DECIMAL(7,2) DEFAULT 0,
-                fat_per_100g DECIMAL(7,2) DEFAULT 0,
-                fiber_per_100g DECIMAL(7,2) DEFAULT 0,
-                sugar_per_100g DECIMAL(7,2) DEFAULT 0,
-                sodium_per_100g DECIMAL(7,2) DEFAULT 0,
-                category VARCHAR(100),
-                source ENUM('OpenFoodFacts', 'Manual', 'AI_Generated') DEFAULT 'Manual',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_name (name),
-                INDEX idx_barcode (barcode)
-            )
-        """)
-        
-        # Nutrition logs for tracking meals
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS nutrition_logs (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                member_id INT NOT NULL,
-                meal_type ENUM('breakfast', 'lunch', 'dinner', 'snack') NOT NULL,
-                food_name VARCHAR(200) NOT NULL,
-                quantity DECIMAL(7,2) NOT NULL,
-                unit ENUM('grams', 'ml', 'pieces', 'cups', 'tablespoons', 'serving') DEFAULT 'grams',
-                calories DECIMAL(7,2) NOT NULL,
-                protein DECIMAL(7,2) DEFAULT 0,
-                carbs DECIMAL(7,2) DEFAULT 0,
-                fat DECIMAL(7,2) DEFAULT 0,
-                photo_path VARCHAR(500),
-                notes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (member_id) REFERENCES members(id),
-                INDEX idx_member_date (member_id, created_at)
-            )
-        """)
-        
-        # AI meal analysis and suggestions
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS meal_analysis (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                member_id INT NOT NULL,
-                analysis_date DATE NOT NULL,
-                total_calories DECIMAL(7,2) NOT NULL,
-                total_protein DECIMAL(7,2) NOT NULL,
-                total_carbs DECIMAL(7,2) NOT NULL,
-                total_fat DECIMAL(7,2) NOT NULL,
-                calorie_goal DECIMAL(7,2),
-                protein_goal DECIMAL(7,2),
-                carbs_goal DECIMAL(7,2),
-                fat_goal DECIMAL(7,2),
-                ai_feedback TEXT,
-                suggestions TEXT,
-                health_score DECIMAL(3,1),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (member_id) REFERENCES members(id),
-                INDEX idx_member_date (member_id, analysis_date)
-            )
-        """)
-        
-        # Coach nutrition comments
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS nutrition_comments (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                member_id INT NOT NULL,
-                coach_id INT NOT NULL,
-                comment_date DATE NOT NULL,
-                comment TEXT NOT NULL,
-                nutrition_log_id INT,
-                meal_analysis_id INT,
-                comment_type ENUM('General', 'Meal_Specific', 'Goal_Adjustment') DEFAULT 'General',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (member_id) REFERENCES members(id),
-                FOREIGN KEY (coach_id) REFERENCES coaches(id),
-                FOREIGN KEY (nutrition_log_id) REFERENCES nutrition_logs(id),
-                FOREIGN KEY (meal_analysis_id) REFERENCES meal_analysis(id),
-                INDEX idx_member_date (member_id, comment_date)
-            )
-        """)
-        
-        # Member nutrition goals and preferences
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS nutrition_goals (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                member_id INT NOT NULL UNIQUE,
-                daily_calorie_goal DECIMAL(7,2) DEFAULT 2000,
-                daily_protein_goal DECIMAL(7,2) DEFAULT 150,
-                daily_carbs_goal DECIMAL(7,2) DEFAULT 250,
-                daily_fat_goal DECIMAL(7,2) DEFAULT 70,
-                goal_type ENUM('Weight_Loss', 'Weight_Gain', 'Maintenance', 'Muscle_Gain') DEFAULT 'Maintenance',
-                dietary_restrictions TEXT,
-                allergies TEXT,
-                preferred_cuisines TEXT,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                FOREIGN KEY (member_id) REFERENCES members(id)
-            )
-        """)
-        
-        # AI-generated nutrition plans
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS nutrition_plans (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                member_id INT,
-                coach_id INT,
-                plan_name VARCHAR(200) NOT NULL,
-                plan_data JSON,
-                daily_calories INT,
-                daily_protein INT,
-                daily_carbs INT,
-                daily_fat INT,
-                notes TEXT,
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (member_id) REFERENCES members(id),
-                FOREIGN KEY (coach_id) REFERENCES coaches(id),
-                INDEX idx_member (member_id),
-                INDEX idx_coach (coach_id),
-                INDEX idx_created (created_at)
-            )
-        """)
-
-        # Create payments table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS payments (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                member_id INT NOT NULL,
-                gym_id INT NOT NULL,
-                amount DECIMAL(10,2) NOT NULL,
-                payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                payment_type ENUM('Membership', 'Session', 'Other') NOT NULL,
-                status ENUM('Pending', 'Completed', 'Failed') DEFAULT 'Pending',
-                notes TEXT,
-                FOREIGN KEY (member_id) REFERENCES members(id),
-                FOREIGN KEY (gym_id) REFERENCES gyms(id)
-            )
-        """)
-        
-        # Create user_preferences table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS user_preferences (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                user_type ENUM('coach', 'member') NOT NULL,
-                preferred_workout_types JSON,
-                preferred_duration INT DEFAULT 60,
-                preferred_time_slots JSON,
-                notes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY unique_user_pref (user_id, user_type)
-            )
-        """)
-        
-        # Create availability_slots table for date and hour based availability
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS availability_slots (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                user_type ENUM('coach', 'member') NOT NULL,
-                date DATE NOT NULL,
-                hour INT NOT NULL CHECK (hour >= 0 AND hour <= 23),
-                is_available BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY unique_user_date_hour (user_id, user_type, date, hour)
-            )
-        """)
-        
-        # Keep the old free_days table for backward compatibility (will be removed later)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS free_days (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                user_type ENUM('coach', 'member') NOT NULL,
-                day_of_week ENUM('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday') NOT NULL,
-                is_available BOOLEAN DEFAULT TRUE,
-                start_time TIME DEFAULT '08:00:00',
-                end_time TIME DEFAULT '20:00:00',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                UNIQUE KEY unique_user_day (user_id, user_type, day_of_week)
-            )
-        """)
-        
-        # Messages table for communication between users
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                sender_id INT NOT NULL,
-                sender_type ENUM('gym', 'coach', 'member') NOT NULL,
-                receiver_id INT NOT NULL,
-                receiver_type ENUM('gym', 'coach', 'member') NOT NULL,
-                message TEXT NOT NULL,
-                is_read BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_sender (sender_id, sender_type),
-                INDEX idx_receiver (receiver_id, receiver_type),
-                INDEX idx_conversation (sender_id, sender_type, receiver_id, receiver_type),
-                INDEX idx_created_at (created_at)
-            )
-        """)
-        
-        connection.commit()
-        print("Database tables created successfully")
-    except Exception as e:
-        print(f"Error initializing database: {str(e)}")
-        connection.rollback()
-    finally:
-        cursor.close()
-        connection.close()
-
-# Initialize database on startup
-init_db()
 
 @app.get("/", response_class=HTMLResponse)
 async def get_login_page():
@@ -1723,159 +1956,6 @@ async def get_gym_coaches(
         cursor.close()
         conn.close()
 
-@app.get("/api/regenerate-db")
-async def regenerate_db():
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        
-        # Drop existing tables in correct order (respecting foreign key constraints)
-        cursor.execute("DROP TABLE IF EXISTS payments")
-        cursor.execute("DROP TABLE IF EXISTS member_coach")
-        cursor.execute("DROP TABLE IF EXISTS sessions")
-        cursor.execute("DROP TABLE IF EXISTS members")
-        cursor.execute("DROP TABLE IF EXISTS coaches")
-        cursor.execute("DROP TABLE IF EXISTS gyms")
-        
-        connection.commit()
-        
-        # Reinitialize database
-        init_db()
-        
-        # Insert one gym
-        cursor.execute("""
-            INSERT INTO gyms (name, email, password, address, phone)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (
-            "PowerFit Gym",
-            "powerfit@example.com",
-            "gym123",
-            "123 Fitness Street",
-            "123-456-7890"
-        ))
-        gym_id = cursor.lastrowid
-        
-        # Insert 4 coaches with specializations
-        coaches = [
-            ("John Doe", "john@example.com", "coach123", "Strength Training"),
-            ("Jane Smith", "jane@example.com", "coach123", "Functional Training"),
-            ("Mike Johnson", "mike@example.com", "coach123", "Bodybuilding"),
-            ("Sarah Williams", "sarah@example.com", "coach123", "Powerlifting")
-        ]
-        coach_ids = []
-        for coach in coaches:
-            cursor.execute("""
-                INSERT INTO coaches (gym_id, name, email, password, specialization, status)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (gym_id, coach[0], coach[1], coach[2], coach[3], "Active"))
-            coach_ids.append(cursor.lastrowid)
-        
-        # Insert 15 members
-        members = [
-            ("Alice Johnson", "alice@example.com", "member123", "Premium"),
-            ("Bob Smith", "bob@example.com", "member123", "Basic"),
-            ("Carol White", "carol@example.com", "member123", "VIP"),
-            ("David Brown", "david@example.com", "member123", "Premium"),
-            ("Eva Davis", "eva@example.com", "member123", "Basic"),
-            ("Frank Miller", "frank@example.com", "member123", "Premium"),
-            ("Grace Lee", "grace@example.com", "member123", "Basic"),
-            ("Henry Wilson", "henry@example.com", "member123", "VIP"),
-            ("Ivy Taylor", "ivy@example.com", "member123", "Premium"),
-            ("Jack Anderson", "jack@example.com", "member123", "Basic"),
-            ("Kelly Martinez", "kelly@example.com", "member123", "Premium"),
-            ("Liam Garcia", "liam@example.com", "member123", "Basic"),
-            ("Mia Robinson", "mia@example.com", "member123", "VIP"),
-            ("Noah Clark", "noah@example.com", "member123", "Premium"),
-            ("Olivia Lewis", "olivia@example.com", "member123", "Basic")
-        ]
-        member_ids = []
-        for member in members:
-            cursor.execute("""
-                INSERT INTO members (gym_id, name, email, password, membership_type, join_date)
-                VALUES (%s, %s, %s, %s, %s, CURDATE())
-            """, (gym_id, member[0], member[1], member[2], member[3]))
-            member_ids.append(cursor.lastrowid)
-        
-        # Assign members to coaches (distribute members among coaches)
-        for i, member_id in enumerate(member_ids):
-            coach_id = coach_ids[i % len(coach_ids)]  # Distribute members evenly among coaches
-        cursor.execute("""
-            INSERT INTO member_coach (member_id, coach_id)
-            VALUES (%s, %s)
-            """, (member_id, coach_id))
-        
-        # Add sample sessions with specific exercise types
-        today = datetime.now().date()
-        
-        # Create sessions for the next 7 days
-        for day in range(7):
-            session_date = today + timedelta(days=day)
-            
-            # Create 2-3 sessions per day
-            for hour in [9, 14, 16]:  # Morning, afternoon, and evening sessions
-                # Skip some sessions randomly to make it more realistic
-                if hour == 14 and day % 2 == 0:  # Skip some afternoon sessions
-                    continue
-                
-                # Create sessions for each coach
-                for coach_id in coach_ids:
-                    # Get members assigned to this coach
-                    cursor.execute("""
-                        SELECT member_id 
-                        FROM member_coach 
-                        WHERE coach_id = %s
-                    """, (coach_id,))
-                    coach_members = cursor.fetchall()
-                    
-                    if coach_members:
-                        # Create a session for one of the coach's members
-                        member = coach_members[day % len(coach_members)]
-                        session_time = f"{hour:02d}:00:00"
-                        
-                        # Select a random workout template
-                        workout_type = random.choice(list(WORKOUT_TEMPLATES.keys()))
-                        exercises = WORKOUT_TEMPLATES[workout_type]
-                        
-                        # Create detailed notes with exercises
-                        notes = f"Workout Type: {workout_type}\n"
-                        for i, exercise in enumerate(exercises, 1):
-                            notes += f"{i}. {exercise}\n"
-                        
-                        cursor.execute("""
-                            INSERT INTO sessions (
-                                gym_id,
-                                coach_id,
-                                member_id,
-                                session_date,
-                                session_time,
-                                duration,
-                                status,
-                                notes
-                            )
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (
-                            gym_id,
-                            coach_id,
-                            member["member_id"],
-                            session_date,
-                            session_time,
-                            60,  # 1-hour sessions
-                            "Scheduled",
-                            notes
-                        ))
-        
-        connection.commit()
-        return JSONResponse(content={"detail": "Database regenerated successfully with sample data"})
-    except Exception as e:
-        connection.rollback()
-        print(f"Error regenerating database: {str(e)}")  # Add debug logging
-        return JSONResponse(
-            status_code=500,
-            content={"detail": str(e)}
-        )
-    finally:
-        cursor.close()
-        connection.close()
 
 @app.get("/api/gym/members")
 async def get_gym_members(request: Request, search: str = None, membership_type: str = None, status: str = None):
@@ -2373,7 +2453,6 @@ async def get_coach_dashboard_page(request: Request):
     finally:
         cursor.close()
         conn.close()
-
 @app.get("/api/coach/dashboard")
 async def get_coach_dashboard(request: Request):
     # Get user from session
@@ -3910,7 +3989,6 @@ async def favicon():
     import base64
     favicon_data = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
     return Response(content=favicon_data, media_type="image/x-icon")
-
 # Test endpoint to check messages table
 @app.get("/api/test-messages-table")
 async def test_messages_table():
@@ -4707,13 +4785,11 @@ async def update_user_availability_bulk(
     finally:
         if connection:
             connection.close()
-
 # Load model once at startup for classifier endpoint
 image_processor = AutoImageProcessor.from_pretrained("prithivMLmods/Gym-Workout-Classifier-SigLIP2")
 model = SiglipForImageClassification.from_pretrained("prithivMLmods/Gym-Workout-Classifier-SigLIP2")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
-
 @app.post("/api/classify-frame")
 async def classify_frame(
     file: UploadFile = File(...),
@@ -4738,7 +4814,154 @@ async def classify_frame(
     score = torch.nn.functional.softmax(logits, dim=-1)[0, predicted_class_idx].item()
     return {"label": label, "score": score}
 
+@app.post("/api/nutrition/classify-food")
+async def classify_food(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Enhanced food classification using Hugging Face model"""
+    try:
+        # Check user permissions
+        if not current_user or current_user.get("user_type") != "member":
+            raise HTTPException(status_code=403, detail="Members only")
+        if current_user.get("membership_type") not in ["Premium", "VIP"]:
+            raise HTTPException(status_code=403, detail="Enhanced food classification requires Premium or VIP membership")
+        
+        # Read image data
+        image_data = await file.read()
+        
+        # Load the food classification model if not already loaded
+        if food_model is None:
+            load_food_classification_model()
+        
+        # Classify the food
+        classification_result = classify_food_image(image_data)
+        
+        if "error" in classification_result:
+            raise HTTPException(status_code=500, detail=classification_result['error'])
+        
+        # Get nutrition data for the detected food
+        if classification_result.get('top_prediction'):
+            detected_food = classification_result['top_prediction']['food_type']
+            confidence = classification_result['top_prediction']['confidence']
+            
+            # Search USDA database for nutrition
+            nutrition_data = get_food_nutrition_from_usda(detected_food)
+            
+            if nutrition_data:
+                return {
+                    "success": True,
+                    "classification": classification_result,
+                    "nutrition": nutrition_data,
+                    "analysis_method": "AI + USDA Database"
+                }
+            else:
+                # Fallback to estimated nutrition
+                estimated_nutrition = get_estimated_nutrition(detected_food)
+                return {
+                    "success": True,
+                    "classification": classification_result,
+                    "nutrition": estimated_nutrition,
+                    "analysis_method": "AI + Estimated Nutrition"
+                }
+        else:
+            raise HTTPException(status_code=500, detail="No food detected in image")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in food classification: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 # Add this constant at the top of your file with your actual API key
+
+@app.post("/api/nutrition/detect-food-type")
+async def detect_food_type(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Detect food type in image using AI model"""
+    try:
+        # Check user permissions
+        if not current_user or current_user.get("user_type") != "member":
+            raise HTTPException(status_code=403, detail="Members only")
+        if current_user.get("membership_type") not in ["Premium", "VIP"]:
+            raise HTTPException(status_code=403, detail="Food detection requires Premium or VIP membership")
+        
+        # Read image data
+        image_data = await file.read()
+        
+        # Load the food classification model if not already loaded
+        if food_model is None:
+            load_food_classification_model()
+        
+        # Classify the food
+        classification_result = classify_food_image(image_data)
+        
+        if "error" in classification_result:
+            raise HTTPException(status_code=500, detail=classification_result['error'])
+        
+        # Return only the detection results without nutrition data
+        if classification_result.get('top_prediction'):
+            detected_food = classification_result['top_prediction']['food_type']
+            confidence = classification_result['top_prediction']['confidence']
+            
+            return {
+                "success": True,
+                "detected_food": detected_food,
+                "confidence": confidence,
+                "all_predictions": classification_result.get('predictions', []),
+                "analysis_method": "AI Food Detection Model"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="No food detected in image")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in food type detection: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/nutrition/detect-food-simple")
+async def detect_food_simple(
+    file: UploadFile = File(...)
+):
+    """Simple food detection endpoint for testing (no authentication required)"""
+    try:
+        # Read image data
+        image_data = await file.read()
+        
+        # Load the food classification model if not already loaded
+        if food_model is None:
+            load_food_classification_model()
+        
+        # Classify the food
+        classification_result = classify_food_image(image_data)
+        
+        if "error" in classification_result:
+            raise HTTPException(status_code=500, detail=classification_result['error'])
+        
+        # Return detection results
+        if classification_result.get('top_prediction'):
+            detected_food = classification_result['top_prediction']['food_type']
+            confidence = classification_result['top_prediction']['confidence']
+            
+            return {
+                "success": True,
+                "detected_food": detected_food,
+                "confidence": confidence,
+                "all_predictions": classification_result.get('predictions', []),
+                "message": f"Detected food: {detected_food} (confidence: {confidence:.2f})"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "No food detected in image"
+            }
+            
+    except Exception as e:
+        print(f"Error in simple food detection: {e}")
+        raise HTTPException(status_code=500, detail=f"Detection error: {str(e)}")
 
 @app.post("/api/chat")
 async def chat(request: Request):
@@ -5863,6 +6086,95 @@ async def search_food(
     query: str = Query(..., description="Food name or barcode"),
     limit: int = Query(10, description="Number of results to return")
 ):
+    """Search for foods using USDA database"""
+    try:
+        # Search USDA database
+        usda_foods = search_usda_foods(query, max_results=limit)
+        
+        if usda_foods:
+            return {
+                "success": True,
+                "data": usda_foods,
+                "source": "USDA",
+                "message": f"Found {len(usda_foods)} foods in USDA database"
+            }
+        else:
+            # Fallback to basic search
+            return {
+                "success": True,
+                "data": [],
+                "source": "fallback",
+                "message": "No foods found in USDA database"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Error searching USDA database"
+        }
+
+@app.get("/api/nutrition/get-food-nutrition")
+async def get_food_nutrition(
+    request: Request,
+    food_name: str = Query(..., description="Food name to get nutrition for")
+):
+    """Get detailed nutrition information for a specific food from USDA database"""
+    try:
+        # Try USDA database first
+        nutrition_data = search_and_get_nutrition(food_name)
+        
+        if nutrition_data:
+            return {
+                "success": True,
+                "data": nutrition_data,
+                "source": "USDA",
+                "message": "Nutrition data retrieved from USDA database"
+            }
+        else:
+            # Use fallback nutrition
+            fallback_data = get_fallback_nutrition(food_name)
+            return {
+                "success": True,
+                "data": fallback_data,
+                "source": "fallback",
+                "message": "Using estimated nutrition data"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Error retrieving nutrition data"
+        }
+
+@app.get("/api/nutrition/get-food-nutrition-by-id")
+async def get_food_nutrition_by_id(
+    request: Request,
+    fdc_id: int = Query(..., description="USDA FDC ID to get nutrition for")
+):
+    """Get detailed nutrition information for a specific food by USDA FDC ID"""
+    try:
+        # Get nutrition data directly by FDC ID
+        nutrition_data = get_usda_food_details(fdc_id)
+        
+        if nutrition_data:
+            return {
+                "success": True,
+                "data": nutrition_data,
+                "source": "USDA",
+                "message": "Nutrition data retrieved from USDA database"
+            }
+        else:
+            return {
+                "success": False,
+                "error": "Food not found",
+                "message": "Could not find nutrition data for this food"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Error retrieving nutrition data"
+        }
     """Search for food items using Open Food Facts API"""
     user = get_current_user(request)
     if not user:
@@ -5955,6 +6267,11 @@ async def add_food_manually(
     if user.get('membership_type') not in ['VIP', 'Premium']:
         raise HTTPException(status_code=403, detail="VIP or Premium membership required for AI Calorie Tracker")
     
+    # Validate unit field - must be one of the allowed ENUM values
+    allowed_units = ['grams', 'ml', 'pieces', 'cups', 'tablespoons', 'serving']
+    if unit not in allowed_units:
+        raise HTTPException(status_code=400, detail=f"Invalid unit value. Must be one of: {', '.join(allowed_units)}")
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -6022,7 +6339,6 @@ async def add_food_manually(
     finally:
         cursor.close()
         conn.close()
-
 # Get weekly nutrition progress data
 @app.get("/api/nutrition/weekly-progress/{member_id}")
 async def get_weekly_nutrition_progress(request: Request, member_id: int):
@@ -6363,49 +6679,26 @@ async def create_sample_nutrition_data():
         
         member_id = member_result['id']
         
-        # Create sample nutrition data for the past week
+        # Create sample nutrition data for today
+        from datetime import datetime
+        today = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         sample_data = [
-            # Yesterday
-            (member_id, 'Breakfast', 'Oatmeal with berries', 100, 350, 12, 60, 8, '2024-01-15'),
-            (member_id, 'Lunch', 'Grilled chicken salad', 150, 450, 35, 15, 25, '2024-01-15'),
-            (member_id, 'Dinner', 'Salmon with vegetables', 200, 550, 40, 20, 30, '2024-01-15'),
-            
-            # 2 days ago
-            (member_id, 'Breakfast', 'Greek yogurt with granola', 120, 320, 18, 45, 12, '2024-01-14'),
-            (member_id, 'Lunch', 'Turkey sandwich', 180, 480, 28, 55, 18, '2024-01-14'),
-            (member_id, 'Dinner', 'Pasta with meatballs', 250, 680, 25, 85, 22, '2024-01-14'),
-            
-            # 3 days ago
-            (member_id, 'Breakfast', 'Eggs and toast', 150, 420, 22, 35, 20, '2024-01-13'),
-            (member_id, 'Lunch', 'Caesar salad', 130, 380, 15, 25, 28, '2024-01-13'),
-            (member_id, 'Dinner', 'Beef stir fry', 220, 520, 32, 40, 25, '2024-01-13'),
-            
-            # 4 days ago
-            (member_id, 'Breakfast', 'Smoothie bowl', 140, 360, 15, 50, 12, '2024-01-12'),
-            (member_id, 'Lunch', 'Quinoa bowl', 160, 440, 18, 65, 16, '2024-01-12'),
-            (member_id, 'Dinner', 'Pizza slice', 200, 480, 20, 60, 18, '2024-01-12'),
-            
-            # 5 days ago
-            (member_id, 'Breakfast', 'Protein pancakes', 180, 420, 25, 55, 15, '2024-01-11'),
-            (member_id, 'Lunch', 'Tuna salad', 140, 380, 30, 20, 22, '2024-01-11'),
-            (member_id, 'Dinner', 'Chicken curry', 220, 520, 28, 45, 24, '2024-01-11'),
-            
-            # 6 days ago
-            (member_id, 'Breakfast', 'Cereal with milk', 120, 300, 12, 50, 8, '2024-01-10'),
-            (member_id, 'Lunch', 'Soup and bread', 160, 400, 15, 60, 14, '2024-01-10'),
-            (member_id, 'Dinner', 'Fish tacos', 180, 460, 22, 40, 20, '2024-01-10'),
-            
-            # 7 days ago
-            (member_id, 'Breakfast', 'Bagel with cream cheese', 200, 450, 12, 70, 16, '2024-01-09'),
-            (member_id, 'Lunch', 'Burger and fries', 250, 650, 25, 75, 28, '2024-01-09'),
-            (member_id, 'Dinner', 'Steak with potatoes', 280, 720, 35, 45, 32, '2024-01-09'),
+            # Today's individual food items
+            (member_id, 'breakfast', 'Apple', 150, 95, 0, 25, 0, today),
+            (member_id, 'breakfast', 'Oatmeal', 100, 350, 12, 60, 8, today),
+            (member_id, 'lunch', 'Chicken Breast', 200, 330, 62, 0, 6, today),
+            (member_id, 'lunch', 'Brown Rice', 100, 110, 2, 23, 1, today),
+            (member_id, 'snack', 'Greek Yogurt', 170, 130, 15, 8, 5, today),
+            (member_id, 'dinner', 'Salmon', 150, 280, 34, 0, 12, today),
+            (member_id, 'dinner', 'Broccoli', 100, 55, 4, 11, 0, today),
         ]
         
         # Insert sample data
         for data in sample_data:
             cursor.execute("""
                 INSERT INTO nutrition_logs 
-                (member_id, meal_type, custom_food_name, quantity, total_calories, total_protein, total_carbs, total_fat, log_date)
+                (member_id, meal_type, custom_food_name, quantity, total_calories, total_protein, total_carbs, total_fat, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, data)
         
@@ -6832,7 +7125,6 @@ async def create_nutrition_plan(
     except Exception as e:
         print(f"Error creating nutrition plan: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
 @app.get("/api/coach/nutrition/plans/{member_id}")
 async def get_member_nutrition_plans(request: Request, member_id: int):
     """Get nutrition plans for a specific member"""
@@ -7146,12 +7438,12 @@ async def get_member_today_nutrition(request: Request):
         # Get today's nutrition entries for the member
         today_query = """
             SELECT 
-                SUM(calories) as total_calories,
-                SUM(protein) as total_protein,
-                SUM(carbs) as total_carbs,
-                SUM(fat) as total_fat,
+                SUM(total_calories) as total_calories,
+                SUM(total_protein) as total_protein,
+                SUM(total_carbs) as total_carbs,
+                SUM(total_fat) as total_fat,
                 COUNT(*) as entries_count
-            FROM nutrition_entries
+            FROM nutrition_logs
             WHERE member_id = %s 
             AND DATE(created_at) = CURDATE()
         """
@@ -7159,27 +7451,24 @@ async def get_member_today_nutrition(request: Request):
         cursor.execute(today_query, (user['id'],))
         today_data = cursor.fetchone()
         
-        # Get today's meals breakdown
+        # Get today's individual food entries
         meals_query = """
             SELECT 
+                id,
                 meal_type,
-                SUM(calories) as total_calories,
-                SUM(protein) as total_protein,
-                SUM(carbs) as total_carbs,
-                SUM(fat) as total_fat,
-                COUNT(*) as entries_count
-            FROM nutrition_entries
+                custom_food_name,
+                quantity,
+                unit,
+                total_calories as calories,
+                total_protein as protein,
+                total_carbs as carbs,
+                total_fat as fat,
+                notes,
+                created_at
+            FROM nutrition_logs
             WHERE member_id = %s 
             AND DATE(created_at) = CURDATE()
-            GROUP BY meal_type
-            ORDER BY 
-                CASE meal_type
-                    WHEN 'Breakfast' THEN 1
-                    WHEN 'Lunch' THEN 2
-                    WHEN 'Dinner' THEN 3
-                    WHEN 'Snack' THEN 4
-                    ELSE 5
-                END
+            ORDER BY created_at DESC
         """
         
         cursor.execute(meals_query, (user['id'],))
@@ -7233,12 +7522,12 @@ async def get_coach_member_today_nutrition(request: Request, member_id: int):
         # Get today's nutrition entries for the member
         today_query = """
             SELECT 
-                SUM(calories) as total_calories,
-                SUM(protein) as total_protein,
-                SUM(carbs) as total_carbs,
-                SUM(fat) as total_fat,
+                SUM(total_calories) as total_calories,
+                SUM(total_protein) as total_protein,
+                SUM(total_carbs) as total_carbs,
+                SUM(total_fat) as total_fat,
                 COUNT(*) as entries_count
-            FROM nutrition_entries
+            FROM nutrition_logs
             WHERE member_id = %s 
             AND DATE(created_at) = CURDATE()
         """
@@ -7246,27 +7535,24 @@ async def get_coach_member_today_nutrition(request: Request, member_id: int):
         cursor.execute(today_query, (member_id,))
         today_data = cursor.fetchone()
         
-        # Get today's meals breakdown
+        # Get today's individual food entries
         meals_query = """
             SELECT 
+                id,
                 meal_type,
-                SUM(calories) as total_calories,
-                SUM(protein) as total_protein,
-                SUM(carbs) as total_carbs,
-                SUM(fat) as total_fat,
-                COUNT(*) as entries_count
-            FROM nutrition_entries
+                custom_food_name,
+                quantity,
+                unit,
+                total_calories as calories,
+                total_protein as protein,
+                total_carbs as carbs,
+                total_fat as fat,
+                notes,
+                created_at
+            FROM nutrition_logs
             WHERE member_id = %s 
             AND DATE(created_at) = CURDATE()
-            GROUP BY meal_type
-            ORDER BY 
-                CASE meal_type
-                    WHEN 'Breakfast' THEN 1
-                    WHEN 'Lunch' THEN 2
-                    WHEN 'Dinner' THEN 3
-                    WHEN 'Snack' THEN 4
-                    ELSE 5
-                END
+            ORDER BY created_at DESC
         """
         
         cursor.execute(meals_query, (member_id,))
@@ -7575,6 +7861,166 @@ async def delete_member_nutrition_plan(plan_id: int, request: Request):
     except Exception as e:
         print(f"Error deleting nutrition plan: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+@app.put("/api/member/nutrition/meals/{meal_id}")
+async def update_member_meal(meal_id: int, request: Request):
+    """Update a meal for the current member"""
+    try:
+        # Get user from session
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        
+        if user['user_type'] != 'member':
+            raise HTTPException(status_code=403, detail="Only members can update their own meals")
+        
+        # Get request data
+        data = await request.json()
+        
+        # Validate required fields
+        required_fields = ['food_name', 'meal_type', 'quantity', 'unit', 'calories', 'protein', 'carbs', 'fat']
+        for field in required_fields:
+            if field not in data:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Validate unit field - must be one of the allowed ENUM values
+        allowed_units = ['grams', 'ml', 'pieces', 'cups', 'tablespoons', 'serving']
+        if data['unit'] not in allowed_units:
+            raise HTTPException(status_code=400, detail=f"Invalid unit value. Must be one of: {', '.join(allowed_units)}")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if meal exists and belongs to the current member
+            cursor.execute("""
+                SELECT id, meal_type, custom_food_name, total_calories, total_protein, total_carbs, total_fat, quantity, unit, notes, created_at
+                FROM nutrition_logs 
+                WHERE id = %s AND member_id = %s
+            """, (meal_id, user['id']))
+            
+            meal = cursor.fetchone()
+            if not meal:
+                raise HTTPException(status_code=404, detail="Meal not found or access denied")
+            
+            # Update the meal
+            update_query = """
+                UPDATE nutrition_logs 
+                SET custom_food_name = %s, meal_type = %s, quantity = %s, unit = %s, 
+                    total_calories = %s, total_protein = %s, total_carbs = %s, total_fat = %s, notes = %s
+                WHERE id = %s AND member_id = %s
+            """
+            
+            cursor.execute(update_query, (
+                data['food_name'],
+                data['meal_type'],
+                data['quantity'],
+                data['unit'],
+                data['calories'],
+                data['protein'],
+                data['carbs'],
+                data['fat'],
+                data.get('notes', ''),
+                meal_id,
+                user['id']
+            ))
+            
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Meal not found or access denied")
+            
+            conn.commit()
+            
+            return {
+                "success": True,
+                "message": "Meal updated successfully",
+                "updated_meal": {
+                    "id": meal_id,
+                    "food_name": data['food_name'],
+                    "meal_type": data['meal_type'],
+                    "quantity": data['quantity'],
+                    "unit": data['unit'],
+                    "calories": data['calories'],
+                    "protein": data['protein'],
+                    "carbs": data['carbs'],
+                    "fat": data['fat'],
+                    "notes": data.get('notes', '')
+                }
+            }
+            
+        except Exception as e:
+            print(f"Error updating meal: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating meal: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.delete("/api/member/nutrition/meals/{meal_id}")
+async def delete_member_meal(meal_id: int, request: Request):
+    """Delete a meal for the current member"""
+    try:
+        # Get user from session
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        
+        if user['user_type'] != 'member':
+            raise HTTPException(status_code=403, detail="Only members can delete their own meals")
+        
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        try:
+            # Check if meal exists and belongs to the current member
+            cursor.execute("""
+                SELECT id, meal_type, custom_food_name, total_calories, total_protein, total_carbs, total_fat, quantity, unit, notes, created_at
+                FROM nutrition_logs 
+                WHERE id = %s AND member_id = %s
+            """, (meal_id, user['id']))
+            
+            meal = cursor.fetchone()
+            if not meal:
+                raise HTTPException(status_code=404, detail="Meal not found or access denied")
+            
+            # Delete the meal
+            cursor.execute("DELETE FROM nutrition_logs WHERE id = %s", (meal_id,))
+            conn.commit()
+            
+            return {
+                "success": True,
+                "message": "Meal deleted successfully",
+                "deleted_meal": {
+                    "id": meal["id"],
+                    "meal_type": meal["meal_type"],
+                    "food_name": meal["custom_food_name"],
+                    "calories": meal["total_calories"],
+                    "protein": meal["total_protein"],
+                    "carbs": meal["total_carbs"],
+                    "fat": meal["total_fat"],
+                    "quantity": meal["quantity"],
+                    "unit": meal["unit"],
+                    "notes": meal["notes"],
+                    "created_at": meal["created_at"]
+                }
+            }
+            
+        except Exception as e:
+            print(f"Error deleting meal: {e}")
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"Error deleting meal: {str(e)}")
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting meal: {e}")
+        raise HTTPException(status_code=500, detail=f"Error deleting meal: {str(e)}")
 
 @app.post("/api/nutrition/generate-custom-meal")
 async def generate_custom_meal(request: Request):
@@ -7666,7 +8112,7 @@ async def analyze_nutrition_photo_ai(
     meal_type: str = Form(...),
     detected_foods: str = Form("[]")
 ):
-    """Analyze nutrition photo using AI"""
+    """Enhanced nutrition photo analysis using Hugging Face model + USDA database"""
     try:
         # Get user from session
         user = get_current_user(request)
@@ -7688,44 +8134,42 @@ async def analyze_nutrition_photo_ai(
         # Read photo data
         photo_data = await file.read()
         
-        # Parse detected foods
-        try:
-            detected_foods_list = json.loads(detected_foods)
-        except:
-            detected_foods_list = []
+        # Load the food classification model if not already loaded
+        if food_model is None:
+            load_food_classification_model()
         
-        if not meal_planner:
-            raise HTTPException(status_code=503, detail="AI meal planner not available")
+        # Analyze photo with enhanced AI + USDA database
+        analysis_result = analyze_food_photo_enhanced(photo_data)
         
-        # Analyze photo with AI
-        analysis = meal_planner.analyze_nutrition_photo(photo_data, detected_foods_list)
-        
-        if 'error' in analysis:
-            raise HTTPException(status_code=500, detail=analysis['error'])
+        if "error" in analysis_result:
+            raise HTTPException(status_code=500, detail=analysis_result['error'])
         
         # Save to nutrition logs if analysis is successful
-        if 'nutrition' in analysis:
+        if analysis_result.get('success'):
             conn = get_db_connection()
             cursor = conn.cursor()
             
             try:
                 # Save the photo
-                photo_filename = f"nutrition_ai_{user['id']}_{int(time.time())}.jpg"
+                photo_filename = f"nutrition_enhanced_{user['id']}_{int(time.time())}.jpg"
                 photo_path = os.path.join("static", "images", photo_filename)
+                
+                # Ensure directory exists
+                os.makedirs(os.path.dirname(photo_path), exist_ok=True)
                 
                 with open(photo_path, "wb") as f:
                     f.write(photo_data)
                 
                 # Save nutrition data
-                nutrition = analysis['nutrition']
+                nutrition = analysis_result['nutrition']
                 cursor.execute("""
                     INSERT INTO nutrition_logs
-                    (member_id, meal_type, food_name, quantity, unit, calories, protein, carbs, fat, photo_path, notes, created_at)
+                    (member_id, meal_type, custom_food_name, quantity, unit, calories, protein, carbs, fat, photo_path, notes, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
                 """, (
                     user['id'],
                     meal_type,
-                    "AI Analyzed Meal",
+                    analysis_result['detected_food'],
                     1,
                     "serving",
                     nutrition.get('calories', 0),
@@ -7733,33 +8177,65 @@ async def analyze_nutrition_photo_ai(
                     nutrition.get('carbs', 0),
                     nutrition.get('fat', 0),
                     photo_filename,
-                    f"AI Analysis: {', '.join([food['name'] for food in analysis.get('foods', [])])}"
+                    f"Enhanced AI Analysis: {analysis_result['detected_food']} (Confidence: {analysis_result['confidence']:.2f}) - Source: {nutrition.get('source', 'Unknown')}"
                 ))
                 conn.commit()
                 
-                # Add AI insights
-                analysis['ai_insights'] = meal_planner.get_nutrition_insights({
-                    'calories': nutrition.get('calories', 0),
-                    'protein': nutrition.get('protein', 0),
-                    'carbs': nutrition.get('carbs', 0),
-                    'fat': nutrition.get('fat', 0),
-                    'goal': 'maintenance',
-                    'activity_level': 'moderately_active'
-                })
+                # Add insights
+                analysis_result['insights'] = {
+                    'detection_confidence': analysis_result['confidence'],
+                    'data_source': nutrition.get('source', 'Unknown'),
+                    'analysis_method': analysis_result['analysis_method'],
+                    'recommendations': generate_nutrition_recommendations(nutrition)
+                }
                 
             except Exception as e:
-                print(f"Error saving AI nutrition analysis: {e}")
+                print(f"Error saving enhanced nutrition analysis: {e}")
             finally:
                 cursor.close()
                 conn.close()
         
-        return analysis
+        return analysis_result
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error analyzing nutrition photo with AI: {e}")
+        print(f"Error analyzing nutrition photo with enhanced AI: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+def generate_nutrition_recommendations(nutrition: Dict) -> List[str]:
+    """Generate nutrition recommendations based on detected food"""
+    recommendations = []
+    
+    calories = nutrition.get('calories', 0)
+    protein = nutrition.get('protein', 0)
+    carbs = nutrition.get('carbs', 0)
+    fat = nutrition.get('fat', 0)
+    
+    if calories > 0:
+        if calories < 100:
+            recommendations.append("This appears to be a low-calorie food. Consider adding protein or healthy fats for better satiety.")
+        elif calories > 500:
+            recommendations.append("This is a high-calorie food. Consider portion control or balancing with lower-calorie options.")
+    
+    if protein > 0:
+        if protein < 5:
+            recommendations.append("Low in protein. Consider adding lean protein sources to your meal.")
+        elif protein > 20:
+            recommendations.append("Good protein content! This will help with muscle maintenance and satiety.")
+    
+    if carbs > 0:
+        if carbs > 50:
+            recommendations.append("High in carbohydrates. Consider pairing with protein and fiber for better blood sugar control.")
+    
+    if fat > 0:
+        if fat > 15:
+            recommendations.append("High in fat. Consider portion control or choosing lower-fat alternatives.")
+    
+    if not recommendations:
+        recommendations.append("Keep tracking your meals for personalized nutrition insights!")
+    
+    return recommendations
 
 @app.post("/api/nutrition/get-insights")
 async def get_nutrition_insights(request: Request):
@@ -9249,6 +9725,32 @@ async def debug_members():
             "total_members": len(members)
         }
         
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/debug/nutrition-table")
+async def debug_nutrition_table():
+    """Debug endpoint to check nutrition_logs table structure"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get table structure
+        cursor.execute("DESCRIBE nutrition_logs")
+        structure = cursor.fetchall()
+        
+        # Get sample data
+        cursor.execute("SELECT * FROM nutrition_logs LIMIT 3")
+        sample_data = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "table_structure": structure,
+            "sample_data": sample_data
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 

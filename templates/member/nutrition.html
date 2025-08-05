@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 
 {% block head %}
-<!-- Hugging Face Transformers.js for superior food recognition -->
-<script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.15.0/dist/transformers.min.js"></script>
+<!-- YOLOv5 Food Detection Integration -->
 <!-- Chart.js for weekly progress charts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <!-- Custom Chart Implementation - No external dependencies -->
@@ -190,8 +189,8 @@ class CustomChart {
             <div class="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600 mb-4">
                 <i class="fas fa-camera text-xl"></i>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Advanced AI Food Recognition</h3>
-            <p class="text-gray-600 text-sm mb-4">Upload a photo for superior AI food classification</p>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">YOLOv5 AI Food Detection</h3>
+            <p class="text-gray-600 text-sm mb-4">Upload a photo for advanced YOLOv5 object detection</p>
             <button onclick="openPhotoAnalysis()" class="w-full px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all">
                 <i class="fas fa-camera mr-2"></i>Analyze Photo
             </button>
@@ -232,6 +231,9 @@ class CustomChart {
             <div class="flex items-center space-x-2">
                 <button onclick="viewMyNutritionPlans()" class="px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all text-sm">
                     <i class="fas fa-clipboard-list mr-2"></i>View My Plans
+                </button>
+                <button onclick="openFoodChartModal()" class="px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all text-sm">
+                    <i class="fas fa-chart-bar mr-2"></i>View Food Chart
                 </button>
                 <span class="text-sm text-gray-500" id="currentDate"></span>
             </div>
@@ -372,22 +374,7 @@ class CustomChart {
         </div>
     </div>
 
-    <!-- Today's Meals -->
-    <div class="glass rounded-xl p-6 border border-gray-100">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-            <i class="fas fa-utensils text-emerald-600 mr-2"></i>
-            Today's Meals
-        </h2>
-        
-        <div class="space-y-4" id="todaysMeals">
-            <!-- Meals will be loaded here -->
-        </div>
 
-        <div class="text-center text-gray-500 py-8" id="noMealsMessage">
-            <i class="fas fa-utensils text-4xl mb-2 opacity-50"></i>
-            <p>No meals logged today. Start by adding your first meal!</p>
-        </div>
-    </div>
 
     <!-- Weekly Progress -->
     <div class="glass rounded-xl p-6 border border-gray-100">
@@ -466,7 +453,7 @@ class CustomChart {
     <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div class="p-6">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Advanced AI Food Recognition</h3>
+                <h3 class="text-lg font-semibold text-gray-900">YOLOv5 AI Food Detection</h3>
                 <button onclick="closeModal('photoModal')" class="text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times"></i>
                 </button>
@@ -488,8 +475,8 @@ class CustomChart {
                         <label class="block text-sm font-medium text-gray-700 mb-2">Food Photo</label>
                         <input type="file" name="file" accept="image/*" required 
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                               onchange="analyzePhotoWithHuggingFace(this)">
-                        <p class="text-xs text-gray-500 mt-1">Our advanced AI will identify foods with superior accuracy</p>
+                               onchange="analyzePhotoWithYOLOv5(this)">
+                        <p class="text-xs text-gray-500 mt-1">Our YOLOv5 AI will identify foods with high accuracy and bounding boxes</p>
                     </div>
                     
                     <!-- Photo Preview -->
@@ -942,8 +929,8 @@ class CustomChart {
 
 <script>
 // Global variables
-let foodClassifier = null;
 let detectedFoodsData = [];
+let lastNutritionData = null; // Store last nutrition data
 let currentChartType = 'calories';
 let weeklyData = null;
 
@@ -953,7 +940,7 @@ let weeklyData = null;
 window.onload = function() {
     console.log('Window loaded, checking libraries...');
     console.log('Chart.js available:', typeof Chart !== 'undefined');
-    console.log('Hugging Face Transformers available:', typeof pipeline !== 'undefined');
+    console.log('YOLOv5 Food Detection available');
     
     // Ensure Chart.js is loaded before proceeding
     if (typeof Chart === 'undefined') {
@@ -1039,29 +1026,12 @@ function initializeDashboard() {
     
     loadNutritionDashboard();
     updateCurrentDate();
-    loadFoodClassifier();
     loadWeeklyProgress();
     
     // Test Chart.js availability after a short delay
     setTimeout(() => {
         testChartJS();
     }, 2000);
-}
-
-// Load Hugging Face food classification model
-async function loadFoodClassifier() {
-    try {
-        console.log('Loading Hugging Face food classification model...');
-        if (typeof pipeline !== 'undefined') {
-            foodClassifier = await pipeline('image-classification', 'nateraw/food');
-            console.log('Hugging Face food classifier loaded successfully!');
-        } else {
-            console.warn('Hugging Face Transformers.js not available - photo analysis will be limited');
-        }
-    } catch (error) {
-        console.error('Error loading Hugging Face model:', error);
-        console.warn('Photo analysis will work with manual food entry only');
-    }
 }
 
 function updateCurrentDate() {
@@ -1089,110 +1059,55 @@ async function loadNutritionDashboard() {
     }
 }
 
-// Hugging Face Food Analysis
-async function analyzePhotoWithHuggingFace(fileInput) {
-    if (!fileInput.files || !fileInput.files[0]) return;
+// Load today's meals function
+function loadTodaysMeals(meals) {
+    const container = document.getElementById('todaysMealsContainer');
+    if (!container) return;
     
-    const file = fileInput.files[0];
-    const imageUrl = URL.createObjectURL(file);
-    
-    // Show preview
-    const preview = document.getElementById('photoPreview');
-    const previewImage = document.getElementById('previewImage');
-    previewImage.src = imageUrl;
-    preview.classList.remove('hidden');
-    
-    // Show loading state
-    const resultsDiv = document.getElementById('detectionResults');
-    const foodsList = document.getElementById('detectedFoodsList');
-    foodsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-emerald-600"></i><p class="text-sm text-gray-600 mt-2">Analyzing food with AI...</p></div>';
-    resultsDiv.classList.remove('hidden');
-    
-    try {
-        if (!foodClassifier) {
-            await loadFoodClassifier();
-        }
-        
-        // Check if Hugging Face model is available
-        if (!foodClassifier || typeof pipeline === 'undefined') {
-            console.warn('Hugging Face model not available - using fallback food detection');
-            // Use fallback food detection
-            detectedFoodsData = [{
-                name: "Food Item (Manual Entry Recommended)",
-                quantity: 100,
-                calories: 200,
-                protein: 8,
-                carbs: 25,
-                fat: 8,
-                confidence: 0.5
-            }];
-            displayDetectedFoods(detectedFoodsData);
-            return;
-        }
-        
-        // Create image element for Hugging Face
-        const img = new Image();
-        img.onload = async () => {
-            try {
-                // Get predictions from Hugging Face model
-                const predictions = await foodClassifier(img);
-                
-                // Process predictions to extract food items
-                const foodPredictions = filterHuggingFacePredictions(predictions);
-                
-                if (foodPredictions.length > 0) {
-                    detectedFoodsData = await estimateNutritionFromHuggingFacePredictions(foodPredictions);
-                    displayDetectedFoods(detectedFoodsData);
-                } else {
-                    // No food detected
-                    detectedFoodsData = [{
-                        name: "Unknown Food Item",
-                        quantity: 100,
-                        calories: 200,
-                        protein: 5,
-                        carbs: 20,
-                        fat: 10,
-                        confidence: 0.3
-                    }];
-                    displayDetectedFoods(detectedFoodsData);
-                }
-            } catch (error) {
-                console.error('Error analyzing photo:', error);
-                showErrorInResults();
-            }
-        };
-        img.src = imageUrl;
-        
-    } catch (error) {
-        console.error('Error with Hugging Face analysis:', error);
-        showErrorInResults();
+    if (!meals || meals.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-utensils text-4xl mb-2 opacity-50"></i>
+                <p>No meals logged today. Start by adding your first food item!</p>
+            </div>
+        `;
+        return;
     }
+    
+    let mealsHTML = '';
+    meals.forEach(meal => {
+        const mealIcon = getMealIcon(meal.meal_type || 'snack');
+        mealsHTML += `
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fas ${mealIcon} text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-medium text-gray-900">${meal.custom_food_name || meal.food_name || 'Unknown Food'}</div>
+                        <div class="text-sm text-gray-600">${meal.quantity || 0} ${meal.unit || 'g'}</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="font-medium text-gray-900">${Math.round(meal.total_calories || meal.calories || 0)} cal</div>
+                    <div class="text-xs text-gray-600">P: ${Math.round(meal.total_protein || meal.protein || 0)}g • C: ${Math.round(meal.total_carbs || meal.carbs || 0)}g • F: ${Math.round(meal.total_fat || meal.fat || 0)}g</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = mealsHTML;
 }
 
-function filterHuggingFacePredictions(predictions) {
-    // Debug: Log all predictions to see what Hugging Face model is detecting
-    console.log('🔍 Hugging Face Food Predictions:', predictions.map(p => ({
-        name: p.label,
-        confidence: Math.round(p.score * 100) + '%'
-    })));
-    
-    // The nateraw/food model is specifically trained on Food101 dataset
-    // All predictions are food-related, so we can trust them more
-    const foodPredictions = predictions.filter(pred => pred.score > 0.1);
-    
-    console.log('✅ Filtered Food Predictions:', foodPredictions.map(p => ({
-        name: p.label,
-        confidence: Math.round(p.score * 100) + '%'
-    })));
-    
-    return foodPredictions.slice(0, 3); // Take top 3 predictions
-}
 
-async function estimateNutritionFromHuggingFacePredictions(predictions) {
-    // Comprehensive nutrition database for Food101 categories
-    const nutritionDatabase = {
+
+
+
+function getFallbackNutrition(foodName) {
+    // Fallback nutrition database for when USDA lookup fails
+    const fallbackDatabase = {
         // Fruits
-        'apple_pie': { calories: 237, protein: 2.4, carbs: 34, fat: 11, defaultGrams: 100 },
+        'apple': { calories: 52, protein: 0.3, carbs: 14, fat: 0.2, defaultGrams: 120 },
         'banana': { calories: 89, protein: 1.1, carbs: 23, fat: 0.3, defaultGrams: 120 },
         'orange': { calories: 47, protein: 0.9, carbs: 12, fat: 0.1, defaultGrams: 130 },
         'strawberry': { calories: 32, protein: 0.7, carbs: 8, fat: 0.3, defaultGrams: 100 },
@@ -1209,84 +1124,34 @@ async function estimateNutritionFromHuggingFacePredictions(predictions) {
         'potato': { calories: 77, protein: 2, carbs: 17, fat: 0.1, defaultGrams: 150 },
         
         // Meats
-        'beef_carpaccio': { calories: 250, protein: 26, carbs: 0, fat: 15, defaultGrams: 100 },
-        'beef_tartare': { calories: 250, protein: 26, carbs: 0, fat: 15, defaultGrams: 100 },
-        'chicken_curry': { calories: 200, protein: 25, carbs: 8, fat: 10, defaultGrams: 150 },
-        'chicken_wings': { calories: 290, protein: 27, carbs: 0, fat: 19, defaultGrams: 100 },
-        'fish_and_chips': { calories: 350, protein: 15, carbs: 35, fat: 18, defaultGrams: 200 },
-        'hamburger': { calories: 540, protein: 25, carbs: 40, fat: 31, defaultGrams: 200 },
-        'hot_dog': { calories: 290, protein: 11, carbs: 3, fat: 26, defaultGrams: 100 },
-        'pizza': { calories: 285, protein: 12, carbs: 36, fat: 10, defaultGrams: 150 },
+        'chicken': { calories: 165, protein: 31, carbs: 0, fat: 3.6, defaultGrams: 100 },
+        'beef': { calories: 250, protein: 26, carbs: 0, fat: 15, defaultGrams: 100 },
+        'pork': { calories: 242, protein: 27, carbs: 0, fat: 14, defaultGrams: 100 },
         'steak': { calories: 250, protein: 26, carbs: 0, fat: 15, defaultGrams: 150 },
         
         // Breads and Grains
-        'bagel': { calories: 250, protein: 10, carbs: 49, fat: 1.5, defaultGrams: 90 },
         'bread': { calories: 265, protein: 9, carbs: 49, fat: 3.2, defaultGrams: 50 },
-        'french_fries': { calories: 365, protein: 4, carbs: 63, fat: 17, defaultGrams: 100 },
-        'french_toast': { calories: 229, protein: 7, carbs: 25, fat: 12, defaultGrams: 100 },
-        'pancakes': { calories: 227, protein: 6, carbs: 35, fat: 9, defaultGrams: 100 },
-        'waffles': { calories: 291, protein: 8, carbs: 38, fat: 14, defaultGrams: 100 },
-        
-        // Desserts
-        'apple_pie': { calories: 237, protein: 2.4, carbs: 34, fat: 11, defaultGrams: 100 },
-        'cheesecake': { calories: 321, protein: 6, carbs: 26, fat: 23, defaultGrams: 100 },
-        'chocolate_cake': { calories: 371, protein: 5, carbs: 45, fat: 20, defaultGrams: 100 },
-        'chocolate_mousse': { calories: 225, protein: 4, carbs: 20, fat: 15, defaultGrams: 100 },
-        'donuts': { calories: 253, protein: 4, carbs: 31, fat: 13, defaultGrams: 60 },
-        'ice_cream': { calories: 207, protein: 3.5, carbs: 24, fat: 11, defaultGrams: 100 },
-        'tiramisu': { calories: 285, protein: 6, carbs: 28, fat: 18, defaultGrams: 100 },
-        
-        // Other foods
-        'sushi': { calories: 150, protein: 6, carbs: 30, fat: 1, defaultGrams: 100 },
-        'tacos': { calories: 226, protein: 9, carbs: 26, fat: 12, defaultGrams: 100 },
-        'spaghetti_carbonara': { calories: 400, protein: 15, carbs: 45, fat: 20, defaultGrams: 200 },
-        'ramen': { calories: 350, protein: 12, carbs: 60, fat: 8, defaultGrams: 300 },
-        'salad': { calories: 25, protein: 2, carbs: 5, fat: 0.3, defaultGrams: 100 },
+        'pasta': { calories: 131, protein: 5, carbs: 25, fat: 1.1, defaultGrams: 100 },
+        'rice': { calories: 130, protein: 2.7, carbs: 28, fat: 0.3, defaultGrams: 100 },
         
         // Default for unknown items
         'default': { calories: 200, protein: 8, carbs: 25, fat: 8, defaultGrams: 100 }
     };
     
-    return predictions.map(pred => {
-        const foodName = pred.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        let nutritionData = nutritionDatabase['default'];
-        let matchedKey = 'default';
+    const foodNameLower = foodName.toLowerCase();
+    let nutritionData = fallbackDatabase['default'];
+    
+    // Find matching nutrition data
+    for (const [key, data] of Object.entries(fallbackDatabase)) {
+        if (key === 'default') continue;
         
-        console.log(`🔍 Trying to match: "${foodName}"`);
-        
-        // Find matching nutrition data
-        for (const [key, data] of Object.entries(nutritionDatabase)) {
-            if (key === 'default') continue;
-            
-            // Try exact match first
-            if (foodName === key) {
-                nutritionData = data;
-                matchedKey = key;
-                console.log(`✅ Exact match found: ${key}`);
-                break;
-            }
-            
-            // Try partial matches
-            if (foodName.includes(key) || key.includes(foodName)) {
-                nutritionData = data;
-                matchedKey = key;
-                console.log(`✅ Partial match found: ${key}`);
-                break;
-            }
+        if (foodNameLower.includes(key) || key.includes(foodNameLower)) {
+            nutritionData = data;
+            break;
         }
-        
-        console.log(`📊 Final match for "${foodName}": ${matchedKey}`);
-        
-        return {
-            name: pred.label,
-            quantity: nutritionData.defaultGrams,
-            calories: Math.round(nutritionData.calories * (nutritionData.defaultGrams / 100)),
-            protein: Math.round(nutritionData.protein * (nutritionData.defaultGrams / 100) * 10) / 10,
-            carbs: Math.round(nutritionData.carbs * (nutritionData.defaultGrams / 100) * 10) / 10,
-            fat: Math.round(nutritionData.fat * (nutritionData.defaultGrams / 100) * 10) / 10,
-            confidence: pred.score
-        };
-    });
+    }
+    
+    return nutritionData;
 }
 
 function displayDetectedFoods(foods) {
@@ -1297,7 +1162,11 @@ function displayDetectedFoods(foods) {
             <div class="flex justify-between items-start mb-2">
                 <div>
                     <h4 class="font-medium text-gray-900">${food.name}</h4>
-                    <p class="text-xs text-gray-500">Confidence: ${Math.round(food.confidence * 100)}%</p>
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <span>Confidence: ${Math.round(food.confidence * 100)}%</span>
+                        ${food.source ? `<span class="px-1.5 py-0.5 rounded text-xs ${food.source === 'USDA' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${food.source}</span>` : ''}
+                    </div>
+                    ${food.matched_name && food.matched_name !== food.name ? `<p class="text-xs text-blue-600">Matched: ${food.matched_name}</p>` : ''}
                 </div>
                 <button onclick="removeFoodItem(${index})" class="text-red-500 hover:text-red-700">
                     <i class="fas fa-times text-sm"></i>
@@ -1383,48 +1252,6 @@ function updateProgressCircle(type, percentage, current, goal, unit = '') {
     circle.style.strokeDashoffset = offset;
     percentElement.textContent = `${Math.round(percentage)}%`;
     textElement.textContent = `${Math.round(current)}${unit} / ${Math.round(goal)}${unit}`;
-}
-
-function loadTodaysMeals(meals) {
-    const container = document.getElementById('todaysMeals');
-    const noMealsMessage = document.getElementById('noMealsMessage');
-    
-    if (meals.length === 0) {
-        container.style.display = 'none';
-        noMealsMessage.style.display = 'block';
-        return;
-    }
-    
-    container.style.display = 'block';
-    noMealsMessage.style.display = 'none';
-    
-    container.innerHTML = meals.map(meal => `
-        <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                    <i class="fas ${getMealIcon(meal.meal_type)}"></i>
-                </div>
-                <div>
-                    <h4 class="font-medium text-gray-900">${meal.meal_type}</h4>
-                    <p class="text-sm text-gray-600">${Math.round(meal.calories)} calories</p>
-                </div>
-            </div>
-            <div class="text-right text-sm text-gray-600">
-                <div>P: ${Math.round(meal.protein)}g</div>
-                <div>C: ${Math.round(meal.carbs)}g • F: ${Math.round(meal.fat)}g</div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function getMealIcon(mealType) {
-    const icons = {
-        'Breakfast': 'fa-coffee',
-        'Lunch': 'fa-hamburger',
-        'Dinner': 'fa-utensils',
-        'Snack': 'fa-cookie-bite'
-    };
-    return icons[mealType] || 'fa-utensils';
 }
 
 // Modal functions
@@ -1881,37 +1708,166 @@ async function searchFood() {
         const data = await response.json();
         
         if (data.success) {
-            displaySearchResults(data.foods);
+            displaySearchResults(data.data, data.source);
         }
     } catch (error) {
         console.error('Error searching food:', error);
-        showNotification('Error searching food', 'error');
+        showNotification('Error searching USDA database', 'error');
     }
 }
 
-function displaySearchResults(foods) {
+function displaySearchResults(foods, source = 'USDA') {
     const container = document.getElementById('searchResults');
     
     if (foods.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 text-center py-4">No foods found</p>';
+        container.innerHTML = '<p class="text-gray-500 text-center py-4">No foods found in USDA database</p>';
         return;
     }
     
     container.innerHTML = foods.map(food => `
-        <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer" onclick="selectFood(${JSON.stringify(food).replace(/"/g, '&quot;')})">
+        <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors" onclick="selectFoodFromUSDA(${JSON.stringify(food).replace(/"/g, '&quot;')})">
             <div class="flex justify-between items-start">
-                <div>
+                <div class="flex-1">
                     <h4 class="font-medium text-gray-900">${food.name}</h4>
-                    <p class="text-sm text-gray-600">${food.brand}</p>
-                    <p class="text-xs text-blue-600">Open Food Facts</p>
+                    ${food.brand ? `<p class="text-sm text-gray-600">${food.brand}</p>` : ''}
+                    ${food.category ? `<p class="text-xs text-gray-500">${food.category}</p>` : ''}
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="inline-block px-2 py-1 text-xs rounded ${source === 'USDA' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${source}</span>
+                        <span class="text-xs text-blue-600">Click to load nutrition data</span>
+                    </div>
                 </div>
-                <div class="text-sm text-gray-600 text-right">
-                    <div>${food.calories_per_100g} cal/100g</div>
-                    <div class="text-xs">P:${food.protein_per_100g}g C:${food.carbs_per_100g}g F:${food.fat_per_100g}g</div>
+                <div class="text-sm text-gray-600 text-right ml-2">
+                    <i class="fas fa-chevron-right text-gray-400"></i>
                 </div>
             </div>
         </div>
     `).join('');
+}
+
+async function selectFoodFromUSDA(food) {
+    try {
+        // Show loading state
+        showNotification('Loading nutrition data...', 'info');
+        
+        console.log('🔍 Getting nutrition for:', food);
+        
+        // Get detailed nutrition data from USDA using fdc_id if available
+        let response;
+        let url;
+        
+        if (food.fdc_id) {
+            // Use fdc_id for more accurate results
+            url = `/api/nutrition/get-food-nutrition-by-id?fdc_id=${food.fdc_id}`;
+            console.log('📊 Using FDC ID:', food.fdc_id);
+        } else {
+            // Fallback to name search
+            url = `/api/nutrition/get-food-nutrition?food_name=${encodeURIComponent(food.name)}`;
+            console.log('📊 Using name search:', food.name);
+        }
+        
+        response = await fetch(url);
+        const data = await response.json();
+        
+        console.log('📊 Nutrition response:', data);
+        
+        if (data.success && data.data) {
+            const nutritionData = data.data;
+            
+            console.log('📊 Nutrition data:', nutritionData);
+            
+            // Fill manual form with USDA nutrition data
+            closeModal('searchModal');
+            openManualEntry();
+            
+            // Wait a moment for the modal to open
+            setTimeout(() => {
+                const form = document.getElementById('manualForm');
+                console.log('🔍 Looking for form:', form);
+                
+                if (form) {
+                    console.log('✅ Form found, filling with nutrition data');
+                    
+                    // Set form values using multiple approaches
+                    const nameField = form.querySelector('input[name="food_name"]');
+                    const quantityField = form.querySelector('input[name="quantity"]');
+                    const caloriesField = form.querySelector('input[name="calories"]');
+                    const proteinField = form.querySelector('input[name="protein"]');
+                    const carbsField = form.querySelector('input[name="carbs"]');
+                    const fatField = form.querySelector('input[name="fat"]');
+                    
+                    console.log('🔍 Form fields found:', {
+                        nameField: !!nameField,
+                        quantityField: !!quantityField,
+                        caloriesField: !!caloriesField,
+                        proteinField: !!proteinField,
+                        carbsField: !!carbsField,
+                        fatField: !!fatField
+                    });
+                    
+                    // Set values with fallbacks
+                    if (nameField) {
+                        nameField.value = nutritionData.name || '';
+                        console.log('✅ Set name to:', nutritionData.name);
+                    }
+                    if (quantityField) {
+                        quantityField.value = nutritionData.serving_size || 100;
+                        console.log('✅ Set quantity to:', nutritionData.serving_size);
+                    }
+                    if (caloriesField) {
+                        caloriesField.value = nutritionData.calories || 0;
+                        console.log('✅ Set calories to:', nutritionData.calories);
+                    }
+                    if (proteinField) {
+                        proteinField.value = nutritionData.protein || 0;
+                        console.log('✅ Set protein to:', nutritionData.protein);
+                    }
+                    if (carbsField) {
+                        carbsField.value = nutritionData.carbs || 0;
+                        console.log('✅ Set carbs to:', nutritionData.carbs);
+                    }
+                    if (fatField) {
+                        fatField.value = nutritionData.fat || 0;
+                        console.log('✅ Set fat to:', nutritionData.fat);
+                    }
+                    
+                    // Also try setting values directly on form
+                    try {
+                        form.food_name.value = nutritionData.name || '';
+                        form.quantity.value = nutritionData.serving_size || 100;
+                        form.calories.value = nutritionData.calories || 0;
+                        form.protein.value = nutritionData.protein || 0;
+                        form.carbs.value = nutritionData.carbs || 0;
+                        form.fat.value = nutritionData.fat || 0;
+                        console.log('✅ Also set values directly on form');
+                    } catch (e) {
+                        console.log('⚠️ Direct form access failed:', e);
+                    }
+                    
+                    console.log('✅ Form filled with:', {
+                        name: nutritionData.name,
+                        calories: nutritionData.calories,
+                        protein: nutritionData.protein,
+                        carbs: nutritionData.carbs,
+                        fat: nutritionData.fat
+                    });
+                    
+                    // Store the nutrition data for manual filling
+                    lastNutritionData = nutritionData;
+                    
+                    showNotification(`Nutrition data loaded from ${data.source} database`, 'success');
+                } else {
+                    console.error('❌ Form not found');
+                    showNotification('Error: Could not find form', 'error');
+                }
+            }, 200); // Increased delay to ensure modal is fully open
+        } else {
+            console.error('❌ No nutrition data found:', data);
+            showNotification('Could not retrieve nutrition data', 'error');
+        }
+    } catch (error) {
+        console.error('Error getting nutrition data:', error);
+        showNotification('Error retrieving nutrition data', 'error');
+    }
 }
 
 function selectFood(food) {
@@ -1926,6 +1882,39 @@ function selectFood(food) {
     form.protein.value = food.protein_per_100g;
     form.carbs.value = food.carbs_per_100g;
     form.fat.value = food.fat_per_100g;
+}
+
+function fillFormWithLastNutritionData() {
+    if (!lastNutritionData) {
+        showNotification('No nutrition data available. Please search for a food first.', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('manualForm');
+    if (!form) {
+        showNotification('Form not found. Please try again.', 'error');
+        return;
+    }
+    
+    console.log('🔧 Manually filling form with:', lastNutritionData);
+    
+    // Set form values
+    const nameField = form.querySelector('input[name="food_name"]');
+    const quantityField = form.querySelector('input[name="quantity"]');
+    const caloriesField = form.querySelector('input[name="calories"]');
+    const proteinField = form.querySelector('input[name="protein"]');
+    const carbsField = form.querySelector('input[name="carbs"]');
+    const fatField = form.querySelector('input[name="fat"]');
+    
+    if (nameField) nameField.value = lastNutritionData.name || '';
+    if (quantityField) quantityField.value = lastNutritionData.serving_size || 100;
+    if (caloriesField) caloriesField.value = lastNutritionData.calories || 0;
+    if (proteinField) proteinField.value = lastNutritionData.protein || 0;
+    if (carbsField) carbsField.value = lastNutritionData.carbs || 0;
+    if (fatField) fatField.value = lastNutritionData.fat || 0;
+    
+    console.log('✅ Manual form fill completed');
+    showNotification('Nutrition data filled successfully!', 'success');
 }
 
 // Manual food entry
@@ -3046,6 +3035,628 @@ function generateMealHTML(meal, mealType) {
         </div>
     `;
 }
+
+// Food Chart Modal Functions
+function openFoodChartModal() {
+    document.getElementById('foodChartModal').classList.remove('hidden');
+    loadFoodChartData();
+}
+
+function closeFoodChartModal() {
+    document.getElementById('foodChartModal').classList.add('hidden');
+}
+
+async function loadFoodChartData() {
+    try {
+        const response = await fetch('/api/member/nutrition/today');
+        const data = await response.json();
+        
+        if (data.success && data.meals) {
+            displayFoodChart(data.meals);
+        } else {
+            document.getElementById('foodChartContainer').innerHTML = `
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-chart-bar text-4xl mb-2 opacity-50"></i>
+                    <p>No food items logged today. Start by adding your first food item!</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading food chart data:', error);
+        document.getElementById('foodChartContainer').innerHTML = `
+            <div class="text-center text-red-500 py-8">
+                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                <p>Error loading food data. Please try again.</p>
+            </div>
+        `;
+    }
+}
+
+function displayFoodChart(meals) {
+    const container = document.getElementById('foodChartContainer');
+    
+    // Debug: Log the meals data to console
+    console.log('🔍 Meals data for food chart:', meals);
+    
+    if (!meals || meals.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-chart-bar text-4xl mb-2 opacity-50"></i>
+                <p>No food items logged today. Start by adding your first food item!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Group meals by meal type
+    const mealGroups = {};
+    meals.forEach(meal => {
+        if (!mealGroups[meal.meal_type]) {
+            mealGroups[meal.meal_type] = [];
+        }
+        mealGroups[meal.meal_type].push(meal);
+    });
+    
+    let chartHTML = `
+        <div class="space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">Today's Food Items</h3>
+                <div class="text-sm text-gray-500">${meals.length} items logged</div>
+            </div>
+    `;
+    
+    // Create sections for each meal type
+    Object.keys(mealGroups).forEach(mealType => {
+        const mealItems = mealGroups[mealType];
+        const totalCalories = mealItems.reduce((sum, meal) => sum + (meal.calories || 0), 0);
+        const totalProtein = mealItems.reduce((sum, meal) => sum + (meal.protein || 0), 0);
+        const totalCarbs = mealItems.reduce((sum, meal) => sum + (meal.carbs || 0), 0);
+        const totalFat = mealItems.reduce((sum, meal) => sum + (meal.fat || 0), 0);
+        
+        chartHTML += `
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="font-medium text-gray-900 capitalize">${mealType}</h4>
+                    <div class="text-sm text-gray-600">
+                        ${totalCalories} cal • P: ${Math.round(totalProtein)}g • C: ${Math.round(totalCarbs)}g • F: ${Math.round(totalFat)}g
+                    </div>
+                </div>
+                <div class="space-y-2">
+        `;
+        
+        mealItems.forEach(meal => {
+            // Debug: Log individual meal data
+            console.log('🔍 Individual meal data:', meal);
+            
+            chartHTML += `
+                <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                            <i class="fas ${getMealIcon(meal.meal_type || 'snack')} text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">${meal.custom_food_name || meal.food_name || 'Unknown Food'}</div>
+                            <div class="text-sm text-gray-600">${meal.quantity || 0} ${meal.unit || 'g'}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="text-right">
+                            <div class="font-medium text-gray-900">${Math.round(meal.total_calories || meal.calories || 0)} cal</div>
+                            <div class="text-xs text-gray-600">P: ${Math.round(meal.total_protein || meal.protein || 0)}g • C: ${Math.round(meal.total_carbs || meal.carbs || 0)}g • F: ${Math.round(meal.total_fat || meal.fat || 0)}g</div>
+                        </div>
+                        <button onclick="editFoodItem(${meal.id}, '${meal.custom_food_name || meal.food_name || 'Unknown Food'}', '${meal.meal_type || 'snack'}', ${meal.quantity || 0}, '${meal.unit || 'g'}', ${meal.total_calories || meal.calories || 0}, ${meal.total_protein || meal.protein || 0}, ${meal.total_carbs || meal.carbs || 0}, ${meal.total_fat || meal.fat || 0}, '${meal.notes || ''}')" 
+                                class="ml-2 p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors" 
+                                title="Edit this food item">
+                            <i class="fas fa-edit text-sm"></i>
+                        </button>
+                        <button onclick="deleteFoodItem(${meal.id}, '${meal.custom_food_name || meal.food_name || 'Unknown Food'}', event)" 
+                                class="ml-2 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" 
+                                title="Delete this food item">
+                            <i class="fas fa-trash text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        chartHTML += `
+                </div>
+            </div>
+        `;
+    });
+    
+    chartHTML += `</div>`;
+    container.innerHTML = chartHTML;
+}
+
+// Helper function to get meal icon
+function getMealIcon(mealType) {
+    const icons = {
+        'breakfast': 'fa-sun',
+        'lunch': 'fa-cloud-sun',
+        'dinner': 'fa-moon',
+        'snack': 'fa-coffee'
+    };
+    return icons[mealType.toLowerCase()] || 'fa-utensils';
+}
+
+// Show notification function
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 translate-x-full`;
+    
+    // Set background color based on type
+    const bgColors = {
+        'success': 'bg-green-500',
+        'error': 'bg-red-500',
+        'warning': 'bg-yellow-500',
+        'info': 'bg-blue-500'
+    };
+    
+    notification.className += ` ${bgColors[type] || bgColors.info} text-white`;
+    
+    // Set icon based on type
+    const icons = {
+        'success': 'fa-check-circle',
+        'error': 'fa-exclamation-circle',
+        'warning': 'fa-exclamation-triangle',
+        'info': 'fa-info-circle'
+    };
+    
+    notification.innerHTML = `
+        <div class="flex items-center space-x-3">
+            <i class="fas ${icons[type] || icons.info}"></i>
+            <span class="flex-1">${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 300);
+    }, 5000);
+}
+
+// Delete food item function
+async function deleteFoodItem(mealId, foodName, event) {
+    // Show confirmation dialog
+    const confirmed = confirm(`Are you sure you want to delete "${foodName}" from your nutrition log?`);
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        // Show loading state
+        const deleteBtn = event.target.closest('button');
+        if (!deleteBtn) {
+            console.error('Delete button not found');
+            return;
+        }
+        const originalContent = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-sm"></i>';
+        deleteBtn.disabled = true;
+        
+        // Make API call to delete the meal
+        const response = await fetch(`/api/member/nutrition/meals/${mealId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Show success notification
+            showNotification(`"${foodName}" has been deleted from your nutrition log`, 'success');
+            
+            // Reload the food chart data
+            loadFoodChartData();
+            
+            // Reload the main nutrition dashboard
+            loadNutritionDashboard();
+            
+            // Refresh weekly progress if it exists
+            if (typeof refreshWeeklyProgress === 'function') {
+                refreshWeeklyProgress();
+            }
+        } else {
+            throw new Error(data.detail || data.message || 'Failed to delete food item');
+        }
+        
+    } catch (error) {
+        console.error('Error deleting food item:', error);
+        showNotification('Error deleting food item. Please try again.', 'error');
+        
+        // Reset button state
+        const deleteBtn = event.target.closest('button');
+        if (deleteBtn) {
+            deleteBtn.innerHTML = '<i class="fas fa-trash text-sm"></i>';
+            deleteBtn.disabled = false;
+        }
+    }
+}
+
+// Edit food item function
+function editFoodItem(mealId, foodName, mealType, quantity, unit, calories, protein, carbs, fat, notes) {
+    // Map old unit values to new ones
+    const unitMapping = {
+        'g': 'grams',
+        'oz': 'grams', // Convert ounces to grams
+        'cup': 'cups',
+        'tbsp': 'tablespoons',
+        'tsp': 'tablespoons', // Convert teaspoons to tablespoons
+        'piece': 'pieces',
+        'slice': 'pieces' // Convert slice to pieces
+    };
+    
+    const mappedUnit = unitMapping[unit] || unit;
+    
+    // Populate the edit form with current values
+    document.getElementById('editMealId').value = mealId;
+    document.getElementById('editFoodName').value = foodName;
+    document.getElementById('editMealType').value = mealType;
+    document.getElementById('editQuantity').value = quantity;
+    document.getElementById('editUnit').value = mappedUnit;
+    document.getElementById('editCalories').value = calories;
+    document.getElementById('editProtein').value = protein;
+    document.getElementById('editCarbs').value = carbs;
+    document.getElementById('editFat').value = fat;
+    document.getElementById('editNotes').value = notes;
+    
+    // Show the edit modal
+    document.getElementById('editFoodModal').classList.remove('hidden');
+}
+
+// Close edit food modal
+function closeEditFoodModal() {
+    document.getElementById('editFoodModal').classList.add('hidden');
+    // Reset form
+    document.getElementById('editFoodForm').reset();
+}
+
+// Handle edit form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const editFoodForm = document.getElementById('editFoodForm');
+    if (editFoodForm) {
+        editFoodForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('editFoodSubmitBtn');
+            const originalText = submitBtn.textContent;
+            
+            try {
+                // Show loading state
+                submitBtn.textContent = 'Updating...';
+                submitBtn.disabled = true;
+                
+                // Get form data
+                const formData = new FormData(editFoodForm);
+                const mealId = formData.get('meal_id');
+                
+                // Convert form data to JSON
+                const updateData = {
+                    food_name: formData.get('food_name'),
+                    meal_type: formData.get('meal_type'),
+                    quantity: parseFloat(formData.get('quantity')),
+                    unit: formData.get('unit'),
+                    calories: parseFloat(formData.get('calories')),
+                    protein: parseFloat(formData.get('protein')),
+                    carbs: parseFloat(formData.get('carbs')),
+                    fat: parseFloat(formData.get('fat')),
+                    notes: formData.get('notes')
+                };
+                
+                // Make API call to update the meal
+                const response = await fetch(`/api/member/nutrition/meals/${mealId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Show success notification
+                    showNotification(`"${updateData.food_name}" has been updated successfully`, 'success');
+                    
+                    // Close the modal
+                    closeEditFoodModal();
+                    
+                    // Reload the food chart data
+                    loadFoodChartData();
+                    
+                    // Reload the main nutrition dashboard
+                    loadNutritionDashboard();
+                    
+                    // Refresh weekly progress if it exists
+                    if (typeof refreshWeeklyProgress === 'function') {
+                        refreshWeeklyProgress();
+                    }
+                } else {
+                    throw new Error(data.detail || data.message || 'Failed to update food item');
+                }
+                
+            } catch (error) {
+                console.error('Error updating food item:', error);
+                showNotification('Error updating food item. Please try again.', 'error');
+            } finally {
+                // Reset button state
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+});
+
+// YOLOv5 Food Analysis - Replaces Hugging Face implementation
+async function analyzePhotoWithYOLOv5(fileInput) {
+    if (!fileInput.files || !fileInput.files[0]) return;
+    
+    const file = fileInput.files[0];
+    const imageUrl = URL.createObjectURL(file);
+    
+    // Show preview
+    const preview = document.getElementById('photoPreview');
+    const previewImage = document.getElementById('previewImage');
+    previewImage.src = imageUrl;
+    preview.classList.remove('hidden');
+    
+    // Show loading state
+    const resultsDiv = document.getElementById('detectionResults');
+    const foodsList = document.getElementById('detectedFoodsList');
+    foodsList.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-emerald-600"></i><p class="text-sm text-gray-600 mt-2">Analyzing food with YOLOv5 AI...</p></div>';
+    resultsDiv.classList.remove('hidden');
+    
+    try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Call our YOLOv5 API endpoint
+        const response = await fetch('/api/food-detect/detect-simple', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.detections && result.detections.length > 0) {
+            // Convert YOLOv5 detections to nutrition data
+            detectedFoodsData = await convertYOLOv5DetectionsToNutrition(result.detections);
+            displayDetectedFoods(detectedFoodsData);
+        } else {
+            // No food detected
+            detectedFoodsData = [{
+                name: "No food items detected",
+                quantity: 100,
+                calories: 0,
+                protein: 0,
+                carbs: 0,
+                fat: 0,
+                confidence: 0.1,
+                source: 'yolov5_no_detection'
+            }];
+            displayDetectedFoods(detectedFoodsData);
+        }
+        
+    } catch (error) {
+        console.error('Error analyzing photo with YOLOv5:', error);
+        showErrorInResults();
+    }
+}
+
+async function convertYOLOv5DetectionsToNutrition(detections) {
+    const nutritionResults = [];
+    
+    for (const detection of detections) {
+        try {
+            // Get nutrition data from USDA database
+            const response = await fetch(`/api/nutrition/get-food-nutrition?food_name=${encodeURIComponent(detection.name)}`);
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                const nutritionData = result.data;
+                const servingSize = nutritionData.serving_size || 100;
+                
+                nutritionResults.push({
+                    name: detection.name,
+                    quantity: servingSize,
+                    calories: Math.round(nutritionData.calories),
+                    protein: Math.round(nutritionData.protein * 10) / 10,
+                    carbs: Math.round(nutritionData.carbs * 10) / 10,
+                    fat: Math.round(nutritionData.fat * 10) / 10,
+                    confidence: detection.confidence,
+                    source: result.source,
+                    matched_name: nutritionData.matched_name || detection.name,
+                    box: detection.box // Keep bounding box info for visualization
+                });
+                
+                console.log(`✅ USDA data for "${detection.name}": ${result.source}`);
+            } else {
+                // Fallback to basic estimation
+                const fallbackData = getFallbackNutrition(detection.name);
+                nutritionResults.push({
+                    name: detection.name,
+                    quantity: fallbackData.defaultGrams,
+                    calories: Math.round(fallbackData.calories * (fallbackData.defaultGrams / 100)),
+                    protein: Math.round(fallbackData.protein * (fallbackData.defaultGrams / 100) * 10) / 10,
+                    carbs: Math.round(fallbackData.carbs * (fallbackData.defaultGrams / 100) * 10) / 10,
+                    fat: Math.round(fallbackData.fat * (fallbackData.defaultGrams / 100) * 10) / 10,
+                    confidence: detection.confidence,
+                    source: 'fallback',
+                    box: detection.box
+                });
+                
+                console.log(`⚠️ Fallback data for "${detection.name}"`);
+            }
+        } catch (error) {
+            console.error(`Error getting nutrition for "${detection.name}":`, error);
+            
+            // Use fallback nutrition
+            const fallbackData = getFallbackNutrition(detection.name);
+            nutritionResults.push({
+                name: detection.name,
+                quantity: fallbackData.defaultGrams,
+                calories: Math.round(fallbackData.calories * (fallbackData.defaultGrams / 100)),
+                protein: Math.round(fallbackData.protein * (fallbackData.defaultGrams / 100) * 10) / 10,
+                carbs: Math.round(fallbackData.carbs * (fallbackData.defaultGrams / 100) * 10) / 10,
+                fat: Math.round(fallbackData.fat * (fallbackData.defaultGrams / 100) * 10) / 10,
+                confidence: detection.confidence,
+                source: 'fallback',
+                box: detection.box
+            });
+        }
+    }
+    
+    return nutritionResults;
+}
 </script>
+
+<!-- Food Chart Modal -->
+<div id="foodChartModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-chart-bar text-emerald-600 mr-2"></i>
+                    Food Items Chart
+                </h3>
+                <button onclick="closeFoodChartModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div id="foodChartContainer" class="space-y-4">
+                <!-- Food chart content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Food Item Modal -->
+<div id="editFoodModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-md w-full">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-edit text-blue-600 mr-2"></i>
+                    Edit Food Item
+                </h3>
+                <button onclick="closeEditFoodModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="editFoodForm" class="space-y-4">
+                <input type="hidden" id="editMealId" name="meal_id">
+                
+                <div>
+                    <label for="editFoodName" class="block text-sm font-medium text-gray-700 mb-1">Food Name</label>
+                    <input type="text" id="editFoodName" name="food_name" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label for="editMealType" class="block text-sm font-medium text-gray-700 mb-1">Meal Type</label>
+                    <select id="editMealType" name="meal_type" required 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="breakfast">Breakfast</option>
+                        <option value="lunch">Lunch</option>
+                        <option value="dinner">Dinner</option>
+                        <option value="snack">Snack</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="editQuantity" class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                        <input type="number" id="editQuantity" name="quantity" step="0.1" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="editUnit" class="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                        <select id="editUnit" name="unit" required 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="grams">grams (g)</option>
+                            <option value="ml">milliliters (ml)</option>
+                            <option value="pieces">pieces</option>
+                            <option value="cups">cups</option>
+                            <option value="tablespoons">tablespoons</option>
+                            <option value="serving">serving</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="editCalories" class="block text-sm font-medium text-gray-700 mb-1">Calories</label>
+                        <input type="number" id="editCalories" name="calories" step="0.1" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="editProtein" class="block text-sm font-medium text-gray-700 mb-1">Protein (g)</label>
+                        <input type="number" id="editProtein" name="protein" step="0.1" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="editCarbs" class="block text-sm font-medium text-gray-700 mb-1">Carbs (g)</label>
+                        <input type="number" id="editCarbs" name="carbs" step="0.1" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="editFat" class="block text-sm font-medium text-gray-700 mb-1">Fat (g)</label>
+                        <input type="number" id="editFat" name="fat" step="0.1" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="editNotes" class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                    <textarea id="editNotes" name="notes" rows="3" 
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Any additional notes about this food item..."></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeEditFoodModal()" 
+                            class="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" id="editFoodSubmitBtn"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        Update Food Item
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 {% endblock %} 
