@@ -130,37 +130,53 @@
                         <div class="bg-gray-50 rounded-lg p-3 sm:p-4">
                             <h3 class="font-semibold mb-3 text-sm sm:text-base">Session Details</h3>
                             <form id="assignBestWorkoutForm" class="space-y-3">
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">Workout Type</label>
- <select name="workout_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm">
- <option value="">Select workout type...</option>
- <option value="Upper Body">Upper Body</option>
- <option value="Lower Body">Lower Body</option>
- <option value="Full Body">Full Body</option>
- <option value="Cardio">Cardio</option>
- <option value="Strength Training">Strength Training</option>
- <option value="Flexibility">Flexibility</option>
- <option value="HIIT">HIIT</option>
- <option value="General Training">General Training</option>
- </select>
- </div>
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">Duration</label>
- <select name="duration" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm">
- <option value="60">60 minutes</option>
- <option value="90">90 minutes</option>
- <option value="120">120 minutes</option>
- </select>
- </div>
- <div>
- <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
- <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm"></textarea>
- </div>
- <button type="submit" class="w-full bg-green-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-green-700 text-sm">
- Find Best Times
- </button>
- </form>
- </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Workout Type *</label>
+                                    <select name="workout_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm">
+                                        <option value="">Select workout type...</option>
+                                        <option value="Upper Body">Upper Body</option>
+                                        <option value="Lower Body">Lower Body</option>
+                                        <option value="Full Body">Full Body</option>
+                                        <option value="Cardio">Cardio</option>
+                                        <option value="Strength Training">Strength Training</option>
+                                        <option value="Flexibility">Flexibility</option>
+                                        <option value="HIIT">HIIT</option>
+                                        <option value="General Training">General Training</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Duration *</label>
+                                    <select name="duration" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm">
+                                        <option value="60">60 minutes</option>
+                                        <option value="90">90 minutes</option>
+                                        <option value="120">120 minutes</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Exercises *</label>
+                                    <div class="text-xs text-gray-500 mb-2">Specify the exercises for this workout session</div>
+                                    <div id="exercisesContainer" class="space-y-2">
+                                        <div class="flex items-center space-x-2">
+                                            <input type="text" name="exercises[]" placeholder="Exercise name (e.g., Push-ups)" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm">
+                                            <button type="button" onclick="addExercise()" class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="addExercise()" class="w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-green-500 hover:text-green-600 text-sm mt-2">
+                                        <i class="fas fa-plus mr-2"></i>Add Another Exercise
+                                    </button>
+                                    <div class="text-xs text-gray-500 mt-1">At least one exercise is required</div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Additional Notes</label>
+                                    <textarea name="notes" rows="3" placeholder="Additional notes, goals, instructions, or special considerations for this session..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm"></textarea>
+                                </div>
+                                <button type="submit" class="w-full bg-green-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-green-700 text-sm font-medium">
+                                    <i class="fas fa-search mr-2"></i>Find Best Times
+                                </button>
+                            </form>
+                        </div>
  
  <!-- Coach Info -->
  <div class="bg-blue-50 rounded-lg p-4">
@@ -194,6 +210,8 @@
  </div>
  </div>
 
+
+
  <!-- Legend -->
  <div class="bg-white border rounded-lg p-4 mb-4 sm:mb-6">
  <h3 class="font-semibold mb-3 text-sm">Schedule Legend</h3>
@@ -216,11 +234,11 @@
  </div>
  <div class="flex items-center">
  <div class="w-3 h-3 bg-red-200 border border-red-400 rounded mr-2"></div>
- <span>Coach Session</span>
+ <span>Coach Session(s) (Multiple shown separately)</span>
  </div>
  <div class="flex items-center">
  <div class="w-3 h-3 bg-orange-200 border border-orange-400 rounded mr-2"></div>
- <span>Member Session</span>
+ <span>Member Session(s) (Multiple shown separately)</span>
  </div>
  <div class="flex items-center">
  <div class="w-3 h-3 bg-yellow-200 border-2 border-yellow-500 rounded mr-2"></div>
@@ -230,12 +248,16 @@
  <div class="w-3 h-3 bg-blue-200 border border-blue-400 rounded mr-2"></div>
  <span>Coach Available</span>
  </div>
+ <div class="flex items-center">
+ <div class="w-3 h-3 bg-blue-50 border border-blue-200 rounded mr-2"></div>
+ <span>Preference Indicator</span>
+ </div>
  </div>
  </div>
 
                      <!-- Schedule Grid -->
                     <div class="bg-white border rounded-lg overflow-hidden mb-4 sm:mb-6">
-                        <div class="overflow-x-auto overflow-y-auto modal-scroll max-h-64 sm:max-h-80 lg:max-h-96">
+                        <div class="overflow-x-auto overflow-y-auto modal-scroll max-h-96 sm:max-h-[32rem] lg:max-h-[40rem]">
                             <table id="modalScheduleTable" class="min-w-full text-xs sm:text-sm" style="min-width: 800px;">
  <thead class="bg-gray-50">
  <tr>
@@ -284,6 +306,64 @@ console.log('=== MEMBER DETAILS PAGE DEBUG ===');
 console.log('Member ID from URL:', memberId);
 console.log('Coach ID from template:', coachId);
 console.log('Current URL:', window.location.href);
+
+ // Exercise management functions - moved to top for availability
+function addExercise() {
+ const container = document.getElementById('exercisesContainer');
+ const exerciseDiv = document.createElement('div');
+ exerciseDiv.className = 'flex items-center space-x-2';
+ exerciseDiv.innerHTML = `
+ <input type="text" name="exercises[]" placeholder="Exercise name (e.g., Push-ups)" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm">
+ <button type="button" onclick="removeExercise(this)" class="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm">
+ <i class="fas fa-minus"></i>
+ </button>
+ `;
+ container.appendChild(exerciseDiv);
+ 
+ // Focus on the new input
+ const newInput = exerciseDiv.querySelector('input');
+ newInput.focus();
+}
+
+function removeExercise(button) {
+ const exerciseDiv = button.parentElement;
+ const container = document.getElementById('exercisesContainer');
+ const exerciseInputs = container.querySelectorAll('input[name="exercises[]"]');
+ 
+ // Don't remove if it's the last exercise input
+ if (exerciseInputs.length > 1) {
+ exerciseDiv.remove();
+ } else {
+ // Clear the input instead of removing
+ const input = exerciseDiv.querySelector('input');
+ input.value = '';
+ input.focus();
+ }
+}
+
+function validateExerciseInput(input) {
+ const value = input.value.trim();
+ if (value.length === 0) {
+ input.classList.add('border-red-300');
+ input.classList.remove('border-green-500');
+ } else {
+ input.classList.remove('border-red-300');
+ input.classList.add('border-green-500');
+ }
+}
+
+// Add real-time validation for exercise inputs
+document.addEventListener('DOMContentLoaded', function() {
+ // Add event listeners for exercise input validation
+ const exercisesContainer = document.getElementById('exercisesContainer');
+ if (exercisesContainer) {
+ exercisesContainer.addEventListener('input', function(e) {
+ if (e.target.name === 'exercises[]') {
+ validateExerciseInput(e.target);
+ }
+ });
+ }
+});
 
  // Fetch member details
 async function fetchMemberDetails() {
@@ -709,11 +789,27 @@ function displaySessions(sessions) {
                                sessionStatus.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
                                'bg-blue-100 text-blue-800';
             
-            const exercisesHTML = exercises.length > 0 ? `
+            // Parse exercises from notes if not already available
+            let parsedExercises = exercises;
+            if (exercises.length === 0 && notes) {
+                try {
+                    const lines = notes.split('\n');
+                    const exercisesStart = lines.findIndex(line => line.includes('Exercises:'));
+                    if (exercisesStart !== -1) {
+                        parsedExercises = lines.slice(exercisesStart + 1)
+                            .filter(line => line.trim() && line.trim().match(/^\d+\./))
+                            .map(line => line.replace(/^\d+\.\s*/, '').trim());
+                    }
+                } catch (e) {
+                    console.log('Error parsing exercises from notes:', e);
+                }
+            }
+            
+            const exercisesHTML = parsedExercises.length > 0 ? `
                 <div class="mt-3">
                     <h4 class="text-sm font-medium text-gray-700 mb-2">Exercises:</h4>
                     <ul class="text-sm text-gray-600 space-y-1">
-                        ${exercises.map(exercise => `<li class="flex items-center">
+                        ${parsedExercises.map(exercise => `<li class="flex items-center">
                             <span class="w-2 h-2 bg-indigo-400 rounded-full mr-2"></span>
                             ${exercise}
                         </li>`).join('')}
@@ -721,10 +817,26 @@ function displaySessions(sessions) {
                 </div>
             ` : '';
             
-            const notesHTML = notes && notes !== 'No notes' ? `
+            // Parse additional notes (remove workout type and exercises)
+            let additionalNotes = notes;
+            if (notes) {
+                try {
+                    const lines = notes.split('\n');
+                    const notesStart = lines.findIndex(line => line.trim() && !line.includes('Workout Type:') && !line.includes('Exercises:') && !line.match(/^\d+\./));
+                    if (notesStart !== -1) {
+                        additionalNotes = lines.slice(notesStart).join('\n').trim();
+                    } else {
+                        additionalNotes = '';
+                    }
+                } catch (e) {
+                    console.log('Error parsing additional notes:', e);
+                }
+            }
+            
+            const notesHTML = additionalNotes && additionalNotes !== 'No notes' ? `
                 <div class="mt-3">
-                    <h4 class="text-sm font-medium text-gray-700 mb-2">Notes:</h4>
-                    <p class="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">${notes}</p>
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Additional Notes:</h4>
+                    <p class="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">${additionalNotes}</p>
                 </div>
             ` : '';
             
@@ -750,7 +862,7 @@ function displaySessions(sessions) {
                         <div class="space-y-2">
                             <div class="flex items-center text-sm">
                                 <span class="font-medium text-gray-700 w-20">Duration:</span>
-                                <span class="text-gray-600">${duration}</span>
+                                <span class="text-gray-600">${duration} minutes</span>
                             </div>
                             <div class="flex items-center text-sm">
                                 <span class="font-medium text-gray-700 w-20">Coach:</span>
@@ -878,7 +990,7 @@ document.addEventListener('DOMContentLoaded', function() {
  }
 
  function getModalCellContent(slot, day, hour, bestMatches = []) {
- let content = '<div class="h-16 p-1 text-xs overflow-y-auto">';
+ let content = '<div class="min-h-16 p-1 text-xs">';
  
  // Check if this slot is a best match
  const isBestMatch = bestMatches.some(match => 
@@ -886,47 +998,137 @@ document.addEventListener('DOMContentLoaded', function() {
  );
  
  let hasAnySessions = false;
+ let sessionCount = 0;
  
- if (slot.coach_session) {
+ // Handle multiple coach sessions - display each separately
+ if (slot.coach_sessions && slot.coach_sessions.length > 0) {
  hasAnySessions = true;
+ sessionCount += slot.coach_sessions.length;
+ 
+ slot.coach_sessions.forEach((session, index) => {
+ const sessionType = session.session_type || 'General Training';
+ const status = session.status || 'Scheduled';
+ const duration = session.duration || 60;
+ const notes = session.notes || '';
+ 
  content += `
- <div class="bg-red-100 border border-red-300 rounded p-1 mb-1 relative group">
+ <div class="bg-red-100 border border-red-300 rounded p-1 mb-1 relative group cursor-help">
+ <div class="font-semibold text-red-800 text-xs truncate">Coach Session ${slot.coach_sessions.length > 1 ? `(${index + 1}/${slot.coach_sessions.length})` : ''}</div>
+ <div class="text-red-600 text-xs truncate">${session.member_name || 'Unknown Member'}</div>
+ <div class="text-red-500 text-xs">${session.time || 'Unknown Time'}</div>
+ <div class="absolute left-0 top-0 bg-red-800 text-white p-3 rounded shadow-lg hidden group-hover:block z-20 min-w-64 max-w-80">
+ <div class="font-semibold text-sm mb-2">Coach Session Details</div>
+ <div class="space-y-1 text-xs">
+ <div><strong>Member:</strong> ${session.member_name || 'Unknown'}</div>
+ <div><strong>Time:</strong> ${session.time || 'Unknown'}</div>
+ <div><strong>Duration:</strong> ${duration} minutes</div>
+ <div><strong>Type:</strong> ${sessionType}</div>
+ <div><strong>Status:</strong> <span class="capitalize">${status}</span></div>
+ ${notes ? `<div><strong>Notes:</strong> ${notes}</div>` : ''}
+ <div><strong>Session ID:</strong> ${session.id || 'Unknown'}</div>
+ </div>
+ </div>
+ </div>
+ `;
+ });
+ }
+ 
+ // Handle single coach session (backward compatibility)
+ if (slot.coach_session && !slot.coach_sessions) {
+ hasAnySessions = true;
+ sessionCount += 1;
+ const session = slot.coach_session;
+ const sessionType = session.session_type || 'General Training';
+ const status = session.status || 'Scheduled';
+ const duration = session.duration || 60;
+ const notes = session.notes || '';
+ 
+ content += `
+ <div class="bg-red-100 border border-red-300 rounded p-1 mb-1 relative group cursor-help">
  <div class="font-semibold text-red-800 text-xs truncate">Coach Session</div>
- <div class="text-red-600 text-xs truncate">${slot.coach_session.member_name}</div>
- <div class="text-red-500 text-xs">${slot.coach_session.time}</div>
- <div class="absolute left-0 top-0 bg-red-800 text-white p-2 rounded shadow-lg hidden group-hover:block z-10 min-w-48">
- <div class="font-semibold">Coach Session</div>
- <div>Member: ${slot.coach_session.member_name}</div>
- <div>Time: ${slot.coach_session.time}</div>
- <div>Duration: ${slot.coach_session.duration} min</div>
- <div>Type: ${slot.coach_session.session_type}</div>
- <div>Status: ${slot.coach_session.status}</div>
- ${slot.coach_session.notes ? `<div>Notes: ${slot.coach_session.notes}</div>` : ''}
+ <div class="text-red-600 text-xs truncate">${session.member_name || 'Unknown Member'}</div>
+ <div class="text-red-500 text-xs">${session.time || 'Unknown Time'}</div>
+ <div class="absolute left-0 top-0 bg-red-800 text-white p-3 rounded shadow-lg hidden group-hover:block z-20 min-w-64 max-w-80">
+ <div class="font-semibold text-sm mb-2">Coach Session Details</div>
+ <div class="space-y-1 text-xs">
+ <div><strong>Member:</strong> ${session.member_name || 'Unknown'}</div>
+ <div><strong>Time:</strong> ${session.time || 'Unknown'}</div>
+ <div><strong>Duration:</strong> ${duration} minutes</div>
+ <div><strong>Type:</strong> ${sessionType}</div>
+ <div><strong>Status:</strong> <span class="capitalize">${status}</span></div>
+ ${notes ? `<div><strong>Notes:</strong> ${notes}</div>` : ''}
+ <div><strong>Session ID:</strong> ${session.id || 'Unknown'}</div>
+ </div>
  </div>
  </div>
  `;
  }
  
- if (slot.member_session) {
+ // Handle multiple member sessions - display each separately
+ if (slot.member_sessions && slot.member_sessions.length > 0) {
  hasAnySessions = true;
+ sessionCount += slot.member_sessions.length;
+ 
+ slot.member_sessions.forEach((session, index) => {
+ const sessionType = session.session_type || 'General Training';
+ const status = session.status || 'Scheduled';
+ const duration = session.duration || 60;
+ const notes = session.notes || '';
+ 
  content += `
- <div class="bg-orange-100 border border-orange-300 rounded p-1 mb-1 relative group">
+ <div class="bg-orange-100 border border-orange-300 rounded p-1 mb-1 relative group cursor-help">
+ <div class="font-semibold text-orange-800 text-xs truncate">Member Session ${slot.member_sessions.length > 1 ? `(${index + 1}/${slot.member_sessions.length})` : ''}</div>
+ <div class="text-orange-600 text-xs truncate">${session.coach_name || 'Unknown Coach'}</div>
+ <div class="text-orange-500 text-xs">${session.time || 'Unknown Time'}</div>
+ <div class="absolute left-0 top-0 bg-orange-800 text-white p-3 rounded shadow-lg hidden group-hover:block z-20 min-w-64 max-w-80">
+ <div class="font-semibold text-sm mb-2">Member Session Details</div>
+ <div class="space-y-1 text-xs">
+ <div><strong>Coach:</strong> ${session.coach_name || 'Unknown'}</div>
+ <div><strong>Time:</strong> ${session.time || 'Unknown'}</div>
+ <div><strong>Duration:</strong> ${duration} minutes</div>
+ <div><strong>Type:</strong> ${sessionType}</div>
+ <div><strong>Status:</strong> <span class="capitalize">${status}</span></div>
+ ${notes ? `<div><strong>Notes:</strong> ${notes}</div>` : ''}
+ <div><strong>Session ID:</strong> ${session.id || 'Unknown'}</div>
+ </div>
+ </div>
+ </div>
+ `;
+ });
+ }
+ 
+ // Handle single member session (backward compatibility)
+ if (slot.member_session && !slot.member_sessions) {
+ hasAnySessions = true;
+ sessionCount += 1;
+ const session = slot.member_session;
+ const sessionType = session.session_type || 'General Training';
+ const status = session.status || 'Scheduled';
+ const duration = session.duration || 60;
+ const notes = session.notes || '';
+ 
+ content += `
+ <div class="bg-orange-100 border border-orange-300 rounded p-1 mb-1 relative group cursor-help">
  <div class="font-semibold text-orange-800 text-xs truncate">Member Session</div>
- <div class="text-orange-600 text-xs truncate">${slot.member_session.coach_name}</div>
- <div class="text-orange-500 text-xs">${slot.member_session.time}</div>
- <div class="absolute left-0 top-0 bg-orange-800 text-white p-2 rounded shadow-lg hidden group-hover:block z-10 min-w-48">
- <div class="font-semibold">Member Session</div>
- <div>Coach: ${slot.member_session.coach_name}</div>
- <div>Time: ${slot.member_session.time}</div>
- <div>Duration: ${slot.member_session.duration} min</div>
- <div>Type: ${slot.member_session.session_type}</div>
- <div>Status: ${slot.member_session.status}</div>
- ${slot.member_session.notes ? `<div>Notes: ${slot.member_session.notes}</div>` : ''}
+ <div class="text-orange-600 text-xs truncate">${session.coach_name || 'Unknown Coach'}</div>
+ <div class="text-orange-500 text-xs">${session.time || 'Unknown Time'}</div>
+ <div class="absolute left-0 top-0 bg-orange-800 text-white p-3 rounded shadow-lg hidden group-hover:block z-20 min-w-64 max-w-80">
+ <div class="font-semibold text-sm mb-2">Member Session Details</div>
+ <div class="space-y-1 text-xs">
+ <div><strong>Coach:</strong> ${session.coach_name || 'Unknown'}</div>
+ <div><strong>Time:</strong> ${session.time || 'Unknown'}</div>
+ <div><strong>Duration:</strong> ${duration} minutes</div>
+ <div><strong>Type:</strong> ${sessionType}</div>
+ <div><strong>Status:</strong> <span class="capitalize">${status}</span></div>
+ ${notes ? `<div><strong>Notes:</strong> ${notes}</div>` : ''}
+ <div><strong>Session ID:</strong> ${session.id || 'Unknown'}</div>
+ </div>
  </div>
  </div>
  `;
  }
  
+ // Display available slots for assignment (only if no sessions exist)
  if (slot.available_for_both && !hasAnySessions) {
  const borderClass = isBestMatch ? 'border-2 border-yellow-500 bg-yellow-100' : '';
  content += `
@@ -944,11 +1146,12 @@ document.addEventListener('DOMContentLoaded', function() {
  content += `
  <div class="bg-yellow-100 border border-yellow-400 rounded p-1 text-center">
  <div class="text-xs text-yellow-800">⚠️ Conflicts</div>
+ <div class="text-xs text-yellow-700">Both Available</div>
  </div>
  `;
  }
  
- // If slot has preference indicators but no sessions, show availability
+ // Display individual availability when no sessions exist
  if (!hasAnySessions && !slot.available_for_both) {
  if (slot.coach_available || slot.member_available) {
  const availabilityText = [];
@@ -959,6 +1162,21 @@ document.addEventListener('DOMContentLoaded', function() {
  <div class="bg-gray-100 border border-gray-300 rounded p-1 text-center">
  <div class="text-xs text-gray-600">${availabilityText.join(' + ')}</div>
  <div class="text-xs text-gray-500">Available</div>
+ </div>
+ `;
+ }
+ }
+ 
+ // Display preference indicators (only if no sessions exist)
+ if (slot.coach_preferred || slot.member_preferred) {
+ const preferenceText = [];
+ if (slot.coach_preferred) preferenceText.push('Coach Prefers');
+ if (slot.member_preferred) preferenceText.push('Member Prefers');
+ 
+ if (preferenceText.length > 0 && !hasAnySessions) {
+ content += `
+ <div class="bg-blue-50 border border-blue-200 rounded p-1 text-center mt-1">
+ <div class="text-xs text-blue-600">${preferenceText.join(' + ')}</div>
  </div>
  `;
  }
@@ -977,11 +1195,44 @@ document.addEventListener('DOMContentLoaded', function() {
  
  matchesDiv.innerHTML = '';
  form.reset();
+ 
+ // Initialize form properly
+ initializeAssignWorkoutForm();
+ 
  modal.classList.remove('hidden');
  
  // Load initial schedule
  await loadModalSchedule();
  };
+
+ // Initialize the assign workout form
+ function initializeAssignWorkoutForm() {
+ const form = document.getElementById('assignBestWorkoutForm');
+ const exercisesContainer = document.getElementById('exercisesContainer');
+ 
+ // Clear existing exercises
+ exercisesContainer.innerHTML = '';
+ 
+ // Add first exercise input
+ const firstExerciseDiv = document.createElement('div');
+ firstExerciseDiv.className = 'flex items-center space-x-2';
+ firstExerciseDiv.innerHTML = `
+ <input type="text" name="exercises[]" placeholder="Exercise name (e.g., Push-ups)" required class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-sm">
+ <button type="button" onclick="addExercise()" class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm">
+ <i class="fas fa-plus"></i>
+ </button>
+ `;
+ exercisesContainer.appendChild(firstExerciseDiv);
+ 
+ // Focus on the first exercise input
+ const firstInput = firstExerciseDiv.querySelector('input');
+ firstInput.focus();
+ 
+ // Reset form fields
+ form.querySelector('select[name="workout_type"]').value = '';
+ form.querySelector('select[name="duration"]').value = '60';
+ form.querySelector('textarea[name="notes"]').value = '';
+ }
 
  async function loadModalParticipantsInfo() {
  try {
@@ -1023,9 +1274,55 @@ document.addEventListener('DOMContentLoaded', function() {
 
  async function loadModalSchedule() {
  try {
+ console.log('=== LOADING MODAL SCHEDULE ===');
  const weekStart = formatModalDate(currentModalWeek);
+ console.log('Week start:', weekStart);
+ console.log('Coach ID:', coachId);
+ console.log('Member ID:', memberId);
+ 
  const response = await fetch(`/api/coach/schedule_view/${coachId}/${memberId}?week_start=${weekStart}`);
+ console.log('Schedule response status:', response.status);
+ 
+ if (!response.ok) {
+ const errorText = await response.text();
+ console.error('Schedule response error:', errorText);
+ throw new Error('Failed to load schedule data');
+ }
+ 
  const data = await response.json();
+ console.log('=== RECEIVED SCHEDULE DATA ===');
+ console.log('Schedule data:', data);
+ console.log('Coach sessions count:', data.coach?.sessions?.length || 0);
+ console.log('Member sessions count:', data.member?.sessions?.length || 0);
+ 
+ // Log detailed session information
+ if (data.coach?.sessions) {
+ console.log('=== COACH SESSIONS DETAILS ===');
+ data.coach.sessions.forEach((session, index) => {
+ console.log(`Coach Session ${index + 1}:`, {
+ id: session.id,
+ member_name: session.member_name,
+ date: session.formatted_date,
+ time: session.formatted_time,
+ day: session.day_name,
+ hour: session.hour_slot
+ });
+ });
+ }
+ 
+ if (data.member?.sessions) {
+ console.log('=== MEMBER SESSIONS DETAILS ===');
+ data.member.sessions.forEach((session, index) => {
+ console.log(`Member Session ${index + 1}:`, {
+ id: session.id,
+ coach_name: session.coach_name,
+ date: session.formatted_date,
+ time: session.formatted_time,
+ day: session.day_name,
+ hour: session.hour_slot
+ });
+ });
+ }
  
  if (!data.success) {
  throw new Error('Failed to load schedule data');
@@ -1033,10 +1330,13 @@ document.addEventListener('DOMContentLoaded', function() {
  
  modalScheduleData = data;
  displayModalSchedule(data);
+ console.log('=== MODAL SCHEDULE LOADED ===');
  } catch (error) {
- console.error('Error loading modal schedule:', error);
+ console.error('=== ERROR LOADING MODAL SCHEDULE ===');
+ console.error('Error:', error);
+ console.error('Error message:', error.message);
  document.getElementById('modalScheduleBody').innerHTML = 
- '<tr><td colspan="8" class="text-center text-red-500 p-4">Error loading schedule data</td></tr>';
+ '<tr><td colspan="8" class="text-center text-red-500 p-4">Error loading schedule data: ' + error.message + '</td></tr>';
  }
  }
 
@@ -1076,6 +1376,8 @@ document.addEventListener('DOMContentLoaded', function() {
  });
  }
 
+
+
  window.closeAssignBestWorkoutModal = function() {
  modal.classList.add('hidden');
  document.getElementById('modalBestMatches').classList.add('hidden');
@@ -1097,14 +1399,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
  form.onsubmit = async function(e) {
  e.preventDefault();
+ 
+ // Validate form before submission
+ if (!validateAssignWorkoutForm()) {
+ return;
+ }
+ 
  matchesDiv.innerHTML = '<div class="text-gray-500 text-center p-4">Finding best matches...</div>';
  
  const formData = new FormData(form);
+ 
+ // Collect exercises
+ const exerciseInputs = form.querySelectorAll('input[name="exercises[]"]');
+ const exercises = Array.from(exerciseInputs)
+ .map(input => input.value.trim())
+ .filter(value => value.length > 0);
+ 
  const data = {
  coach_id: coachId,
  member_id: memberId,
  workout_type: formData.get('workout_type'),
  duration: parseInt(formData.get('duration'), 10),
+ exercises: exercises,
  notes: formData.get('notes')
  };
  
@@ -1135,6 +1451,47 @@ document.addEventListener('DOMContentLoaded', function() {
  matchesDiv.innerHTML = `<div class='text-red-600 text-center p-4'>Error finding matches: ${error.message}</div>`;
  }
  };
+
+ // Add form validation function
+ function validateAssignWorkoutForm() {
+ const form = document.getElementById('assignBestWorkoutForm');
+ const workoutType = form.querySelector('select[name="workout_type"]').value;
+ const duration = form.querySelector('select[name="duration"]').value;
+ const exerciseInputs = form.querySelectorAll('input[name="exercises[]"]');
+ const exercises = Array.from(exerciseInputs)
+ .map(input => input.value.trim())
+ .filter(value => value.length > 0);
+ 
+ // Check workout type
+ if (!workoutType) {
+ alert('Please select a workout type');
+ return false;
+ }
+ 
+ // Check duration
+ if (!duration) {
+ alert('Please select a duration');
+ return false;
+ }
+ 
+ // Check exercises
+ if (exercises.length === 0) {
+ alert('Please add at least one exercise');
+ return false;
+ }
+ 
+ // Check for empty exercise inputs
+ const emptyExercises = Array.from(exerciseInputs)
+ .map(input => input.value.trim())
+ .some(value => value.length === 0);
+ 
+ if (emptyExercises) {
+ alert('Please fill in all exercise fields or remove empty ones');
+ return false;
+ }
+ 
+ return true;
+ }
 
  function displayModalBestMatches(matches) {
  if (matches.length === 0) {
@@ -1206,11 +1563,23 @@ document.addEventListener('DOMContentLoaded', function() {
  async function confirmModalAssignment(day, hour, date, formData) {
  const timeStr = formatModalTimeSlot(hour);
  
- if (!confirm(`Assign session on ${day}, ${date} at ${timeStr}?`)) {
+ if (!confirm(`Assign session on ${day}, ${date} at ${timeStr}?\n\nSession Details:\n- Workout Type: ${formData.get('workout_type')}\n- Duration: ${formData.get('duration')} minutes\n- Exercises: ${Array.from(document.querySelectorAll('#assignBestWorkoutForm input[name="exercises[]"]')).map(input => input.value.trim()).filter(v => v).join(', ')}`)) {
  return;
  }
 
  try {
+ // Collect exercises from the form
+ const exerciseInputs = document.querySelectorAll('#assignBestWorkoutForm input[name="exercises[]"]');
+ const exercises = Array.from(exerciseInputs)
+ .map(input => input.value.trim())
+ .filter(value => value.length > 0);
+ 
+ // Validate exercises
+ if (exercises.length === 0) {
+ alert('Please add at least one exercise before assigning the session');
+ return;
+ }
+ 
  const data = {
  coach_id: coachId,
  member_id: parseInt(memberId),
@@ -1218,6 +1587,7 @@ document.addEventListener('DOMContentLoaded', function() {
  session_time: timeStr,
  duration: parseInt(formData.get('duration'), 10),
  workout_type: formData.get('workout_type'),
+ exercises: exercises,
  notes: formData.get('notes')
  };
 
@@ -1229,6 +1599,8 @@ document.addEventListener('DOMContentLoaded', function() {
  console.log('Session time:', timeStr);
  console.log('Duration:', parseInt(formData.get('duration'), 10));
  console.log('Workout type:', formData.get('workout_type'));
+ console.log('Exercises:', exercises);
+ console.log('Notes:', formData.get('notes'));
 
  const res = await fetch('/api/coach/assign_workout_from_schedule', {
  method: 'POST',
@@ -1255,7 +1627,9 @@ document.addEventListener('DOMContentLoaded', function() {
  console.log('API Success Response:', result);
 
  if (result.success) {
- alert('Session assigned successfully!');
+ // Show success message with session details
+ const successMessage = `Session assigned successfully!\n\nSession Details:\n- Date: ${date}\n- Time: ${timeStr}\n- Workout Type: ${data.workout_type}\n- Duration: ${data.duration} minutes\n- Exercises: ${exercises.join(', ')}`;
+ alert(successMessage);
  closeAssignBestWorkoutModal();
  location.reload(); // Refresh the page to show updated data
  } else {
@@ -1288,7 +1662,7 @@ async function loadCoachSidebarStats() {
 </script>
 {% endblock %}
 
- <style>
+<style>
  .modal-preference-both {
  background-color: #e9d5ff !important; /* purple-200 */
  }
@@ -1322,15 +1696,70 @@ async function loadCoachSidebarStats() {
  z-index: 10;
  }
 
+ .z-20 {
+ z-index: 20;
+ }
+
+ /* Enhanced tooltip positioning */
+ .group:hover .group-hover\\:block {
+ display: block !important;
+ position: absolute;
+ top: 100%;
+ left: 0;
+ margin-top: 2px;
+ }
+
+ /* Better session cell styling */
+ #modalScheduleTable td {
+ vertical-align: top;
+ min-height: 64px;
+ height: auto;
+ }
+
+ /* Ensure session containers fit properly */
+ .modal-available-slot {
+ min-height: 60px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ }
+
+ /* Multiple sessions styling - removed scroll, let content expand */
+ .session-multiple {
+ height: auto;
+ overflow: visible;
+ }
+
+ /* Session summary styling */
+ .session-summary-item {
+ transition: all 0.2s ease;
+ }
+
+ .session-summary-item:hover {
+ transform: translateY(-1px);
+ box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+ }
+
  /* Better spacing for schedule cells */
  #modalScheduleTable td {
  vertical-align: top;
- height: 64px;
+ min-height: 64px;
+ height: auto;
  }
 
  /* Smooth scrolling for modal */
  .modal-scroll {
  scroll-behavior: smooth;
+ }
+
+ /* Ensure session blocks have proper spacing */
+ .bg-red-100, .bg-orange-100 {
+ margin-bottom: 2px;
+ }
+
+ /* Better tooltip positioning for multiple sessions */
+ .group:hover .group-hover\\:block {
+ z-index: 50;
  }
 
  /* Custom scrollbar styling */
@@ -1358,6 +1787,76 @@ async function loadCoachSidebarStats() {
  max-height: 95vh;
  }
  }
- </style>
+
+ /* Enhanced exercise input styling */
+ #exercisesContainer input[name="exercises[]"] {
+ transition: all 0.2s ease;
+ }
+
+ #exercisesContainer input[name="exercises[]"]:focus {
+ border-color: #10b981;
+ box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+ }
+
+ #exercisesContainer input[name="exercises[]"].border-green-500 {
+ border-color: #10b981;
+ background-color: #f0fdf4;
+ }
+
+ #exercisesContainer input[name="exercises[]"].border-red-300 {
+ border-color: #fca5a5;
+ background-color: #fef2f2;
+ }
+
+ /* Exercise container styling */
+ #exercisesContainer > div {
+ transition: all 0.2s ease;
+ }
+
+ #exercisesContainer > div:hover {
+ background-color: #f9fafb;
+ border-radius: 0.5rem;
+ }
+
+ /* Form validation styling */
+ .form-error {
+ border-color: #fca5a5 !important;
+ background-color: #fef2f2 !important;
+ }
+
+ .form-success {
+ border-color: #10b981 !important;
+ background-color: #f0fdf4 !important;
+ }
+
+ /* Required field indicator */
+ label:has(+ *[required])::after {
+ content: " *";
+ color: #ef4444;
+ }
+
+ /* Enhanced button styling */
+ .btn-primary {
+ background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+ transition: all 0.2s ease;
+ }
+
+ .btn-primary:hover {
+ background: linear-gradient(135deg, #059669 0%, #047857 100%);
+ transform: translateY(-1px);
+ box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+ }
+
+ /* Exercise input focus animation */
+ @keyframes exerciseFocus {
+ 0% { transform: scale(1); }
+ 50% { transform: scale(1.02); }
+ 100% { transform: scale(1); }
+ }
+
+ #exercisesContainer input[name="exercises[]"]:focus {
+ animation: exerciseFocus 0.2s ease;
+ }
+</style>
 </body>
 </html> 

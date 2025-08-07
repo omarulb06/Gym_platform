@@ -5508,6 +5508,7 @@ async def assign_best_workout_api(
     member_id: int = Body(...),
     workout_type: str = Body(...),
     duration: int = Body(...),
+    exercises: List[str] = Body([]),
     notes: str = Body("")
 ):
     conn = get_db_connection()
@@ -5750,6 +5751,7 @@ async def create_session_api(
     date: str = Body(...),
     workout_type: str = Body(...),
     duration: int = Body(...),
+    exercises: List[str] = Body([]),
     notes: str = Body("")
 ):
     # Use the provided date directly
@@ -5766,10 +5768,23 @@ async def create_session_api(
             raise HTTPException(status_code=400, detail="Coach does not have a gym_id")
         gym_id = row['gym_id']
 
+        # Format notes with workout type and exercises
+        notes_content = f"Workout Type: {workout_type}"
+        
+        # Add exercises if provided
+        if exercises and len(exercises) > 0:
+            notes_content += "\nExercises:\n"
+            for i, exercise in enumerate(exercises, 1):
+                notes_content += f"{i}. {exercise}\n"
+        
+        # Add additional notes if provided
+        if notes:
+            notes_content += f"\n{notes}"
+        
         cursor.execute("""
             INSERT INTO sessions (gym_id, coach_id, member_id, session_date, session_time, duration, status, notes)
             VALUES (%s, %s, %s, %s, %s, %s, 'Scheduled', %s)
-        """, (gym_id, coach_id, member_id, session_date, session_time, duration, f"Workout Type: {workout_type}\n{notes}" if notes else f"Workout Type: {workout_type}"))
+        """, (gym_id, coach_id, member_id, session_date, session_time, duration, notes_content))
         conn.commit()
         return {"success": True, "session_id": cursor.lastrowid}
     finally:
@@ -5897,47 +5912,90 @@ async def get_schedule_view(
                     if day in schedule_grid:
                         schedule_grid[day][hour]['member_available'] = True
         
-        # Mark coach sessions
+        # Group coach sessions by day and hour
+        coach_sessions_by_slot = {}
         for session in coach_sessions:
             day = session['day_name']
             hour = session['hour_slot']
-            if day in schedule_grid and 0 <= hour < 24:
-                schedule_grid[day][hour]['coach_session'] = {
-                    'id': session['id'],
-                    'member_name': session['member_name'],
-                    'time': session['formatted_time'],
-                    'duration': session['duration'],
-                    'status': session['status'],
-                    'notes': session['notes'],
-                    'session_type': session.get('session_type', 'General Training')
-                }
-                schedule_grid[day][hour]['coach_available'] = False
+            slot_key = f"{day}_{hour}"
+            
+            if slot_key not in coach_sessions_by_slot:
+                coach_sessions_by_slot[slot_key] = []
+            
+            coach_sessions_by_slot[slot_key].append({
+                'id': session['id'],
+                'member_name': session['member_name'],
+                'time': session['formatted_time'],
+                'duration': session['duration'],
+                'status': session['status'],
+                'notes': session['notes'],
+                'session_type': session.get('session_type', 'General Training')
+            })
         
-        # Mark member sessions
+        # Group member sessions by day and hour
+        member_sessions_by_slot = {}
         for session in member_sessions:
             day = session['day_name']
             hour = session['hour_slot']
+            slot_key = f"{day}_{hour}"
+            
+            if slot_key not in member_sessions_by_slot:
+                member_sessions_by_slot[slot_key] = []
+            
+            member_sessions_by_slot[slot_key].append({
+                'id': session['id'],
+                'coach_name': session['coach_name'],
+                'time': session['formatted_time'],
+                'duration': session['duration'],
+                'status': session['status'],
+                'notes': session['notes'],
+                'session_type': session.get('session_type', 'General Training')
+            })
+        
+        # Mark coach sessions in schedule grid
+        for slot_key, sessions in coach_sessions_by_slot.items():
+            day, hour = slot_key.split('_')
+            hour = int(hour)
+            
             if day in schedule_grid and 0 <= hour < 24:
-                schedule_grid[day][hour]['member_session'] = {
-                    'id': session['id'],
-                    'coach_name': session['coach_name'],
-                    'time': session['formatted_time'],
-                    'duration': session['duration'],
-                    'status': session['status'],
-                    'notes': session['notes'],
-                    'session_type': session.get('session_type', 'General Training')
-                }
+                if len(sessions) == 1:
+                    # Single session - use backward compatibility
+                    schedule_grid[day][hour]['coach_session'] = sessions[0]
+                else:
+                    # Multiple sessions - use new array format
+                    schedule_grid[day][hour]['coach_sessions'] = sessions
+                
+                schedule_grid[day][hour]['coach_available'] = False
+        
+        # Mark member sessions in schedule grid
+        for slot_key, sessions in member_sessions_by_slot.items():
+            day, hour = slot_key.split('_')
+            hour = int(hour)
+            
+            if day in schedule_grid and 0 <= hour < 24:
+                if len(sessions) == 1:
+                    # Single session - use backward compatibility
+                    schedule_grid[day][hour]['member_session'] = sessions[0]
+                else:
+                    # Multiple sessions - use new array format
+                    schedule_grid[day][hour]['member_sessions'] = sessions
+                
                 schedule_grid[day][hour]['member_available'] = False
         
         # Calculate availability for both and preference scores
         for day in days:
             for hour in range(24):
                 slot = schedule_grid[day][hour]
+                
+                # Check if there are any sessions (single or multiple)
+                has_coach_session = slot.get('coach_session') is not None or slot.get('coach_sessions') is not None
+                has_member_session = slot.get('member_session') is not None or slot.get('member_sessions') is not None
+                
                 slot['available_for_both'] = (
                     slot['coach_available'] and 
                     slot['member_available'] and
-                    not slot['coach_session'] and 
-                    not slot['member_session']
+                    not has_coach_session and 
+                    not has_member_session
                 )
                 
                 # Calculate preference score
@@ -5995,6 +6053,7 @@ async def assign_workout_from_schedule(
     session_time: str = Body(...),
     duration: int = Body(...),
     workout_type: str = Body(...),
+    exercises: List[str] = Body([]),
     notes: str = Body("")
 ):
     """Assign a workout session from the schedule view"""
@@ -6040,6 +6099,19 @@ async def assign_workout_from_schedule(
         if not gym_data:
             raise HTTPException(status_code=400, detail="Coach not found")
         
+        # Format notes with workout type and exercises
+        notes_content = f"Workout Type: {workout_type}"
+        
+        # Add exercises if provided
+        if exercises and len(exercises) > 0:
+            notes_content += "\nExercises:\n"
+            for i, exercise in enumerate(exercises, 1):
+                notes_content += f"{i}. {exercise}\n"
+        
+        # Add additional notes if provided
+        if notes:
+            notes_content += f"\n{notes}"
+        
         # Create the session
         cursor.execute("""
             INSERT INTO sessions (
@@ -6061,7 +6133,7 @@ async def assign_workout_from_schedule(
             session_date,
             session_time,
             duration,
-            f"Workout Type: {workout_type}\n{notes}" if notes else f"Workout Type: {workout_type}"
+            notes_content
         ))
         
         session_id = cursor.lastrowid
