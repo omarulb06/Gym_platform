@@ -47,13 +47,13 @@
  <input type="date" id="memberStartDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
  <span class="text-gray-500">to</span>
  <input type="date" id="memberEndDate" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
- <button id="memberSearchBtn" class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ <button id="memberSearchBtn" class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none">
  <i class="fas fa-search mr-2"></i>Search
  </button>
  </div>
  <div class="flex items-center space-x-2">
  <button onclick="exportMemberSchedule('xlsx')" 
- class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
+ class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none">
  <i class="fas fa-file-excel mr-2"></i>Export Excel
  </button>
  </div>
@@ -74,7 +74,7 @@
  <div class="bg-white shadow rounded-lg mb-4 sm:mb-6" id="coachPreferences" style="display: none;">
  <div class="px-4 py-5 sm:p-4 sm:p-6">
  <div class="flex justify-between items-center mb-4">
- <h4 class="text-lg font-medium text-gray-900">My Coach's Preferences & Availability</h4>
+ <h4 class="text-lg font-medium text-gray-900">My Coach's Information & Preferences</h4>
  <button onclick="toggleCoachPreferences()" 
  class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
  <i class="fas fa-eye-slash mr-1"></i>Hide
@@ -88,13 +88,28 @@
  <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 sm:mb-6" id="coachAvailabilityQuick">
  <div class="flex justify-between items-center">
  <div>
- <h4 class="text-sm font-medium text-blue-900">Coach Availability</h4>
- <p class="text-sm text-blue-700">Click to view your coach's full preferences and availability</p>
+ <h4 class="text-sm font-medium text-blue-900">Coach Information</h4>
+ <p class="text-sm text-blue-700">Click to view your coach's details, preferences and availability</p>
  </div>
  <button onclick="showCoachPreferences()" 
- class="bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700 focus:outline-none focus:outline-none
+ class="bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700 focus:outline-none focus:outline-none">
  <i class="fas fa-eye mr-1"></i>View Details
  </button>
+ </div>
+ </div>
+
+ <!-- Session Details Popup Modal -->
+ <div id="sessionModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+ <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+ <div class="p-6">
+ <div class="flex justify-between items-center mb-4">
+ <h3 class="text-lg font-semibold text-gray-900">Session Details</h3>
+ <button onclick="closeSessionModal()" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+ <i class="fas fa-times text-xl"></i>
+ </button>
+ </div>
+ <div id="sessionModalContent"></div>
+ </div>
  </div>
  </div>
 
@@ -253,12 +268,12 @@
  <!-- Form Actions -->
  <div class="flex justify-end space-x-3">
  <button type="button" onclick="togglePreferencesForm()" 
- class="px-3 py-2 sm:px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:outline-none
+ class="px-3 py-2 sm:px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:outline-none">
  Cancel
  </button>
  <button type="submit" 
- class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
- Save Preferences
+ class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none">
+ <i class="fas fa-save mr-2"></i>Save Preferences
  </button>
  </div>
  </form>
@@ -398,6 +413,98 @@
  return time >= startTime && time <= endTime;
  }
 
+ // Show session modal
+ function showSessionModal(sessionId) {
+ const session = sessions.find(s => s.id === sessionId);
+ if (!session) return;
+
+ const modal = document.getElementById('sessionModal');
+ const modalContent = document.getElementById('sessionModalContent');
+ 
+ if (!modal || !modalContent) return;
+ 
+ const sessionDate = new Date(session.date);
+ const dayName = getDayName(sessionDate);
+ 
+ modalContent.innerHTML = `
+ <div class="space-y-4">
+ <div class="flex items-center justify-between">
+ <div class="flex items-center space-x-3">
+ <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white">
+ <i class="fas fa-dumbbell"></i>
+ </div>
+ <div>
+ <div class="text-lg font-semibold text-gray-900">${session.time}</div>
+ <div class="text-sm text-gray-500">${sessionDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+ </div>
+ </div>
+ <span class="px-3 py-1 text-sm rounded-full ${
+ session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+ session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+ 'bg-blue-100 text-blue-800'
+ }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
+ </div>
+ 
+ <div class="grid grid-cols-2 gap-4">
+ <div>
+ <h5 class="text-sm font-medium text-gray-500 mb-1">Coach</h5>
+ <p class="text-sm text-gray-900">${session.coach.name}</p>
+ <p class="text-xs text-gray-500">${session.coach.specialization}</p>
+ </div>
+ <div>
+ <h5 class="text-sm font-medium text-gray-500 mb-1">Duration</h5>
+ <p class="text-sm text-gray-900">${session.duration} minutes</p>
+ </div>
+ <div>
+ <h5 class="text-sm font-medium text-gray-500 mb-1">Workout Type</h5>
+ <p class="text-sm text-gray-900">${session.workout.type}</p>
+ </div>
+ <div>
+ <h5 class="text-sm font-medium text-gray-500 mb-1">Day</h5>
+ <p class="text-sm text-gray-900">${dayName}</p>
+ </div>
+ </div>
+ 
+ <div>
+ <h5 class="text-sm font-medium text-gray-500 mb-2">Exercises</h5>
+ <div class="bg-gray-50 rounded-lg p-3">
+ <ul class="text-sm text-gray-700 space-y-2">
+ ${session.workout.exercises.map(ex => `<li class="flex items-start"><i class="fas fa-circle text-xs text-blue-500 mr-2 mt-1"></i>${ex}</li>`).join('')}
+ </ul>
+ </div>
+ </div>
+ 
+ ${session.notes ? `
+ <div>
+ <h5 class="text-sm font-medium text-gray-500 mb-2">Notes</h5>
+ <div class="bg-blue-50 rounded-lg p-3">
+ <p class="text-sm text-gray-700">${session.notes}</p>
+ </div>
+ </div>
+ ` : ''}
+ 
+ <div class="flex justify-end pt-4 border-t border-gray-200">
+ <button onclick="closeSessionModal()" 
+ class="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200">
+ Close
+ </button>
+ </div>
+ </div>
+ `;
+ 
+ modal.classList.remove('hidden');
+ modal.classList.add('flex');
+ }
+
+ // Close session modal
+ function closeSessionModal() {
+ const modal = document.getElementById('sessionModal');
+ if (modal) {
+ modal.classList.add('hidden');
+ modal.classList.remove('flex');
+ }
+ }
+
  // Show session details
  function showSessionDetails(sessionId) {
  const session = sessions.find(s => s.id === sessionId);
@@ -523,12 +630,42 @@
  }
  }
 
+ // Load member sidebar stats
+async function loadMemberSidebarStats() {
+ try {
+ const response = await fetch('/api/member/dashboard');
+ const data = await response.json();
+ 
+ const sidebarWeekSessions = document.getElementById('weekSessions');
+ const sidebarStreakDays = document.getElementById('streakDays');
+ const sidebarProgressPercent = document.getElementById('progressPercent');
+ const sidebarProgressBar = document.getElementById('progressBar');
+ 
+ if (sidebarWeekSessions) sidebarWeekSessions.textContent = `${data.stats.week_sessions || 0} sessions`;
+ if (sidebarStreakDays) sidebarStreakDays.textContent = `${data.stats.streak_days || 0} days`;
+ if (sidebarProgressPercent) sidebarProgressPercent.textContent = `${data.stats.week_progress || 0}%`;
+ if (sidebarProgressBar) sidebarProgressBar.style.width = `${data.stats.week_progress || 0}%`;
+ } catch (error) {
+ console.error('Error loading member sidebar stats:', error);
+ }
+}
+
  // Initialize page
  document.addEventListener('DOMContentLoaded', () => {
+ // Add modal backdrop click handler
+ const modal = document.getElementById('sessionModal');
+ if (modal) {
+ modal.addEventListener('click', (e) => {
+ if (e.target === modal) {
+ closeSessionModal();
+ }
+ });
+ }
  setDefaultMemberDateRange();
  loadMemberSessionsForRange();
  loadSessions();
  loadPreferences();
+ loadMemberSidebarStats(); // Add this line
  
  // Add event listeners for week navigation only if elements exist
  const prevWeekBtn = document.getElementById('prevWeek');
@@ -565,7 +702,7 @@
  const response = await fetch(`/api/member/coach/${coachData.id}/preferences`);
  if (response.ok) {
  const coachPrefData = await response.json();
- await displayCoachPreferences(coachPrefData);
+ await displayCoachPreferences(coachPrefData, coachData);
  return;
  }
  } catch (e) {
@@ -575,12 +712,12 @@
  preferences: null, // We don't have detailed preferences, just availability
  free_days: coachAvailability
  };
- await displayCoachPreferences(preferences);
+ await displayCoachPreferences(preferences, coachData);
  }
  }
 
  // Display coach preferences
- async function displayCoachPreferences(data) {
+ async function displayCoachPreferences(data, coachData) {
  const { preferences, free_days } = data;
  const container = document.getElementById('coachPreferencesContent');
  const section = document.getElementById('coachPreferences');
@@ -599,7 +736,29 @@
  const notes = preferences?.notes || '';
  
  container.innerHTML = `
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:p-6">
+ <div class="space-y-6">
+ <!-- Coach Information Section -->
+ <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+ <div class="flex items-center space-x-4">
+ <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xl font-semibold">
+ ${coachData?.name ? coachData.name.charAt(0).toUpperCase() : 'C'}
+ </div>
+ <div class="flex-1">
+ <h3 class="text-lg font-semibold text-gray-900">${coachData?.name || 'Coach'}</h3>
+ <p class="text-sm text-gray-600">${coachData?.specialization || 'Personal Trainer'}</p>
+ ${coachData?.email ? `<p class="text-xs text-gray-500 mt-1"><i class="fas fa-envelope mr-1"></i>${coachData.email}</p>` : ''}
+ ${coachData?.phone ? `<p class="text-xs text-gray-500"><i class="fas fa-phone mr-1"></i>${coachData.phone}</p>` : ''}
+ </div>
+ <div class="text-right">
+ <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+ <i class="fas fa-check-circle mr-1"></i>Assigned Coach
+ </span>
+ </div>
+ </div>
+ </div>
+ 
+ <!-- Preferences Grid -->
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
  <div class="bg-gray-50 rounded-lg p-4">
  <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Workout Preferences</h3>
  <div class="space-y-2">
@@ -634,7 +793,7 @@
  </div>
  </div>
  
- <div class="bg-gray-50 rounded-lg p-4">
+ <div class="bg-gray-50 rounded-lg p-4 sm:col-span-2">
  <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Weekly Availability</h3>
  <div class="grid grid-cols-2 gap-2">
  ${free_days.map(day => {
@@ -672,11 +831,12 @@
  </div>
  
  ${notes ? `
- <div class="bg-gray-50 rounded-lg p-4">
+ <div class="bg-gray-50 rounded-lg p-4 sm:col-span-2">
  <h3 class="text-sm font-medium text-gray-900 mb-3">Coach's Notes</h3>
  <p class="text-sm text-gray-600">${notes}</p>
  </div>
  ` : ''}
+ </div>
  </div>
  `;
  
@@ -1103,63 +1263,91 @@
  return html;
  }
 
- // Remove renderMemberSessionsTable and replace with renderMemberSessionsGrid
+ // Render member sessions in day columns
  function renderMemberSessionsGrid() {
  const container = document.getElementById('memberSessionsGrid');
  if (!container) return;
  container.innerHTML = '';
  if (!memberStartDate || !memberEndDate) return;
+ 
  const start = new Date(memberStartDate);
  const end = new Date(memberEndDate);
  let current = new Date(start);
+ 
+ // Create columns for each day
  while (current <= end) {
  const dateStr = formatDate(current);
  const dayName = getDayName(current);
- // Find member's availability for this day
- const freeDay = userFreeDays ? userFreeDays.find(fd => fd.day_of_week === dayName) : null;
- const isAvailable = freeDay ? freeDay.is_available : true;
- // Find sessions for this day
  const daySessions = sessions.filter(s => s.date === dateStr);
- // Create column
+ 
+ // Create day column
  const dayColumn = document.createElement('div');
- dayColumn.className = 'space-y-2';
+ dayColumn.className = 'space-y-3';
+ 
  // Day header
  const dayHeader = document.createElement('div');
- dayHeader.className = `text-center font-medium mb-2 ${isAvailable ? 'text-green-900' : 'text-red-900'}`;
+ dayHeader.className = 'text-center mb-4';
  dayHeader.innerHTML = `
- ${current.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
- <div class="text-xs ${isAvailable ? 'text-green-600' : 'text-red-600'}">
- ${isAvailable ? 'Available' : 'Unavailable'}
+ <div class="text-sm font-semibold text-gray-900 mb-1">
+ ${current.toLocaleDateString('en-US', { weekday: 'short' })}
+ </div>
+ <div class="text-xs text-gray-500">
+ ${current.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
  </div>
  `;
  dayColumn.appendChild(dayHeader);
- // Sessions
+ 
+ // Sessions for this day
  if (daySessions.length === 0) {
  const noSessions = document.createElement('div');
- noSessions.className = `text-center text-sm ${isAvailable ? 'text-gray-500' : 'text-red-400'}`;
- noSessions.textContent = isAvailable ? 'No sessions' : 'Not available';
+ noSessions.className = 'text-center text-sm text-gray-400 py-4';
+ noSessions.innerHTML = `
+ <i class="fas fa-calendar-times text-2xl mb-2"></i>
+ <div>No sessions</div>
+ `;
  dayColumn.appendChild(noSessions);
  } else {
  daySessions.forEach(session => {
  const sessionCard = document.createElement('div');
- sessionCard.className = 'bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100';
- sessionCard.onclick = () => showSessionDetails(session.id);
+ sessionCard.className = 'bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-3';
+ sessionCard.onclick = () => showSessionModal(session.id);
+ 
  sessionCard.innerHTML = `
- <div class="text-sm font-medium text-gray-900">${session.time}</div>
- <div class="text-xs text-gray-500">${session.coach.name}</div>
- <div class="text-xs text-gray-500">${session.duration} min</div>
- <div class="mt-1">
+ <div class="flex items-center justify-between mb-2">
+ <div class="text-sm font-semibold text-gray-900">${session.time}</div>
  <span class="px-2 py-1 text-xs rounded-full ${
  session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
  session.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
  'bg-blue-100 text-blue-800'
  }">${session.status.charAt(0).toUpperCase() + session.status.slice(1)}</span>
  </div>
- ${session.notes ? `<div class='text-xs text-gray-400 mt-1 whitespace-pre-line'>${session.notes}</div>` : ''}
+ 
+ <div class="space-y-1">
+ <div class="flex items-center text-xs text-gray-600">
+ <i class="fas fa-user mr-1"></i>
+ <span>${session.coach.name}</span>
+ </div>
+ <div class="flex items-center text-xs text-gray-600">
+ <i class="fas fa-dumbbell mr-1"></i>
+ <span>${session.workout.type}</span>
+ </div>
+ <div class="flex items-center text-xs text-gray-600">
+ <i class="fas fa-clock mr-1"></i>
+ <span>${session.duration} min</span>
+ </div>
+ </div>
+ 
+ ${session.notes ? `
+ <div class="mt-2 pt-2 border-t border-gray-100">
+ <div class="text-xs text-gray-500 italic truncate">${session.notes}</div>
+ </div>
+ ` : ''}
  `;
+ 
  dayColumn.appendChild(sessionCard);
  });
  }
+ 
  container.appendChild(dayColumn);
  current.setDate(current.getDate() + 1);
  }

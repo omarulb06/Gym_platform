@@ -4,19 +4,11 @@
 
 {% block content_title %}
  <div class="mb-4 sm:mb-6 lg:mb-8 animate-fade-in">
- <div class="flex justify-between items-center">
  <div>
  <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent mb-2">
  Welcome back, <span id="gymName" class="gradient-text">PowerFit Gym</span>! 🏋️‍♂️
  </h1>
  <p class="text-gray-600 text-lg">Comprehensive gym management and performance analytics</p>
- </div>
- <div class="flex items-center space-x-2">
- <button onclick="exportGymDashboard('xlsx')" 
- class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
- <i class="fas fa-file-excel mr-2"></i>Export Excel
- </button>
- </div>
  </div>
  </div>
 {% endblock %}
@@ -129,20 +121,7 @@
  
  <!-- Chatbot Interface (Hidden by default) -->
  <div id="chatbotInterface" class="hidden">
- <!-- Role Selection -->
- <div class="bg-gray-50 rounded-lg p-4 mb-4">
- <div class="flex items-center justify-center space-x-2 sm:space-x-4">
- <span class="text-sm font-medium text-gray-700">Select your role:</span>
- <div class="flex space-x-2">
- <button id="memberBtn" class="px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-blue-500 hover:text-blue-700 transition-colors">
- Member
- </button>
- <button id="coachBtn" class="px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-green-500 hover:text-green-700 transition-colors">
- Coach
- </button>
- </div>
- </div>
- </div>
+
 
  <!-- Chat Messages Container -->
  <div id="chatMessages" class="bg-gray-50 rounded-lg p-4 mb-4 h-64 overflow-y-auto space-y-3">
@@ -212,10 +191,17 @@
  const sidebarTotalMembers = document.getElementById('sidebarTotalMembers');
  const sidebarActiveCoaches = document.getElementById('sidebarActiveCoaches');
  const sidebarTodaySessions = document.getElementById('sidebarTodaySessions');
+ const capacityBar = document.getElementById('capacityBar');
  
  if (sidebarTotalMembers) sidebarTotalMembers.textContent = data.stats.total_members;
  if (sidebarActiveCoaches) sidebarActiveCoaches.textContent = data.stats.active_coaches;
  if (sidebarTodaySessions) sidebarTodaySessions.textContent = data.stats.today_sessions;
+ 
+ // Calculate and update capacity utilization (based on members vs ideal capacity)
+ if (capacityBar) {
+     const capacityUtilization = Math.min(100, (data.stats.total_members / 100) * 100); // Assuming 100 is ideal capacity
+     capacityBar.style.width = `${capacityUtilization}%`;
+ }
  
  // Update recent members
  const recentMembersDiv = document.getElementById('recentMembers');
@@ -267,7 +253,6 @@
  }
 
  // Chatbot Functions
- let currentRole = 'member'; // Default role for gym dashboard
 
  function handleKeyPress(event) {
  if (event.key === 'Enter') {
@@ -330,7 +315,7 @@
  },
  body: JSON.stringify({ 
  message: message,
- role: currentRole
+ role: 'gym'
  })
  });
 
@@ -358,18 +343,7 @@
  }
  }
 
- function updateRoleButtons() {
- const memberBtn = document.getElementById('memberBtn');
- const coachBtn = document.getElementById('coachBtn');
- 
- if (currentRole === 'member') {
- memberBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-blue-500 bg-blue-500 text-white font-medium text-sm transition-colors';
- coachBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-green-500 hover:text-green-700 transition-colors';
- } else {
- memberBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-blue-500 hover:text-blue-700 transition-colors';
- coachBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-green-500 bg-green-500 text-white font-medium text-sm transition-colors';
- }
- }
+
 
  // Load data when page loads
  document.addEventListener('DOMContentLoaded', function() {
@@ -378,8 +352,6 @@
  // Chatbot event listeners
  const toggleChatbot = document.getElementById('toggleChatbot');
  const chatbotInterface = document.getElementById('chatbotInterface');
- const memberBtn = document.getElementById('memberBtn');
- const coachBtn = document.getElementById('coachBtn');
 
  toggleChatbot.addEventListener('click', function() {
  const isHidden = chatbotInterface.classList.contains('hidden');
@@ -392,18 +364,7 @@
  }
  });
 
- memberBtn.addEventListener('click', function() {
- currentRole = 'member';
- updateRoleButtons();
- });
 
- coachBtn.addEventListener('click', function() {
- currentRole = 'coach';
- updateRoleButtons();
- });
-
- // Initialize role buttons
- updateRoleButtons();
  });
 </script>
 {% endblock %} 

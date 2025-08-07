@@ -314,10 +314,29 @@
  }
  }
 
+ // Load coach sidebar stats
+async function loadCoachSidebarStats() {
+ try {
+ const response = await fetch('/api/coach/dashboard');
+ const data = await response.json();
+ 
+ const sidebarActiveMembers = document.getElementById('activeMembers');
+ const sidebarWeekSessions = document.getElementById('weekSessions');
+ const sidebarProgressBar = document.getElementById('progressBar');
+ 
+ if (sidebarActiveMembers) sidebarActiveMembers.textContent = data.stats.active_members || 0;
+ if (sidebarWeekSessions) sidebarWeekSessions.textContent = `${data.stats.week_sessions || 0} sessions`;
+ if (sidebarProgressBar) sidebarProgressBar.style.width = `${data.stats.performance_rating || 85}%`;
+ } catch (error) {
+ console.error('Error loading coach sidebar stats:', error);
+ }
+}
+
  // Initialize everything when the page loads
  document.addEventListener('DOMContentLoaded', () => {
  initCharts();
  loadMembers();
+ loadCoachSidebarStats(); // Add this line
  
  // Add event listeners
  document.getElementById('memberSelect').addEventListener('change', (e) => {
@@ -331,11 +350,19 @@
 
  // Export progress function
  async function exportProgress(format) {
+ try {
+ // Get current filter values
  const memberId = document.getElementById('memberSelect').value;
  const timeRange = document.getElementById('timeRange').value;
  
- try {
- const url = `/api/export/progress/coach?format=${format}&time_range=${timeRange}&member_id=${memberId}`;
+ // Build query string for filtered export
+ const queryParams = new URLSearchParams({
+   format: format,
+   time_range: timeRange,
+   member_id: memberId
+ }).toString();
+ 
+ const url = `/api/export/progress/coach?${queryParams}`;
  const response = await fetch(url);
  
  if (!response.ok) {
@@ -347,7 +374,7 @@
  const url2 = window.URL.createObjectURL(blob);
  const a = document.createElement('a');
  a.href = url2;
- a.download = `coach_progress_${memberId === '0' ? 'all_members' : `member_${memberId}`}_${timeRange}.${format}`;
+ a.download = `coach_progress_filtered_${memberId === '0' ? 'all_members' : `member_${memberId}`}_${timeRange}_${new Date().toISOString().split('T')[0]}.${format}`;
  document.body.appendChild(a);
  a.click();
  window.URL.revokeObjectURL(url2);

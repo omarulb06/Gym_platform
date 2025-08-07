@@ -302,6 +302,21 @@ class CustomChart {
             </div>
         </div>
 
+        <!-- Current Plan Info -->
+        <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100 mb-4">
+            <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600">
+                        <i class="fas fa-clipboard-list text-sm"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-sm font-medium text-purple-800 mb-1">Current Nutrition Plan</h4>
+                    <p class="text-sm text-purple-700" id="currentPlanInfo">Loading plan information...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- AI Feedback -->
         <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-4 border border-emerald-100">
             <div class="flex items-start space-x-3">
@@ -659,6 +674,24 @@ class CustomChart {
             
             <div id="myPlansContent">
                 <!-- Member's nutrition plans will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Plan Details Modal -->
+<div id="planDetailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Plan Details</h3>
+                <button onclick="closeModal('planDetailsModal')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="planDetailsContent">
+                <!-- Plan details will be loaded here -->
             </div>
         </div>
     </div>
@@ -1027,6 +1060,7 @@ function initializeDashboard() {
     loadNutritionDashboard();
     updateCurrentDate();
     loadWeeklyProgress();
+    loadMemberSidebarStats(); // Add this line
     
     // Test Chart.js availability after a short delay
     setTimeout(() => {
@@ -1042,20 +1076,56 @@ function updateCurrentDate() {
 
 async function loadNutritionDashboard() {
     try {
-        const response = await fetch(`/api/nutrition/dashboard/{{ user.id if user else 1 }}`);
+        // Use the member nutrition today endpoint which includes plan goals
+        const response = await fetch('/api/member/nutrition/today');
         const data = await response.json();
         
         if (data.success) {
-            updateNutritionProgress(data.today);
-            loadTodaysMeals(data.today.meals);
+            // Update nutrition progress with plan goals
+            updateNutritionProgress(data);
+            loadTodaysMeals(data.meals);
             
-            if (data.today.totals.calories > 0) {
+            if (data.today.total_calories > 0) {
                 document.getElementById('aiFeedback').textContent = 
-                    data.weekly_analysis[0]?.ai_feedback || 'Great job tracking your nutrition today!';
+                    'Great job tracking your nutrition today!';
             }
         }
+        
+        // Load current plan information
+        await loadCurrentPlanInfo();
     } catch (error) {
         console.error('Error loading nutrition dashboard:', error);
+    }
+}
+
+// Load current plan information
+async function loadCurrentPlanInfo() {
+    try {
+        const response = await fetch('/api/member/nutrition/selected-plan');
+        const data = await response.json();
+        
+        if (data.success && data.plan) {
+            const plan = data.plan;
+            const planInfoElement = document.getElementById('currentPlanInfo');
+            
+            if (plan.is_default) {
+                planInfoElement.innerHTML = `
+                    <span class="text-purple-700">Default Plan</span> - 
+                    ${plan.daily_calories} calories, ${plan.daily_protein}g protein, ${plan.daily_carbs}g carbs, ${plan.daily_fat}g fat
+                    <br><span class="text-xs text-purple-600">Click "View My Plans" to select a custom plan</span>
+                `;
+            } else {
+                planInfoElement.innerHTML = `
+                    <span class="text-purple-700">${plan.plan_name}</span> - 
+                    ${plan.daily_calories} calories, ${plan.daily_protein}g protein, ${plan.daily_carbs}g carbs, ${plan.daily_fat}g fat
+                `;
+            }
+        } else {
+            document.getElementById('currentPlanInfo').textContent = 'No plan selected - using default values';
+        }
+    } catch (error) {
+        console.error('Error loading current plan info:', error);
+        document.getElementById('currentPlanInfo').textContent = 'Error loading plan information';
     }
 }
 
@@ -1084,13 +1154,13 @@ function loadTodaysMeals(meals) {
                         <i class="fas ${mealIcon} text-sm"></i>
                     </div>
                     <div>
-                        <div class="font-medium text-gray-900">${meal.custom_food_name || meal.food_name || 'Unknown Food'}</div>
+                        <div class="font-medium text-gray-900">${meal.custom_food_name || 'Unknown Food'}</div>
                         <div class="text-sm text-gray-600">${meal.quantity || 0} ${meal.unit || 'g'}</div>
                     </div>
                 </div>
                 <div class="text-right">
-                    <div class="font-medium text-gray-900">${Math.round(meal.total_calories || meal.calories || 0)} cal</div>
-                    <div class="text-xs text-gray-600">P: ${Math.round(meal.total_protein || meal.protein || 0)}g • C: ${Math.round(meal.total_carbs || meal.carbs || 0)}g • F: ${Math.round(meal.total_fat || meal.fat || 0)}g</div>
+                    <div class="font-medium text-gray-900">${Math.round(meal.calories || 0)} cal</div>
+                    <div class="text-xs text-gray-600">P: ${Math.round(meal.protein || 0)}g • C: ${Math.round(meal.carbs || 0)}g • F: ${Math.round(meal.fat || 0)}g</div>
                 </div>
             </div>
         `;
@@ -1231,14 +1301,14 @@ function updateFoodQuantity(index, newQuantity) {
     }
 }
 
-function updateNutritionProgress(todayData) {
-    const { totals, goals, progress } = todayData;
+function updateNutritionProgress(data) {
+    const { today, goals, progress } = data;
     
-    // Update progress circles
-    updateProgressCircle('calories', progress.calories, totals.calories, goals.daily_calorie_goal);
-    updateProgressCircle('protein', progress.protein, totals.protein, goals.daily_protein_goal, 'g');
-    updateProgressCircle('carbs', progress.carbs, totals.carbs, goals.daily_carbs_goal, 'g');
-    updateProgressCircle('fat', progress.fat, totals.fat, goals.daily_fat_goal, 'g');
+    // Update progress circles with plan goals
+    updateProgressCircle('calories', progress.calories, today.total_calories, goals.daily_calorie_goal);
+    updateProgressCircle('protein', progress.protein, today.total_protein, goals.daily_protein_goal, 'g');
+    updateProgressCircle('carbs', progress.carbs, today.total_carbs, goals.daily_carbs_goal, 'g');
+    updateProgressCircle('fat', progress.fat, today.total_fat, goals.daily_fat_goal, 'g');
 }
 
 function updateProgressCircle(type, percentage, current, goal, unit = '') {
@@ -1293,11 +1363,28 @@ async function viewMyNutritionPlans() {
 }
 
 // Show my nutrition plans modal
-function showMyNutritionPlans(data) {
+async function showMyNutritionPlans(data) {
     const modal = document.getElementById('myPlansModal');
     const content = document.getElementById('myPlansContent');
     
     const plans = data.plans || [];
+    
+    // Get the currently selected plan
+    let selectedPlanId = null;
+    try {
+        const selectedResponse = await fetch('/api/member/nutrition/selected-plan');
+        const selectedData = await selectedResponse.json();
+        if (selectedData.success && selectedData.plan && selectedData.plan.id) {
+            selectedPlanId = selectedData.plan.id;
+        }
+    } catch (error) {
+        console.error('Error getting selected plan:', error);
+    }
+    
+    // Mark which plan is currently selected
+    plans.forEach(plan => {
+        plan.is_selected = plan.id === selectedPlanId;
+    });
     
     content.innerHTML = `
         <div class="space-y-6">
@@ -1321,13 +1408,25 @@ function showMyNutritionPlans(data) {
                     <p class="text-sm text-gray-500 mt-2">Contact your coach to get a personalized nutrition plan!</p>
                 </div>
             ` : `
+                <div class="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h5 class="text-sm font-medium text-blue-800">Plan Management</h5>
+                            <p class="text-xs text-blue-600">Select a plan to use as your active nutrition goals</p>
+                        </div>
+                        <button onclick="resetToDefaultPlan()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-undo mr-1"></i>Reset to Default
+                        </button>
+                    </div>
+                </div>
                 <div class="space-y-4">
                     ${plans.map(plan => `
-                        <div class="border border-gray-200 rounded-lg p-6 bg-gradient-to-r from-purple-50 to-pink-50">
+                        <div class="border border-gray-200 rounded-lg p-6 bg-gradient-to-r from-purple-50 to-pink-50 hover:shadow-lg transition-all duration-300 cursor-pointer ${plan.is_selected ? 'ring-2 ring-green-500' : ''}" onclick="viewPlanDetails(${plan.id})">
                             <div class="flex items-center justify-between mb-4">
                                 <div>
                                     <h5 class="text-lg font-semibold text-gray-900">${plan.plan_name}</h5>
                                     <p class="text-sm text-gray-600">Created: ${new Date(plan.created_at).toLocaleDateString()}</p>
+                                    ${plan.is_selected ? '<p class="text-sm text-green-600 font-medium"><i class="fas fa-check-circle mr-1"></i>Currently Selected</p>' : ''}
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <span class="px-3 py-1 rounded-full text-xs font-medium ${
@@ -1371,10 +1470,18 @@ function showMyNutritionPlans(data) {
                                     Last updated: ${new Date(plan.updated_at).toLocaleDateString()}
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <button onclick="deleteNutritionPlan(${plan.id}, '${plan.plan_name}')" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                    <button onclick="event.stopPropagation(); selectPlan(${plan.id}, '${plan.plan_name}')" class="text-green-600 hover:text-green-800 text-sm font-medium">
+                                        <i class="fas fa-check mr-1"></i>Select Plan
+                                    </button>
+                                    <button onclick="event.stopPropagation(); deleteNutritionPlan(${plan.id}, '${plan.plan_name}')" class="text-red-600 hover:text-red-800 text-sm font-medium">
                                         <i class="fas fa-trash mr-1"></i>Delete Plan
                                     </button>
                                 </div>
+                            </div>
+                            <div class="mt-3 text-center">
+                                <span class="text-sm text-purple-600 font-medium">
+                                    <i class="fas fa-eye mr-1"></i>Click to view detailed meal plan
+                                </span>
                             </div>
                         </div>
                     `).join('')}
@@ -1384,6 +1491,289 @@ function showMyNutritionPlans(data) {
     `;
     
     modal.classList.remove('hidden');
+}
+
+// View detailed plan information
+async function viewPlanDetails(planId) {
+    try {
+        const response = await fetch(`/api/member/nutrition/plans/${planId}/details`);
+        const data = await response.json();
+        
+        if (data.success) {
+            showPlanDetailsModal(data.plan);
+        } else {
+            showNotification(data.detail || 'Failed to load plan details', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading plan details:', error);
+        showNotification('Error loading plan details', 'error');
+    }
+}
+
+// Select a nutrition plan
+async function selectPlan(planId, planName) {
+    if (!confirm(`Are you sure you want to select "${planName}" as your active nutrition plan?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/member/nutrition/select-plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ plan_id: planId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification(`Plan "${planName}" selected successfully!`, 'success');
+            // Refresh the nutrition dashboard to show the new selected plan
+            loadNutritionDashboard();
+            // Close the plans modal
+            closeModal('myPlansModal');
+        } else {
+            showNotification(data.detail || 'Failed to select plan', 'error');
+        }
+    } catch (error) {
+        console.error('Error selecting plan:', error);
+        showNotification('Error selecting plan', 'error');
+    }
+}
+
+// Reset to default plan
+async function resetToDefaultPlan() {
+    if (!confirm('Are you sure you want to reset to the default nutrition plan?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/member/nutrition/select-plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ plan_id: null })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Reset to default plan successfully!', 'success');
+            // Refresh the nutrition dashboard
+            loadNutritionDashboard();
+        } else {
+            showNotification(data.detail || 'Failed to reset to default plan', 'error');
+        }
+    } catch (error) {
+        console.error('Error resetting to default plan:', error);
+        showNotification('Error resetting to default plan', 'error');
+    }
+}
+
+// Show plan details modal
+function showPlanDetailsModal(plan) {
+    const modal = document.getElementById('planDetailsModal');
+    const content = document.getElementById('planDetailsContent');
+    
+    let planDetailsHTML = `
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                    <i class="fas fa-clipboard-list text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900">${plan.plan_name}</h4>
+                    <p class="text-sm text-gray-600">Detailed meal plan with daily breakdown</p>
+                </div>
+            </div>
+            
+            <!-- Plan Summary -->
+            <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-200">
+                <h5 class="text-lg font-semibold text-gray-900 mb-4">Plan Summary</h5>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-purple-600">${plan.daily_calories}</div>
+                        <div class="text-sm text-gray-600">Daily Calories</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600">${plan.daily_protein}g</div>
+                        <div class="text-sm text-gray-600">Daily Protein</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600">${plan.daily_carbs}g</div>
+                        <div class="text-sm text-gray-600">Daily Carbs</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-orange-600">${plan.daily_fat}g</div>
+                        <div class="text-sm text-gray-600">Daily Fat</div>
+                    </div>
+                </div>
+                
+                ${plan.notes ? `
+                    <div class="mt-4 p-3 bg-white rounded-lg border border-gray-200">
+                        <h6 class="text-sm font-medium text-gray-900 mb-2">Coach's Notes:</h6>
+                        <p class="text-sm text-gray-700">${plan.notes}</p>
+                    </div>
+                ` : ''}
+            </div>
+    `;
+    
+    // Check if plan has detailed meal data
+    if (plan.plan_data && plan.plan_data.meal_plan) {
+        planDetailsHTML += `
+            <!-- Detailed Meal Plan -->
+            <div class="space-y-6">
+                <h5 class="text-lg font-semibold text-gray-900">7-Day Meal Plan</h5>
+                ${generateMealPlanHTML(plan.plan_data.meal_plan)}
+            </div>
+        `;
+        
+        // Add shopping list if available
+        if (plan.plan_data.shopping_list && plan.plan_data.shopping_list.length > 0) {
+            planDetailsHTML += `
+                <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200">
+                    <h5 class="text-lg font-semibold text-gray-900 mb-4">Shopping List</h5>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${plan.plan_data.shopping_list.map(item => `
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-check-circle text-green-600"></i>
+                                <span class="text-sm text-gray-700">${item}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add meal prep tips if available
+        if (plan.plan_data.meal_prep_tips && plan.plan_data.meal_prep_tips.length > 0) {
+            planDetailsHTML += `
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                    <h5 class="text-lg font-semibold text-gray-900 mb-4">Meal Prep Tips</h5>
+                    <div class="space-y-2">
+                        ${plan.plan_data.meal_prep_tips.map(tip => `
+                            <div class="flex items-start space-x-2">
+                                <i class="fas fa-lightbulb text-blue-600 mt-1"></i>
+                                <span class="text-sm text-gray-700">${tip}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        planDetailsHTML += `
+            <div class="text-center py-8">
+                <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-utensils text-gray-400 text-2xl"></i>
+                </div>
+                <h5 class="text-lg font-medium text-gray-900 mb-2">No Detailed Meal Plan Available</h5>
+                <p class="text-gray-600">This plan contains basic nutrition goals but no detailed daily meal breakdown.</p>
+                <p class="text-sm text-gray-500 mt-2">Contact your coach to get a complete meal plan with daily recipes!</p>
+            </div>
+        `;
+    }
+    
+    planDetailsHTML += `
+        </div>
+    `;
+    
+    content.innerHTML = planDetailsHTML;
+    modal.classList.remove('hidden');
+}
+
+// Generate HTML for meal plan days
+function generateMealPlanHTML(mealPlan) {
+    const days = Object.keys(mealPlan).filter(key => key.startsWith('day_'));
+    const sortedDays = days.sort((a, b) => {
+        const dayA = parseInt(a.split('_')[1]);
+        const dayB = parseInt(b.split('_')[1]);
+        return dayA - dayB;
+    });
+    
+    return sortedDays.map(dayKey => {
+        const day = mealPlan[dayKey];
+        const dayNumber = dayKey.split('_')[1];
+        
+        return `
+            <div class="border border-gray-200 rounded-lg p-6 bg-white">
+                <h6 class="text-lg font-semibold text-gray-900 mb-4">Day ${dayNumber}</h6>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    ${generateMealHTML(day.breakfast, 'Breakfast', 'orange')}
+                    ${generateMealHTML(day.lunch, 'Lunch', 'green')}
+                    ${generateMealHTML(day.dinner, 'Dinner', 'purple')}
+                    ${generateMealHTML(day.snack_1, 'Snack 1', 'blue')}
+                    ${generateMealHTML(day.snack_2, 'Snack 2', 'pink')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Generate HTML for individual meal
+function generateMealHTML(meal, mealName, colorClass) {
+    if (!meal || !meal.name) {
+        return `
+            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <h6 class="font-medium text-gray-900 mb-2">${mealName}</h6>
+                <p class="text-sm text-gray-500">No meal planned</p>
+            </div>
+        `;
+    }
+    
+    const colorMap = {
+        'orange': 'from-orange-50 to-amber-50 border-orange-200',
+        'green': 'from-green-50 to-emerald-50 border-green-200',
+        'purple': 'from-purple-50 to-pink-50 border-purple-200',
+        'blue': 'from-blue-50 to-indigo-50 border-blue-200',
+        'pink': 'from-pink-50 to-rose-50 border-pink-200'
+    };
+    
+    const bgClass = colorMap[colorClass] || 'from-gray-50 to-gray-100 border-gray-200';
+    
+    return `
+        <div class="border border-gray-200 rounded-lg p-4 bg-gradient-to-r ${bgClass}">
+            <h6 class="font-medium text-gray-900 mb-2">${mealName}</h6>
+            <div class="font-semibold text-gray-800 mb-2">${meal.name}</div>
+            
+            ${meal.ingredients && meal.ingredients.length > 0 ? `
+                <div class="mb-3">
+                    <div class="text-xs font-medium text-gray-600 uppercase tracking-wide">Ingredients:</div>
+                    <ul class="text-xs text-gray-700 mt-1 space-y-1">
+                        ${meal.ingredients.map(ingredient => `
+                            <li class="flex items-start space-x-1">
+                                <span class="text-gray-400">•</span>
+                                <span>${ingredient}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+            
+            ${meal.nutrition ? `
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="text-center">
+                        <div class="font-medium text-gray-900">${Math.round(meal.nutrition.calories || 0)}</div>
+                        <div class="text-gray-500">cal</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="font-medium text-gray-900">${Math.round(meal.nutrition.protein || 0)}g</div>
+                        <div class="text-gray-500">protein</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="font-medium text-gray-900">${Math.round(meal.nutrition.carbs || 0)}g</div>
+                        <div class="text-gray-500">carbs</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="font-medium text-gray-900">${Math.round(meal.nutrition.fat || 0)}g</div>
+                        <div class="text-gray-500">fat</div>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
 }
 
 // Compare plan with today's nutrition
@@ -3533,6 +3923,26 @@ async function convertYOLOv5DetectionsToNutrition(detections) {
     }
     
     return nutritionResults;
+}
+
+// Load member sidebar stats
+async function loadMemberSidebarStats() {
+ try {
+ const response = await fetch('/api/member/dashboard');
+ const data = await response.json();
+ 
+ const sidebarWeekSessions = document.getElementById('weekSessions');
+ const sidebarStreakDays = document.getElementById('streakDays');
+ const sidebarProgressPercent = document.getElementById('progressPercent');
+ const sidebarProgressBar = document.getElementById('progressBar');
+ 
+ if (sidebarWeekSessions) sidebarWeekSessions.textContent = `${data.stats.week_sessions || 0} sessions`;
+ if (sidebarStreakDays) sidebarStreakDays.textContent = `${data.stats.streak_days || 0} days`;
+ if (sidebarProgressPercent) sidebarProgressPercent.textContent = `${data.stats.week_progress || 0}%`;
+ if (sidebarProgressBar) sidebarProgressBar.style.width = `${data.stats.week_progress || 0}%`;
+ } catch (error) {
+ console.error('Error loading member sidebar stats:', error);
+ }
 }
 </script>
 

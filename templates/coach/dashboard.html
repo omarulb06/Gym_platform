@@ -128,20 +128,7 @@
  
  <!-- Chatbot Interface (Hidden by default) -->
  <div id="chatbotInterface" class="hidden">
- <!-- Role Selection -->
- <div class="bg-gray-50 rounded-lg p-4 mb-4">
- <div class="flex items-center justify-center space-x-2 sm:space-x-4">
- <span class="text-sm font-medium text-gray-700">Select your role:</span>
- <div class="flex space-x-2">
- <button id="memberBtn" class="px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-blue-500 hover:text-blue-700 transition-colors">
- Member
- </button>
- <button id="coachBtn" class="px-3 py-2 sm:px-4 rounded-lg border-2 border-green-500 bg-green-500 text-white font-medium text-sm transition-colors">
- Coach
- </button>
- </div>
- </div>
- </div>
+
 
  <!-- Chat Messages Container -->
  <div id="chatMessages" class="bg-gray-50 rounded-lg p-4 mb-4 h-64 overflow-y-auto space-y-3">
@@ -209,6 +196,17 @@
  document.getElementById('total-sessions').textContent = data.stats.total_sessions;
  document.getElementById('upcoming-sessions').textContent = data.stats.upcoming_sessions;
  
+ // Update sidebar stats
+ if (document.getElementById('activeMembers')) {
+     document.getElementById('activeMembers').textContent = data.stats.total_members;
+ }
+ if (document.getElementById('weekSessions')) {
+     document.getElementById('weekSessions').textContent = `${data.stats.week_sessions || 0} sessions`;
+ }
+ if (document.getElementById('progressBar')) {
+     document.getElementById('progressBar').style.width = `${data.stats.performance_rating || 85}%`;
+ }
+ 
  // Update sessions table
  const sessionsTable = document.getElementById('sessions-table');
  sessionsTable.innerHTML = '';
@@ -243,7 +241,6 @@
  }
 
  // Chatbot Functions
- let currentRole = 'coach'; // Default to coach for coach dashboard
 
  function handleKeyPress(event) {
  if (event.key === 'Enter') {
@@ -306,7 +303,7 @@
  },
  body: JSON.stringify({ 
  message: message,
- role: currentRole
+ role: 'coach'
  })
  });
 
@@ -334,18 +331,7 @@
  }
  }
 
- function updateRoleButtons() {
- const memberBtn = document.getElementById('memberBtn');
- const coachBtn = document.getElementById('coachBtn');
- 
- if (currentRole === 'member') {
- memberBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-blue-500 bg-blue-500 text-white font-medium text-sm transition-colors';
- coachBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-green-500 hover:text-green-700 transition-colors';
- } else {
- memberBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium text-sm hover:border-blue-500 hover:text-blue-700 transition-colors';
- coachBtn.className = 'px-3 py-2 sm:px-4 rounded-lg border-2 border-green-500 bg-green-500 text-white font-medium text-sm transition-colors';
- }
- }
+
 
  // Load data when page loads
  document.addEventListener('DOMContentLoaded', function() {
@@ -354,8 +340,6 @@
  // Chatbot event listeners
  const toggleChatbot = document.getElementById('toggleChatbot');
  const chatbotInterface = document.getElementById('chatbotInterface');
- const memberBtn = document.getElementById('memberBtn');
- const coachBtn = document.getElementById('coachBtn');
 
  toggleChatbot.addEventListener('click', function() {
  const isHidden = chatbotInterface.classList.contains('hidden');
@@ -368,18 +352,7 @@
  }
  });
 
- memberBtn.addEventListener('click', function() {
- currentRole = 'member';
- updateRoleButtons();
- });
 
- coachBtn.addEventListener('click', function() {
- currentRole = 'coach';
- updateRoleButtons();
- });
-
- // Initialize role buttons
- updateRoleButtons();
  });
 
  // Export dashboard function

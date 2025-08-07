@@ -3,75 +3,21 @@
 {% block title %}Schedule - PowerFit{% endblock %}
 
 {% block content %}
- <!-- Welcome Section -->
- <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
- <div class="px-4 py-5 sm:p-4 sm:p-6">
- <h3 class="text-lg leading-6 font-medium text-gray-900">Schedule</h3>
- <p class="mt-1 text-sm text-gray-500">View and manage your training sessions</p>
- </div>
- </div>
-
- <!-- Weekly Schedule Section -->
- <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
- <div class="flex justify-between items-center mb-4 sm:mb-6">
- <h2 class="text-lg font-medium text-gray-900">Weekly Schedule</h2>
- <div class="flex items-center space-x-2 sm:space-x-4">
- <div class="flex items-center space-x-2">
- <input type="date" 
- id="startDate" 
- class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
- <span class="text-gray-500">to</span>
- <input type="date" 
- id="endDate" 
- class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
- <button onclick="loadSchedule()" 
- class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
- <i class="fas fa-search mr-2"></i>Search
- </button>
- </div>
- <div class="flex items-center space-x-2">
- <button onclick="exportSchedule('xlsx')" 
- class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
- <i class="fas fa-file-excel mr-2"></i>Export Excel
- </button>
- </div>
- </div>
- </div>
-
- <div class="grid grid-cols-7 gap-4" id="weeklySchedule">
- <!-- Days will be populated here -->
- </div>
- </div>
-
- <!-- Sessions Table -->
- <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
- <div class="px-4 py-5 sm:p-4 sm:p-6">
- <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
- <table class="min-w-full responsive-table divide-y divide-gray-200">
- <thead>
- <tr>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
- <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
- </tr>
- </thead>
- <tbody class="bg-white divide-y divide-gray-200" id="sessions-table">
- <!-- Sessions will be populated here -->
- </tbody>
- </table>
- </div>
- </div>
- </div>
-
  <!-- Preferences and Free Days Section -->
- <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
- <div class="flex justify-between items-center mb-4 sm:mb-6">
- <h2 class="text-lg font-medium text-gray-900">My Preferences & Availability</h2>
+ <div class="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl mb-6 sm:mb-8 border border-white/20 hover:shadow-2xl transition-all duration-300 animate-bounce-in">
+ <div class="px-8 py-8 sm:p-10">
+ <div class="flex justify-between items-center mb-6 sm:mb-8">
+ <div class="flex items-center space-x-2 sm:space-x-4">
+ <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+ <i class="fas fa-cog text-xl"></i>
+ </div>
+ <div>
+ <h2 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">My Preferences & Availability</h2>
+ <p class="text-gray-600">Customize your training preferences</p>
+ </div>
+ </div>
  <button onclick="togglePreferencesForm()" 
- class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+ class="bg-gradient-to-r from-primary-500 to-blue-600 text-white px-3 py-2 sm:px-4 sm:px-6 sm:py-3 rounded-xl hover:from-primary-600 hover:to-blue-700 focus:outline-none transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 font-medium">
  <i class="fas fa-edit mr-2"></i>Edit Preferences
  </button>
  </div>
@@ -204,18 +150,140 @@
  <!-- Form Actions -->
  <div class="flex justify-end space-x-3">
  <button type="button" onclick="togglePreferencesForm()" 
- class="px-3 py-2 sm:px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:outline-none
+ class="px-3 py-2 sm:px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:outline-none">
  Cancel
  </button>
  <button type="submit" 
- class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
- Save Preferences
+ class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none">
+ <i class="fas fa-save mr-2"></i>Save Preferences
  </button>
  </div>
  </form>
  </div>
  </div>
+ </div>
 
+<!-- Welcome Section -->
+<div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+    <div class="px-4 py-5 sm:p-4 sm:p-6">
+    <h3 class="text-lg leading-6 font-medium text-gray-900">Schedule</h3>
+    <p class="mt-1 text-sm text-gray-500">View and manage your training sessions</p>
+    </div>
+    </div>
+   
+    <!-- Weekly Schedule Section -->
+    <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
+    <div class="flex justify-between items-center mb-4 sm:mb-6">
+    <h2 class="text-lg font-medium text-gray-900">Weekly Schedule</h2>
+    <div class="flex items-center space-x-2 sm:space-x-4">
+    <div class="flex items-center space-x-2">
+    <input type="date" 
+    id="startDate" 
+    class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+    <span class="text-gray-500">to</span>
+    <input type="date" 
+    id="endDate" 
+    class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+    <button onclick="loadSchedule()" 
+    class="bg-indigo-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:outline-none
+    <i class="fas fa-search mr-2"></i>Search
+    </button>
+    </div>
+    <div class="flex items-center space-x-2">
+    <button onclick="exportSchedule('xlsx')" 
+    class="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
+    <i class="fas fa-file-excel mr-2"></i>Export Excel
+    </button>
+    </div>
+    </div>
+    </div>
+   
+    <div class="grid grid-cols-7 gap-4" id="weeklySchedule">
+    <!-- Days will be populated here -->
+    </div>
+    </div>
+   
+     <!-- Sessions Table -->
+ <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
+ <div class="px-4 py-5 sm:p-4 sm:p-6">
+ 
+ <!-- Sessions Filters -->
+ <div class="mb-6">
+ <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+ <h3 class="text-lg font-medium text-gray-900">Sessions</h3>
+ <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+ <!-- Search Filter -->
+ <div class="relative">
+ <input type="text" 
+ id="sessionSearch" 
+ placeholder="Search sessions..." 
+ class="w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500">
+ <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+ </div>
+ 
+ <!-- Status Filter -->
+ <select id="statusFilter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500">
+ <option value="all">All Status</option>
+ <option value="scheduled">Scheduled</option>
+ <option value="completed">Completed</option>
+ <option value="cancelled">Cancelled</option>
+ </select>
+ 
+ <!-- Workout Type Filter -->
+ <select id="workoutTypeFilter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500">
+ <option value="all">All Workout Types</option>
+ <option value="Upper Body">Upper Body</option>
+ <option value="Lower Body">Lower Body</option>
+ <option value="Full Body">Full Body</option>
+ <option value="Core">Core</option>
+ <option value="Push">Push</option>
+ <option value="Pull">Pull</option>
+ <option value="Cardio">Cardio</option>
+ <option value="Strength Training">Strength Training</option>
+ <option value="Flexibility">Flexibility</option>
+ <option value="HIIT">HIIT</option>
+ <option value="General Training">General Training</option>
+ </select>
+ 
+ <!-- Clear Filters Button -->
+ <button onclick="clearSessionFilters()" 
+ class="px-3 py-2 text-gray-600 hover:text-gray-800 focus:outline-none">
+ <i class="fas fa-times mr-1"></i>Clear
+ </button>
+ </div>
+ </div>
+ 
+ <!-- Active Filters Display -->
+ <div class="mt-3 flex flex-wrap gap-2">
+ <div id="activeFilters" class="flex flex-wrap gap-2">
+ <!-- Active filters will be displayed here -->
+ </div>
+ <div id="resultsCount" class="text-sm text-gray-600 ml-auto">
+ <!-- Results count will be displayed here -->
+ </div>
+ </div>
+ </div>
+ 
+ <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+ <table class="min-w-full responsive-table divide-y divide-gray-200">
+ <thead>
+ <tr>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workout</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+ <th class="px-3 py-2 sm:px-4 sm:px-6 sm:py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+ </tr>
+ </thead>
+ <tbody class="bg-white divide-y divide-gray-200" id="sessions-table">
+ <!-- Sessions will be populated here -->
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+   
  <!-- Session Details Modal -->
  <div id="sessionModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 hidden">
  <div class="flex items-center justify-center min-h-screen p-4">
@@ -407,6 +475,9 @@
  const startDate = new Date(document.getElementById('startDate').value);
  const endDate = new Date(document.getElementById('endDate').value);
  
+ // Store sessions globally for filtering
+ allSessions = sessions;
+ 
  // Clear existing schedule
  scheduleContainer.innerHTML = '';
  
@@ -472,8 +543,8 @@
  currentDate.setDate(currentDate.getDate() + 1);
  }
  
- // Update sessions table
- displaySessionsTable(sessions);
+ // Update sessions table with filtered results
+ applySessionFilters();
  }
 
  // Display sessions table
@@ -524,11 +595,121 @@
  });
  }
 
+ // Filter sessions based on current filters
+ function filterSessions(sessions) {
+ const searchTerm = document.getElementById('sessionSearch').value.toLowerCase();
+ const statusFilter = document.getElementById('statusFilter').value;
+ const workoutTypeFilter = document.getElementById('workoutTypeFilter').value;
+ 
+ return sessions.filter(session => {
+ // Search filter
+ const searchMatch = !searchTerm || 
+ session.member.name.toLowerCase().includes(searchTerm) ||
+ session.member.email.toLowerCase().includes(searchTerm) ||
+ session.workout.type.toLowerCase().includes(searchTerm) ||
+ session.date.toLowerCase().includes(searchTerm) ||
+ session.time.toLowerCase().includes(searchTerm) ||
+ session.status.toLowerCase().includes(searchTerm);
+ 
+ // Status filter
+ const statusMatch = statusFilter === 'all' || 
+ session.status.toLowerCase() === statusFilter.toLowerCase();
+ 
+ // Workout type filter
+ const workoutMatch = workoutTypeFilter === 'all' || 
+ session.workout.type === workoutTypeFilter;
+ 
+ return searchMatch && statusMatch && workoutMatch;
+ });
+ }
+
+ // Update active filters display
+ function updateActiveFilters() {
+ const searchTerm = document.getElementById('sessionSearch').value;
+ const statusFilter = document.getElementById('statusFilter').value;
+ const workoutTypeFilter = document.getElementById('workoutTypeFilter').value;
+ 
+ const activeFiltersContainer = document.getElementById('activeFilters');
+ const activeFilters = [];
+ 
+ if (searchTerm) {
+ activeFilters.push(`Search: "${searchTerm}"`);
+ }
+ if (statusFilter !== 'all') {
+ activeFilters.push(`Status: ${statusFilter}`);
+ }
+ if (workoutTypeFilter !== 'all') {
+ activeFilters.push(`Workout: ${workoutTypeFilter}`);
+ }
+ 
+ if (activeFilters.length === 0) {
+ activeFiltersContainer.innerHTML = '';
+ return;
+ }
+ 
+ activeFiltersContainer.innerHTML = activeFilters.map(filter => `
+ <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+ ${filter}
+ <button onclick="removeFilter('${filter}')" class="ml-1 text-indigo-600 hover:text-indigo-800">
+ <i class="fas fa-times"></i>
+ </button>
+ </span>
+ `).join('');
+ }
+
+ // Remove specific filter
+ function removeFilter(filterText) {
+ if (filterText.includes('Search:')) {
+ document.getElementById('sessionSearch').value = '';
+ } else if (filterText.includes('Status:')) {
+ document.getElementById('statusFilter').value = 'all';
+ } else if (filterText.includes('Workout:')) {
+ document.getElementById('workoutTypeFilter').value = 'all';
+ }
+ 
+ applySessionFilters();
+ }
+
+ // Clear all filters
+ function clearSessionFilters() {
+ document.getElementById('sessionSearch').value = '';
+ document.getElementById('statusFilter').value = 'all';
+ document.getElementById('workoutTypeFilter').value = 'all';
+ applySessionFilters();
+ }
+
+ // Apply filters and update display
+ function applySessionFilters() {
+ updateActiveFilters();
+ 
+ if (!allSessions || allSessions.length === 0) {
+ const resultsCount = document.getElementById('resultsCount');
+ if (resultsCount) {
+ resultsCount.textContent = 'No sessions available';
+ }
+ return;
+ }
+ 
+ const filteredSessions = filterSessions(allSessions);
+ displaySessionsTable(filteredSessions);
+ 
+ // Update results count
+ const resultsCount = document.getElementById('resultsCount');
+ if (resultsCount) {
+ resultsCount.textContent = `Showing ${filteredSessions.length} of ${allSessions.length} sessions`;
+ }
+ }
+
  // Initialize date range and load schedule when page loads
  document.addEventListener('DOMContentLoaded', () => {
  setDefaultDateRange();
  loadSchedule();
  loadPreferences();
+ 
+ // Add event listeners for session filters
+ document.getElementById('sessionSearch').addEventListener('input', applySessionFilters);
+ document.getElementById('statusFilter').addEventListener('change', applySessionFilters);
+ document.getElementById('workoutTypeFilter').addEventListener('change', applySessionFilters);
  });
 
  // Preferences Functions

@@ -107,15 +107,86 @@ window.addEventListener('load', function() {
                 Member Nutrition Overview
             </h2>
             <div class="flex items-center space-x-2">
-                <button onclick="exportNutrition('xlsx')" 
-                class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:outline-none
-                <i class="fas fa-file-excel mr-2"></i>Export Excel
+                <button onclick="refreshNutritionData()" 
+                        class="bg-emerald-600 text-white px-3 py-2 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors">
+                    <i class="fas fa-sync-alt mr-2"></i>Refresh
                 </button>
-                <select id="timeRangeFilter" class="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                    <option value="quarter">This Quarter</option>
-                </select>
+                <button onclick="exportNutrition('xlsx')" 
+                        class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                    <i class="fas fa-file-excel mr-2"></i>Export Excel
+                </button>
+                <button onclick="toggleFilters()" 
+                        class="bg-gray-600 text-white px-3 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                    <i class="fas fa-filter mr-2"></i>Filters
+                </button>
+            </div>
+        </div>
+        
+        <!-- Filter Section -->
+        <div id="filterSection" class="hidden mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Search Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Search Members</label>
+                    <input type="text" id="memberSearchFilter" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                           placeholder="Search by name or email...">
+                </div>
+                
+                <!-- Activity Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Activity Status</label>
+                    <select id="activityFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="all">All Members</option>
+                        <option value="active">Active (Logged recently)</option>
+                        <option value="inactive">Inactive (No recent logs)</option>
+                        <option value="never">Never Logged</option>
+                    </select>
+                </div>
+                
+                <!-- Time Range Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Time Range</label>
+                    <select id="timeRangeFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="all">All Time</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="quarter">This Quarter</option>
+                        <option value="year">This Year</option>
+                    </select>
+                </div>
+                
+                <!-- Sort By Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                    <select id="sortFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="name">Name (A-Z)</option>
+                        <option value="name-desc">Name (Z-A)</option>
+                        <option value="entries">Most Entries</option>
+                        <option value="entries-asc">Least Entries</option>
+                        <option value="calories">Highest Calories</option>
+                        <option value="calories-asc">Lowest Calories</option>
+                        <option value="last-entry">Most Recent Entry</option>
+                        <option value="last-entry-desc">Oldest Entry</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Filter Actions -->
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                <div class="flex items-center space-x-2">
+                    <button onclick="applyFilters()" 
+                            class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors">
+                        <i class="fas fa-check mr-2"></i>Apply Filters
+                    </button>
+                    <button onclick="clearFilters()" 
+                            class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        <i class="fas fa-times mr-2"></i>Clear Filters
+                    </button>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <span id="filterResults">Showing all members</span>
+                </div>
             </div>
         </div>
 
@@ -151,12 +222,20 @@ window.addEventListener('load', function() {
     </div>
 
     <!-- Nutrition Analytics -->
-    <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Meal Type Distribution -->
         <div class="glass rounded-xl p-6 border border-gray-100">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Meal Type Distribution</h3>
             <div class="chart-container">
                 <canvas id="mealTypeChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Macronutrient Distribution -->
+        <div class="glass rounded-xl p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Macronutrient Distribution</h3>
+            <div class="chart-container">
+                <canvas id="macroNutrientChart"></canvas>
             </div>
         </div>
     </div>
@@ -437,33 +516,72 @@ window.addEventListener('load', function() {
 // Global variables
 let nutritionData = null;
 let mealTypeChart = null;
+let macroNutrientChart = null;
+let nutritionAllMembers = []; // Store all members for filtering
+let nutritionFilteredMembers = []; // Store filtered members
 
 // Initialize page
-window.addEventListener('load', function() {
-    console.log('Page loaded, Chart.js available:', typeof Chart !== 'undefined');
+document.addEventListener('DOMContentLoaded', function() {
+    // Show loading state
+    showLoadingState();
     
-    // Ensure Chart.js is loaded before initializing
-    if (typeof Chart !== 'undefined') {
-        console.log('Chart.js is available, loading data...');
+    // Load all required data
+    Promise.all([
+        loadNutritionDashboard(),
+        loadMembers(),
+        loadAnalytics(),
+        loadCoachSidebarStats()
+    ]).then(() => {
+        hideLoadingState();
+    }).catch((error) => {
+        console.error('Error during initialization:', error);
+        hideLoadingState();
+    });
+    
+    // Refresh data every 5 minutes
+    setInterval(() => {
         loadNutritionDashboard();
-        loadMembers();
-        loadRecentEntries();
         loadAnalytics();
-    } else {
-        console.error('Chart.js not available, retrying in 500ms...');
-        setTimeout(() => {
-            if (typeof Chart !== 'undefined') {
-                console.log('Chart.js now available, loading data...');
-                loadNutritionDashboard();
-                loadMembers();
-                loadRecentEntries();
-                loadAnalytics();
-            } else {
-                console.error('Chart.js still not available');
-            }
-        }, 500);
+    }, 5 * 60 * 1000);
+    
+    // Add real-time search functionality
+    const memberSearchFilter = document.getElementById('memberSearchFilter');
+    if (memberSearchFilter) {
+        memberSearchFilter.addEventListener('input', function() {
+            // Debounce the search to avoid too many filter operations
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                applyFilters();
+            }, 300);
+        });
     }
 });
+
+// Show loading state
+function showLoadingState() {
+    const statsElements = ['totalMembers', 'activeNutrition', 'totalEntries', 'avgCalories'];
+    statsElements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = '...';
+        }
+    });
+    
+    const recentEntries = document.getElementById('recentEntries');
+    if (recentEntries) {
+        recentEntries.innerHTML = `
+            <div class="text-center py-8">
+                <div class="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-gray-600">Loading recent entries...</p>
+            </div>
+        `;
+    }
+}
+
+// Hide loading state
+function hideLoadingState() {
+    // Loading states will be replaced by actual data
+}
 
 // Load nutrition dashboard data
 async function loadNutritionDashboard() {
@@ -471,14 +589,39 @@ async function loadNutritionDashboard() {
         const response = await fetch('/api/coach/nutrition/dashboard');
         const data = await response.json();
         
+        console.log('Nutrition dashboard response:', data);
+        
         if (data.success) {
             nutritionData = data;
-            updateDashboardStats(data.stats);
-            updateRecentEntries(data.recent_entries);
+            
+            // Update dashboard stats
+            if (data.stats) {
+                updateDashboardStats(data.stats);
+            } else if (data.dashboard_stats) {
+                updateDashboardStats(data.dashboard_stats);
+            } else {
+                console.warn('No stats data found in dashboard response');
+            }
+            
+            // Update recent entries
+            if (data.recent_entries) {
+                updateRecentEntries(data.recent_entries);
+            } else if (data.latest_entries) {
+                updateRecentEntries(data.latest_entries);
+            } else {
+                console.warn('No recent entries found in dashboard response');
+            }
+            
+            // Update analytics
             updateAnalytics(data);
+            
+        } else {
+            console.error('Dashboard request failed:', data);
+            showNotification(data.detail || 'Failed to load nutrition dashboard', 'error');
         }
     } catch (error) {
         console.error('Error loading nutrition dashboard:', error);
+        showNotification('Error loading nutrition dashboard data', 'error');
     }
 }
 
@@ -491,30 +634,46 @@ async function loadMembers() {
         console.log('Members response:', data);
         
         if (data.success) {
-            updateMembersTable(data.members);
+            nutritionAllMembers = data.members || [];
+            nutritionFilteredMembers = nutritionAllMembers;
+            updateMembersTable(nutritionAllMembers);
+            updateFilterResults(nutritionAllMembers.length, nutritionAllMembers.length);
         } else {
             console.error('Members request failed:', data);
+            nutritionAllMembers = [];
+            nutritionFilteredMembers = [];
+            updateMembersTable([]);
+            updateFilterResults(0, 0);
         }
     } catch (error) {
         console.error('Error loading members:', error);
+        nutritionAllMembers = [];
+        nutritionFilteredMembers = [];
+        updateMembersTable([]);
+        updateFilterResults(0, 0);
     }
 }
 
 // Load recent nutrition entries
 async function loadRecentEntries() {
     try {
+        // Use the dashboard endpoint which includes recent entries
         const response = await fetch('/api/coach/nutrition/dashboard');
         const data = await response.json();
         
         console.log('Recent entries response:', data);
         
-        if (data.success) {
+        if (data.success && data.recent_entries) {
             updateRecentEntries(data.recent_entries);
         } else {
             console.error('Recent entries request failed:', data);
+            // Show empty state if no data
+            updateRecentEntries([]);
         }
     } catch (error) {
         console.error('Error loading recent entries:', error);
+        // Show empty state on error
+        updateRecentEntries([]);
     }
 }
 
@@ -542,10 +701,30 @@ async function loadAnalytics() {
 // Update dashboard statistics
 function updateDashboardStats(stats) {
     if (stats) {
-        document.getElementById('totalMembers').textContent = stats.total_members || 0;
-        document.getElementById('activeNutrition').textContent = stats.members_with_nutrition || 0;
-        document.getElementById('totalEntries').textContent = stats.total_nutrition_entries || 0;
-        document.getElementById('avgCalories').textContent = Math.round(stats.avg_calories || 0);
+        // Total Members - count of all members assigned to this coach
+        const totalMembers = stats.total_members || stats.total_coach_members || 0;
+        document.getElementById('totalMembers').textContent = totalMembers;
+        
+        // Active Nutrition - members who have logged nutrition entries
+        const activeNutrition = stats.members_with_nutrition || stats.active_nutrition_members || 0;
+        document.getElementById('activeNutrition').textContent = activeNutrition;
+        
+        // Total Entries - total number of nutrition entries across all members
+        const totalEntries = stats.total_nutrition_entries || stats.total_entries || 0;
+        document.getElementById('totalEntries').textContent = totalEntries;
+        
+        // Average Calories - average calories per entry or per member
+        const avgCalories = stats.avg_calories || stats.average_calories || 0;
+        document.getElementById('avgCalories').textContent = Math.round(avgCalories);
+        
+        console.log('Updated dashboard stats:', {
+            totalMembers,
+            activeNutrition,
+            totalEntries,
+            avgCalories
+        });
+    } else {
+        console.warn('No stats data provided to updateDashboardStats');
     }
 }
 
@@ -617,32 +796,49 @@ function updateRecentEntries(entries) {
             <div class="text-center text-gray-500 py-8">
                 <i class="fas fa-clipboard-list text-4xl mb-2 opacity-50"></i>
                 <p>No recent nutrition entries</p>
+                <p class="text-sm text-gray-400 mt-2">Members haven't logged any meals yet</p>
             </div>
         `;
         return;
     }
     
-    // Ensure we only show the latest 5 entries
-    const recentEntries = entries.slice(0, 5);
+    // Ensure we only show the latest 5 entries and sort by date
+    const recentEntries = entries
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5);
     
     container.innerHTML = recentEntries.map(entry => {
-        const fullName = entry.name || 'Unknown Member';
+        const fullName = entry.name || entry.member_name || 'Unknown Member';
+        const foodName = entry.food_name || entry.food_item || 'Unknown Food';
+        const mealType = entry.meal_type || 'Unknown';
+        const calories = Math.round(entry.calories || 0);
+        const protein = Math.round(entry.protein || 0);
+        const carbs = Math.round(entry.carbs || 0);
+        const fat = Math.round(entry.fat || 0);
+        const date = entry.created_at ? new Date(entry.created_at) : null;
         
         return `
-            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200">
+            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                        <i class="fas ${getMealIcon(entry.meal_type)}"></i>
+                        <i class="fas ${getMealIcon(mealType)}"></i>
                     </div>
                     <div>
                         <h4 class="font-medium text-gray-900">${fullName}</h4>
-                        <p class="text-sm text-gray-600">${entry.food_name || 'Unknown Food'} (${entry.meal_type || 'Unknown'})</p>
+                        <p class="text-sm text-gray-600">${foodName} (${mealType})</p>
+                        ${entry.quantity ? `<p class="text-xs text-gray-500">${entry.quantity}${entry.unit || ''}</p>` : ''}
                     </div>
                 </div>
                 <div class="text-right text-sm text-gray-600">
-                    <div>${Math.round(entry.calories || 0)} calories</div>
-                    <div>P: ${Math.round(entry.protein || 0)}g • C: ${Math.round(entry.carbs || 0)}g • F: ${Math.round(entry.fat || 0)}g</div>
-                    <div class="text-xs text-gray-500">${entry.created_at ? new Date(entry.created_at).toLocaleDateString() : 'Unknown date'}</div>
+                    <div class="font-semibold text-gray-900">${calories} calories</div>
+                    <div class="text-xs">
+                        <span class="text-blue-600">P: ${protein}g</span> • 
+                        <span class="text-green-600">C: ${carbs}g</span> • 
+                        <span class="text-orange-600">F: ${fat}g</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        ${date ? date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Unknown date'}
+                    </div>
                 </div>
             </div>
         `;
@@ -653,15 +849,47 @@ function updateRecentEntries(entries) {
 function updateAnalytics(data) {
     console.log('Updating analytics with data:', data);
     
+    // Handle different possible data structures for meal distribution
+    let mealDistribution = null;
+    
     if (data.meal_distribution && data.meal_distribution.length > 0) {
-        createMealTypeChart(data.meal_distribution);
+        mealDistribution = data.meal_distribution;
+    } else if (data.analytics && data.analytics.meal_distribution) {
+        mealDistribution = data.analytics.meal_distribution;
+    } else if (data.meal_type_distribution) {
+        mealDistribution = data.meal_type_distribution;
+    }
+    
+    // Create meal type distribution chart
+    if (mealDistribution && mealDistribution.length > 0) {
+        createMealTypeChart(mealDistribution);
     } else {
-        console.log('No meal distribution data available');
+        console.log('No meal distribution data available - showing default chart');
+        createDefaultMealTypeChart();
+    }
+    
+    // Handle macronutrient data
+    let macroData = null;
+    
+    if (data.recent_entries && data.recent_entries.length > 0) {
+        macroData = data.recent_entries;
+    } else if (data.nutrition_entries && data.nutrition_entries.length > 0) {
+        macroData = data.nutrition_entries;
+    } else if (data.analytics && data.analytics.nutrition_entries) {
+        macroData = data.analytics.nutrition_entries;
+    }
+    
+    // Create macronutrient distribution chart
+    if (macroData && macroData.length > 0) {
+        createMacroNutrientChart(macroData);
+    } else {
+        console.log('No macronutrient data available - showing default chart');
+        createDefaultMacroNutrientChart();
     }
 }
 
-// Create meal type distribution chart
-function createMealTypeChart(mealDistribution) {
+// Create default meal type distribution chart
+function createDefaultMealTypeChart() {
     const ctx = document.getElementById('mealTypeChart');
     
     // Check if Chart.js is available
@@ -676,13 +904,6 @@ function createMealTypeChart(mealDistribution) {
         mealTypeChart = null;
     }
     
-    // Check if we have data
-    if (!mealDistribution || mealDistribution.length === 0) {
-        console.log('No meal distribution data available');
-        ctx.style.display = 'none';
-        return;
-    }
-    
     ctx.style.display = 'block';
     
     // Ensure the canvas has proper dimensions
@@ -690,16 +911,26 @@ function createMealTypeChart(mealDistribution) {
     ctx.width = container.offsetWidth;
     ctx.height = container.offsetHeight;
     
-    const labels = mealDistribution.map(item => item.meal_type);
-    const data = mealDistribution.map(item => item.count);
-    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
+    // Default nutrition distribution data (typical balanced diet)
+    const defaultData = [
+        { label: 'Breakfast', value: 25, color: '#10b981' },
+        { label: 'Lunch', value: 30, color: '#3b82f6' },
+        { label: 'Dinner', value: 30, color: '#f59e0b' },
+        { label: 'Snacks', value: 15, color: '#ef4444' }
+    ];
+    
+    const chartLabels = defaultData.map(item => item.label);
+    const chartData = defaultData.map(item => item.value);
+    const colors = defaultData.map(item => item.color);
+    
+    console.log('Creating default chart with data:', { chartLabels, chartData });
     
     mealTypeChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: labels,
+            labels: chartLabels,
             datasets: [{
-                data: data,
+                data: chartData,
                 backgroundColor: colors,
                 borderWidth: 2,
                 borderColor: '#ffffff'
@@ -724,6 +955,25 @@ function createMealTypeChart(mealDistribution) {
                             size: 12
                         }
                     }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.parsed}% (Recommended)`;
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Recommended Nutrition Distribution',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    padding: {
+                        top: 10,
+                        bottom: 20
+                    }
                 }
             },
             elements: {
@@ -733,6 +983,500 @@ function createMealTypeChart(mealDistribution) {
             }
         }
     });
+    
+    // Add a note below the chart
+    const chartContainer = ctx.parentElement;
+    const noteElement = document.createElement('div');
+    noteElement.className = 'text-center mt-4 text-sm text-gray-500';
+    noteElement.innerHTML = `
+        <i class="fas fa-info-circle mr-1"></i>
+        This shows the recommended nutrition distribution. Actual data will appear when members log their meals.
+    `;
+    
+    // Remove any existing note
+    const existingNote = chartContainer.querySelector('.text-center.mt-4');
+    if (existingNote) {
+        existingNote.remove();
+    }
+    
+    chartContainer.appendChild(noteElement);
+}
+
+// Filter Functions
+function toggleFilters() {
+    const filterSection = document.getElementById('filterSection');
+    const filterButton = document.querySelector('button[onclick="toggleFilters()"]');
+    
+    if (filterSection.classList.contains('hidden')) {
+        filterSection.classList.remove('hidden');
+        filterButton.innerHTML = '<i class="fas fa-filter mr-2"></i>Hide Filters';
+        filterButton.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+        filterButton.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+    } else {
+        filterSection.classList.add('hidden');
+        filterButton.innerHTML = '<i class="fas fa-filter mr-2"></i>Filters';
+        filterButton.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+        filterButton.classList.add('bg-gray-600', 'hover:bg-gray-700');
+    }
+}
+
+function applyFilters() {
+    const searchTerm = document.getElementById('memberSearchFilter').value.toLowerCase();
+    const activityFilter = document.getElementById('activityFilter').value;
+    const timeRangeFilter = document.getElementById('timeRangeFilter').value;
+    const sortFilter = document.getElementById('sortFilter').value;
+    
+    // Filter members based on search term
+    let filtered = nutritionAllMembers.filter(member => {
+        const name = (member.name || '').toLowerCase();
+        const email = (member.email || '').toLowerCase();
+        return name.includes(searchTerm) || email.includes(searchTerm);
+    });
+    
+    // Filter by activity status
+    if (activityFilter !== 'all') {
+        const now = new Date();
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        filtered = filtered.filter(member => {
+            if (activityFilter === 'active') {
+                return member.last_nutrition_entry && new Date(member.last_nutrition_entry) > oneWeekAgo;
+            } else if (activityFilter === 'inactive') {
+                return member.last_nutrition_entry && new Date(member.last_nutrition_entry) <= oneWeekAgo;
+            } else if (activityFilter === 'never') {
+                return !member.last_nutrition_entry;
+            }
+            return true;
+        });
+    }
+    
+    // Sort members
+    filtered.sort((a, b) => {
+        switch (sortFilter) {
+            case 'name':
+                return (a.name || '').localeCompare(b.name || '');
+            case 'name-desc':
+                return (b.name || '').localeCompare(a.name || '');
+            case 'entries':
+                return (b.nutrition_entries || 0) - (a.nutrition_entries || 0);
+            case 'entries-asc':
+                return (a.nutrition_entries || 0) - (b.nutrition_entries || 0);
+            case 'calories':
+                return (b.avg_calories || 0) - (a.avg_calories || 0);
+            case 'calories-asc':
+                return (a.avg_calories || 0) - (b.avg_calories || 0);
+            case 'last-entry':
+                if (!a.last_nutrition_entry && !b.last_nutrition_entry) return 0;
+                if (!a.last_nutrition_entry) return 1;
+                if (!b.last_nutrition_entry) return -1;
+                return new Date(b.last_nutrition_entry) - new Date(a.last_nutrition_entry);
+            case 'last-entry-desc':
+                if (!a.last_nutrition_entry && !b.last_nutrition_entry) return 0;
+                if (!a.last_nutrition_entry) return 1;
+                if (!b.last_nutrition_entry) return -1;
+                return new Date(a.last_nutrition_entry) - new Date(b.last_nutrition_entry);
+            default:
+                return 0;
+        }
+    });
+    
+    nutritionFilteredMembers = filtered;
+    updateMembersTable(filtered);
+    updateFilterResults(filtered.length, nutritionAllMembers.length);
+}
+
+function clearFilters() {
+    document.getElementById('memberSearchFilter').value = '';
+    document.getElementById('activityFilter').value = 'all';
+    document.getElementById('timeRangeFilter').value = 'all';
+    document.getElementById('sortFilter').value = 'name';
+    
+    nutritionFilteredMembers = nutritionAllMembers;
+    updateMembersTable(nutritionAllMembers);
+    updateFilterResults(nutritionAllMembers.length, nutritionAllMembers.length);
+}
+
+function updateFilterResults(filteredCount, totalCount) {
+    const filterResults = document.getElementById('filterResults');
+    if (filteredCount === totalCount) {
+        filterResults.textContent = `Showing all ${totalCount} members`;
+    } else {
+        filterResults.textContent = `Showing ${filteredCount} of ${totalCount} members`;
+    }
+}
+
+// Create default macronutrient distribution chart
+function createDefaultMacroNutrientChart() {
+    const ctx = document.getElementById('macroNutrientChart');
+    
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded');
+        return;
+    }
+    
+    // Destroy existing chart if it exists
+    if (macroNutrientChart) {
+        macroNutrientChart.destroy();
+        macroNutrientChart = null;
+    }
+    
+    ctx.style.display = 'block';
+    
+    // Ensure the canvas has proper dimensions
+    const container = ctx.parentElement;
+    ctx.width = container.offsetWidth;
+    ctx.height = container.offsetHeight;
+    
+    // Default macronutrient distribution data (balanced diet)
+    const defaultData = [
+        { label: 'Protein', value: 25, color: '#3b82f6' },
+        { label: 'Carbohydrates', value: 50, color: '#10b981' },
+        { label: 'Fat', value: 25, color: '#f59e0b' }
+    ];
+    
+    const chartLabels = defaultData.map(item => item.label);
+    const chartData = defaultData.map(item => item.value);
+    const colors = defaultData.map(item => item.color);
+    
+    console.log('Creating default macronutrient chart with data:', { chartLabels, chartData });
+    
+    macroNutrientChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                data: chartData,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 10,
+                    bottom: 10
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.parsed}% (Recommended)`;
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Recommended Macronutrient Distribution',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    padding: {
+                        top: 10,
+                        bottom: 20
+                    }
+                }
+            },
+            elements: {
+                arc: {
+                    borderWidth: 2
+                }
+            }
+        }
+    });
+    
+    // Add a note below the chart
+    const chartContainer = ctx.parentElement;
+    const noteElement = document.createElement('div');
+    noteElement.className = 'text-center mt-4 text-sm text-gray-500';
+    noteElement.innerHTML = `
+        <i class="fas fa-info-circle mr-1"></i>
+        This shows the recommended macronutrient distribution. Actual data will appear when members log their meals.
+    `;
+    
+    // Remove any existing note
+    const existingNote = chartContainer.querySelector('.text-center.mt-4');
+    if (existingNote) {
+        existingNote.remove();
+    }
+    
+    chartContainer.appendChild(noteElement);
+}
+
+// Create macronutrient distribution chart
+function createMacroNutrientChart(macroData) {
+    const ctx = document.getElementById('macroNutrientChart');
+    
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded');
+        return;
+    }
+    
+    // Destroy existing chart if it exists
+    if (macroNutrientChart) {
+        macroNutrientChart.destroy();
+        macroNutrientChart = null;
+    }
+    
+    // Check if we have data
+    if (!macroData || macroData.length === 0) {
+        console.log('No macronutrient data available - showing default chart');
+        createDefaultMacroNutrientChart();
+        return;
+    }
+    
+    ctx.style.display = 'block';
+    
+    // Ensure the canvas has proper dimensions
+    const container = ctx.parentElement;
+    ctx.width = container.offsetWidth;
+    ctx.height = container.offsetHeight;
+    
+    // Process macronutrient data
+    const totalProtein = macroData.reduce((sum, item) => sum + (item.protein || 0), 0);
+    const totalCarbs = macroData.reduce((sum, item) => sum + (item.carbs || 0), 0);
+    const totalFat = macroData.reduce((sum, item) => sum + (item.fat || 0), 0);
+    const total = totalProtein + totalCarbs + totalFat;
+    
+    if (total === 0) {
+        console.log('No valid macronutrient data - showing default chart');
+        createDefaultMacroNutrientChart();
+        return;
+    }
+    
+    const proteinPercent = Math.round((totalProtein / total) * 100);
+    const carbsPercent = Math.round((totalCarbs / total) * 100);
+    const fatPercent = Math.round((totalFat / total) * 100);
+    
+    const chartData = [
+        { label: 'Protein', value: proteinPercent, color: '#3b82f6' },
+        { label: 'Carbohydrates', value: carbsPercent, color: '#10b981' },
+        { label: 'Fat', value: fatPercent, color: '#f59e0b' }
+    ];
+    
+    const chartLabels = chartData.map(item => item.label);
+    const chartValues = chartData.map(item => item.value);
+    const colors = chartData.map(item => item.color);
+    
+    console.log('Creating macronutrient chart with data:', { chartLabels, chartValues });
+    
+    macroNutrientChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                data: chartValues,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 10,
+                    bottom: 10
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.parsed}% (Actual)`;
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Actual Macronutrient Distribution',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    padding: {
+                        top: 10,
+                        bottom: 20
+                    }
+                }
+            },
+            elements: {
+                arc: {
+                    borderWidth: 2
+                }
+            }
+        }
+    });
+    
+    // Remove any existing note when showing actual data
+    const chartContainer = ctx.parentElement;
+    const existingNote = chartContainer.querySelector('.text-center.mt-4');
+    if (existingNote) {
+        existingNote.remove();
+    }
+}
+
+// Create meal type distribution chart
+function createMealTypeChart(mealDistribution) {
+    const ctx = document.getElementById('mealTypeChart');
+    
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded');
+        return;
+    }
+    
+    // Destroy existing chart if it exists
+    if (mealTypeChart) {
+        mealTypeChart.destroy();
+        mealTypeChart = null;
+    }
+    
+    // Check if we have data
+    if (!mealDistribution || mealDistribution.length === 0) {
+        console.log('No meal distribution data available - showing default chart');
+        createDefaultMealTypeChart();
+        return;
+    }
+    
+    ctx.style.display = 'block';
+    
+    // Ensure the canvas has proper dimensions
+    const container = ctx.parentElement;
+    ctx.width = container.offsetWidth;
+    ctx.height = container.offsetHeight;
+    
+    // Handle different data formats
+    let labels = [];
+    let data = [];
+    
+    if (Array.isArray(mealDistribution)) {
+        labels = mealDistribution.map(item => {
+            // Handle different possible field names
+            return item.meal_type || item.type || item.name || 'Unknown';
+        });
+        data = mealDistribution.map(item => {
+            // Handle different possible field names
+            return item.count || item.entries || item.value || 0;
+        });
+    } else if (typeof mealDistribution === 'object') {
+        // If it's an object with meal types as keys
+        labels = Object.keys(mealDistribution);
+        data = Object.values(mealDistribution);
+    }
+    
+    // Filter out zero values and ensure we have valid data
+    const validData = labels.map((label, index) => ({
+        label: label,
+        value: data[index] || 0
+    })).filter(item => item.value > 0);
+    
+    if (validData.length === 0) {
+        console.log('No valid meal distribution data - showing default chart');
+        createDefaultMealTypeChart();
+        return;
+    }
+    
+    const chartLabels = validData.map(item => item.label);
+    const chartData = validData.map(item => item.value);
+    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#8b5cf6', '#f97316'];
+    
+    console.log('Creating chart with data:', { chartLabels, chartData });
+    
+    mealTypeChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                data: chartData,
+                backgroundColor: colors.slice(0, chartData.length),
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 10,
+                    bottom: 10
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `${context.label}: ${context.parsed} (${percentage}%)`;
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Actual Meal Distribution',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    padding: {
+                        top: 10,
+                        bottom: 20
+                    }
+                }
+            },
+            elements: {
+                arc: {
+                    borderWidth: 2
+                }
+            }
+        }
+    });
+    
+    // Remove any existing note when showing actual data
+    const chartContainer = ctx.parentElement;
+    const existingNote = chartContainer.querySelector('.text-center.mt-4');
+    if (existingNote) {
+        existingNote.remove();
+    }
 }
 
 
@@ -1744,6 +2488,9 @@ window.addEventListener('resize', function() {
     if (mealTypeChart) {
         mealTypeChart.resize();
     }
+    if (macroNutrientChart) {
+        macroNutrientChart.resize();
+    }
 });
 
 // Export nutrition function
@@ -1770,6 +2517,48 @@ async function exportNutrition(format) {
     } catch (error) {
         console.error('Error exporting nutrition data:', error);
         alert('Failed to export nutrition data. Please try again.');
+    }
+}
+
+// Refresh nutrition data
+async function refreshNutritionData() {
+    const refreshBtn = document.querySelector('button[onclick="refreshNutritionData()"]');
+    const originalText = refreshBtn.innerHTML;
+    
+    try {
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Refreshing...';
+        
+        await Promise.all([
+            loadNutritionDashboard(),
+            loadAnalytics()
+        ]);
+        
+        showNotification('Nutrition data refreshed successfully', 'success');
+    } catch (error) {
+        console.error('Error refreshing nutrition data:', error);
+        showNotification('Error refreshing nutrition data', 'error');
+    } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalText;
+    }
+}
+
+// Load coach sidebar stats
+async function loadCoachSidebarStats() {
+    try {
+        const response = await fetch('/api/coach/dashboard');
+        const data = await response.json();
+        
+        const sidebarActiveMembers = document.getElementById('activeMembers');
+        const sidebarWeekSessions = document.getElementById('weekSessions');
+        const sidebarProgressBar = document.getElementById('progressBar');
+        
+        if (sidebarActiveMembers) sidebarActiveMembers.textContent = data.stats.active_members || 0;
+        if (sidebarWeekSessions) sidebarWeekSessions.textContent = `${data.stats.week_sessions || 0} sessions`;
+        if (sidebarProgressBar) sidebarProgressBar.style.width = `${data.stats.performance_rating || 85}%`;
+    } catch (error) {
+        console.error('Error loading coach sidebar stats:', error);
     }
 }
 </script>

@@ -1064,7 +1064,7 @@ async def get_coach_members(
 
 @app.get("/api/coach/sessions")
 async def get_coach_sessions(
-    date_range: str = "all",
+    dateRange: str = "all",
     status: str = "all",
     member: str = "all",
     search: str = "",
@@ -1090,12 +1090,12 @@ async def get_coach_sessions(
         params = [current_user["id"]]
         
         # Add date range filter
-        if date_range != "all":
-            if date_range == "today":
+        if dateRange != "all":
+            if dateRange == "today":
                 query += " AND s.session_date = CURDATE()"
-            elif date_range == "week":
+            elif dateRange == "week":
                 query += " AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
-            elif date_range == "month":
+            elif dateRange == "month":
                 query += " AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)"
         
         # Add status filter
@@ -1694,16 +1694,39 @@ async def get_member_dashboard(request: Request):
         """, (user["id"],))
         member = cursor.fetchone()
         
-        # Get stats
+        # Get comprehensive stats
         cursor.execute("""
             SELECT 
                 COUNT(*) as total_sessions,
                 SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_sessions,
-                SUM(CASE WHEN session_date >= CURDATE() THEN 1 ELSE 0 END) as upcoming_sessions
+                SUM(CASE WHEN session_date >= CURDATE() THEN 1 ELSE 0 END) as upcoming_sessions,
+                SUM(CASE WHEN session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as week_sessions,
+                SUM(CASE WHEN status = 'Completed' AND session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) as week_completed_sessions
             FROM sessions
             WHERE member_id = %s
         """, (user["id"],))
         stats = cursor.fetchone()
+        
+        # Calculate streak (consecutive days with completed sessions)
+        cursor.execute("""
+            SELECT COUNT(DISTINCT session_date) as streak_days
+            FROM (
+                SELECT session_date,
+                       ROW_NUMBER() OVER (ORDER BY session_date DESC) as rn,
+                       DATE_SUB(session_date, INTERVAL ROW_NUMBER() OVER (ORDER BY session_date DESC) DAY) as grp
+                FROM sessions 
+                WHERE member_id = %s AND status = 'Completed'
+                ORDER BY session_date DESC
+            ) t
+            WHERE grp = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+        """, (user["id"],))
+        streak_result = cursor.fetchone()
+        streak_days = streak_result['streak_days'] if streak_result else 0
+        
+        # Calculate progress percentage (completed vs total sessions this week)
+        week_progress = 0
+        if stats['week_sessions'] and stats['week_sessions'] > 0:
+            week_progress = round((stats['week_completed_sessions'] / stats['week_sessions']) * 100)
         
         # Get recent sessions
         cursor.execute("""
@@ -1719,7 +1742,11 @@ async def get_member_dashboard(request: Request):
         
         return {
             "member": member,
-            "stats": stats,
+            "stats": {
+                **stats,
+                "streak_days": streak_days,
+                "week_progress": week_progress
+            },
             "coach": {
                 "name": member["coach_name"],
                 "specialization": member["specialization"],
@@ -1764,6 +1791,7 @@ async def get_gym_sessions(
                 s.status,
                 s.notes,
                 m.name as member_name,
+                m.email as member_email,
                 m.membership_type,
                 c.name as coach_name,
                 c.specialization as coach_specialization,
@@ -1835,6 +1863,7 @@ async def get_gym_sessions(
                     "member": {
                         "id": int(session["member_id"]),
                         "name": str(session["member_name"]),
+                        "email": str(session["member_email"]),
                         "membership_type": str(session["membership_type"])
                     },
                     "coach": {
@@ -2473,19 +2502,27 @@ async def get_coach_dashboard(request: Request):
         """, (user["id"],))
         coach = cursor.fetchone()
         
-        # Get stats
+        # Get comprehensive stats
         cursor.execute("""
             SELECT 
                 COUNT(DISTINCT mc.member_id) as total_members,
                 COUNT(DISTINCT s.id) as total_sessions,
                 COUNT(DISTINCT CASE WHEN s.status = 'Completed' THEN s.id END) as completed_sessions,
-                COUNT(DISTINCT CASE WHEN s.session_date >= CURDATE() THEN s.id END) as upcoming_sessions
+                COUNT(DISTINCT CASE WHEN s.session_date >= CURDATE() THEN s.id END) as upcoming_sessions,
+                COUNT(DISTINCT CASE WHEN s.session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN s.id END) as week_sessions,
+                COUNT(DISTINCT CASE WHEN s.status = 'Completed' AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN s.id END) as week_completed_sessions
             FROM coaches c
             LEFT JOIN member_coach mc ON c.id = mc.coach_id
             LEFT JOIN sessions s ON c.id = s.coach_id
             WHERE c.id = %s
         """, (user["id"],))
         stats = cursor.fetchone()
+        
+        # Calculate performance rating (based on completed sessions vs total sessions)
+        performance_rating = 85  # Default rating
+        if stats['total_sessions'] and stats['total_sessions'] > 0:
+            completion_rate = (stats['completed_sessions'] / stats['total_sessions']) * 100
+            performance_rating = min(100, max(60, completion_rate + 20))  # Rating between 60-100
         
         # Get recent sessions
         cursor.execute("""
@@ -2548,7 +2585,9 @@ async def get_coach_dashboard(request: Request):
                 "total_members": stats["total_members"] or 0,
                 "total_sessions": stats["total_sessions"] or 0,
                 "completed_sessions": stats["completed_sessions"] or 0,
-                "upcoming_sessions": stats["upcoming_sessions"] or 0
+                "upcoming_sessions": stats["upcoming_sessions"] or 0,
+                "week_sessions": stats["week_sessions"] or 0,
+                "performance_rating": performance_rating
             },
             "recent_sessions": formatted_sessions
         }
@@ -4249,6 +4288,148 @@ async def get_member_preferences(member_id: int, current_user: dict = Depends(ge
         if connection:
             connection.close()
 
+@app.get("/api/coach/members/{member_id}/sessions")
+async def get_coach_member_sessions(
+    member_id: int, 
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=1000),
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Get all sessions for a member with pagination (coach access only)"""
+    if not current_user or current_user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Not authorized")
+    
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        # Verify the coach has access to this member
+        cursor.execute("""
+            SELECT 1 FROM member_coach 
+            WHERE coach_id = %s AND member_id = %s
+        """, (current_user.get('id'), member_id))
+        
+        if not cursor.fetchone():
+            raise HTTPException(status_code=403, detail="Access denied to this member")
+        
+                # Get total count
+        cursor.execute("""
+            SELECT COUNT(*) FROM sessions
+            WHERE member_id = %s
+        """, (member_id,))
+        
+        count_result = cursor.fetchone()
+        print(f"Debug: count_result = {count_result}, type = {type(count_result)}")
+        
+        try:
+            if count_result is None:
+                total_sessions = 0
+            elif isinstance(count_result, dict):
+                # Handle dictionary result (like {'COUNT(*)': 21})
+                total_sessions = int(count_result.get('COUNT(*)', 0))
+            else:
+                # Handle tuple/list result
+                total_sessions = int(count_result[0]) if count_result[0] is not None else 0
+        except (IndexError, TypeError, ValueError) as e:
+            print(f"Error parsing count_result: {e}")
+            total_sessions = 0
+        
+        # Calculate offset
+        offset = (page - 1) * limit
+        
+        # Get sessions with pagination
+        cursor.execute("""
+            SELECT s.*, c.name as coach_name, g.name as gym_name,
+                   CASE 
+                       WHEN s.notes LIKE '%%Workout Type:%%' THEN 
+                           TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(s.notes, 'Workout Type:', -1), CHAR(10), 1))
+                       ELSE 'General Training'
+                   END as workout_type,
+                   CASE 
+                       WHEN s.notes LIKE '%%Exercises:%%' THEN 
+                           TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(s.notes, 'Exercises:', -1), CHAR(10), 1))
+                       ELSE 'No exercises specified'
+                   END as exercises
+            FROM sessions s 
+            LEFT JOIN coaches c ON s.coach_id = c.id 
+            LEFT JOIN gyms g ON s.gym_id = g.id
+            WHERE s.member_id = %s 
+            ORDER BY s.session_date DESC, s.session_time DESC
+            LIMIT %s OFFSET %s
+        """, (member_id, limit, offset))
+        
+        sessions_data = cursor.fetchall()
+        
+        # Convert to list of dictionaries
+        sessions = []
+        for row in sessions_data:
+            # Handle both dictionary and tuple results
+            if isinstance(row, dict):
+                session = {
+                    "id": row.get('id'),
+                    "member_id": row.get('member_id'),
+                    "coach_id": row.get('coach_id'),
+                    "gym_id": row.get('gym_id'),
+                    "session_date": row.get('session_date').strftime('%Y-%m-%d') if row.get('session_date') else None,
+                    "session_time": str(row.get('session_time')) if row.get('session_time') else None,
+                    "duration": row.get('duration'),
+                    "status": row.get('status'),
+                    "notes": row.get('notes'),
+                    "created_at": row.get('created_at').strftime('%Y-%m-%d %H:%M:%S') if row.get('created_at') else None,
+                    "coach_name": row.get('coach_name'),
+                    "gym_name": row.get('gym_name'),
+                    "workout": {
+                        "type": row.get('workout_type'),
+                        "exercises": row.get('exercises', '').split(',') if row.get('exercises') and row.get('exercises') != 'No exercises specified' else []
+                    }
+                }
+            else:
+                # Handle tuple results
+                session = {
+                    "id": row[0],
+                    "member_id": row[1],
+                    "coach_id": row[2],
+                    "gym_id": row[3],
+                    "session_date": row[4].strftime('%Y-%m-%d') if row[4] else None,
+                    "session_time": str(row[5]) if row[5] else None,
+                    "duration": row[6],
+                    "status": row[7],
+                    "notes": row[8],
+                    "created_at": row[9].strftime('%Y-%m-%d %H:%M:%S') if row[9] else None,
+                    "coach_name": row[10],
+                    "gym_name": row[11],
+                    "workout": {
+                        "type": row[12],
+                        "exercises": row[13].split(',') if row[13] and row[13] != 'No exercises specified' else []
+                    }
+                }
+            sessions.append(session)
+        
+        # Calculate if there are more pages
+        has_more = (offset + limit) < total_sessions
+        
+        return {
+            "sessions": sessions,
+            "total": total_sessions,
+            "page": page,
+            "limit": limit,
+            "has_more": has_more,
+            "total_pages": (total_sessions + limit - 1) // limit
+        }
+        
+    except Exception as e:
+        print(f"Error getting member sessions: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to get member sessions")
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
 @app.get("/api/member/coach")
 async def get_member_coach_info(current_user: dict = Depends(get_current_user_dependency)):
     """Get current member's coach information"""
@@ -4990,29 +5171,72 @@ async def chat(request: Request):
                 {
                     'role': 'system',
                     'content': (
-                        "You are a helpful assistant.\n\n"
-                        "Project PowerFit is a modern web-based gym management platform that connects gyms, coaches, and members.\n\n"
-                        "• Gyms can manage their staff and clients, monitor member progress, set up different membership types (like Basic, Premium, and VIP), track training sessions, and manage payments.\n"
-                        "• Coaches can view their schedule, assign training sessions, track the progress of the members they train, and adjust plans based on preferences.\n"
-                        "• Members can log in to see their coach, track past and upcoming training sessions, and manage personal information like training preferences and membership details.\n\n"
-                        "Be ready to help users with these common questions:\n\n"
-                        "• 'How do I log in?'  \n"
-                        "  → You log in with the username and password your gym provided. If you forgot them, ask your gym to reset your login.\n\n"
-                        "• 'How do I change my workout preferences?'  \n"
-                        "  → After logging in, go to the schedule page where you can update the types of exercises you like or the times you're available. Your coach will use this info to build a better plan for you.\n\n"
-                        "• 'How do I see my training schedule?'  \n"
-                        "  → You'll find a calendar or list on your dashboard showing all upcoming sessions. If something is missing, ask your coach or gym.\n\n"
-                        "• 'Can I change my coach?'  \n"
-                        "  → Coaches are usually assigned by the gym, but you can talk to your gym staff if you want to switch.\n\n"
-                        "• 'How do I see my progress?'  \n"
-                        "  → On your profile or dashboard, you'll find a progress section with a summary of your completed workouts, improvements, or coach feedback.\n\n"
-                        "• 'What membership do I have?'  \n"
-                        "  → You can check your membership details (like whether you're Basic, Premium, or VIP) on your profile. If you want to upgrade or change it, contact your gym.\n\n"
-                        "• 'How do payments work?'  \n"
-                        "  → Payments are handled by the gym. You can see your latest membership or session payments in your account area.\n\n"
-                        "• 'I need help!'  \n"
-                        "  → No problem! You can always message your coach or gym staff directly through the contact section.\n\n"
-                        "Answer these questions in a friendly, clear, and simple way, without using technical terms."
+                        "You are a helpful AI assistant for PowerFit, a comprehensive gym management platform.\n\n"
+                        "POWERFIT PLATFORM OVERVIEW:\n"
+                        "PowerFit is a modern web-based gym management system that connects gyms, coaches, and members with advanced AI-powered features.\n\n"
+                        "CORE FEATURES BY USER TYPE:\n\n"
+                        "🏢 GYMS:\n"
+                        "• Manage staff (coaches) and clients (members)\n"
+                        "• Monitor member progress and attendance\n"
+                        "• Set up membership tiers (Basic, Premium, VIP)\n"
+                        "• Track training sessions and payments\n"
+                        "• Generate reports and analytics\n"
+                        "• Export data to Excel\n"
+                        "• Manage coach assignments and performance\n"
+                        "• View revenue and membership statistics\n\n"
+                        "🏋️ COACHES:\n"
+                        "• View and manage training schedules\n"
+                        "• Assign personalized workout sessions\n"
+                        "• Track member progress and attendance\n"
+                        "• Set workout preferences and availability\n"
+                        "• Create custom workout plans with exercises\n"
+                        "• Monitor session completion rates\n"
+                        "• Communicate with members and gym staff\n"
+                        "• Access nutrition coaching tools (for Premium/VIP members)\n\n"
+                        "👤 MEMBERS:\n"
+                        "• View assigned coach and training schedule\n"
+                        "• Track workout progress and history\n"
+                        "• Set personal preferences and availability\n"
+                        "• Access nutrition tracking (Premium/VIP)\n"
+                        "• Use AI-powered features based on membership\n"
+                        "• Communicate with coaches and gym staff\n\n"
+                        "MEMBERSHIP TIERS:\n"
+                        "• Basic: Core gym access, session tracking, basic communication\n"
+                        "• Premium: All Basic features + AI nutrition analysis, food detection, meal planning\n"
+                        "• VIP: All Premium features + real-time workout classifier, advanced AI features\n\n"
+                        "AI-POWERED FEATURES:\n"
+                        "• AI Meal Planning: Personalized nutrition plans using Google Gemini\n"
+                        "• Food Detection: Analyze food photos for nutrition information\n"
+                        "• Real-time Workout Classifier: Identify exercises from photos (VIP/Premium)\n"
+                        "• Nutrition Analysis: USDA database integration for food nutrition\n"
+                        "• AI Chatbot: Intelligent assistance for all users\n\n"
+                        "COMMON QUESTIONS AND ANSWERS:\n\n"
+                        "🔐 LOGIN & ACCESS:\n"
+                        "• 'How do I log in?' → Use the email and password provided by your gym. Contact your gym if you forgot your credentials.\n\n"
+                        "📅 SCHEDULING & PREFERENCES:\n"
+                        "• 'How do I change my workout preferences?' → Go to your schedule page to update exercise preferences and availability times. Your coach uses this to create better plans.\n"
+                        "• 'How do I see my training schedule?' → Check your dashboard for upcoming sessions. Contact your coach or gym if sessions are missing.\n"
+                        "• 'Can I change my coach?' → Coaches are assigned by the gym. Contact gym staff to request a change.\n\n"
+                        "📊 PROGRESS & TRACKING:\n"
+                        "• 'How do I see my progress?' → Visit your progress page for workout history, attendance rates, and performance metrics.\n"
+                        "• 'How do I track my nutrition?' → Premium and VIP members can access the nutrition page for AI-powered meal planning and food analysis.\n\n"
+                        "💳 MEMBERSHIP & PAYMENTS:\n"
+                        "• 'What membership do I have?' → Check your profile for membership details (Basic/Premium/VIP). Contact your gym to upgrade.\n"
+                        "• 'How do payments work?' → Payments are handled directly by your gym. View payment history in your account.\n\n"
+                        "🤖 AI FEATURES:\n"
+                        "• 'How do I use the AI meal planner?' → Premium/VIP members can access AI meal planning on the nutrition page.\n"
+                        "• 'Can I analyze my food photos?' → Premium/VIP members can upload food photos for nutrition analysis.\n"
+                        "• 'What's the workout classifier?' → VIP/Premium members can use real-time exercise identification from photos.\n\n"
+                        "💬 COMMUNICATION:\n"
+                        "• 'How do I message my coach?' → Use the messages page to communicate with your coach or gym staff.\n"
+                        "• 'I need help!' → Message your coach or gym staff directly through the platform, or use this AI chatbot.\n\n"
+                        "📱 EXPORT & REPORTS:\n"
+                        "• 'Can I export my data?' → Yes, you can export your schedule, progress, and nutrition data to Excel files.\n"
+                        "• 'How do I get reports?' → Gyms can generate comprehensive reports on members, coaches, and revenue.\n\n"
+                        "TECHNICAL SUPPORT:\n"
+                        "• 'The app isn't working' → Try refreshing the page or contact your gym's technical support.\n"
+                        "• 'I can't access AI features' → AI features require Premium or VIP membership. Contact your gym to upgrade.\n\n"
+                        "Provide friendly, clear answers without technical jargon. Always encourage users to contact their gym staff for account-specific issues."
                     )
                 },
                 {'role': 'user', 'content': user_message}
@@ -5838,7 +6062,7 @@ async def assign_workout_from_schedule(
             session_date,
             session_time,
             duration,
-            notes
+            f"Workout Type: {workout_type}\n{notes}" if notes else f"Workout Type: {workout_type}"
         ))
         
         session_id = cursor.lastrowid
@@ -7423,6 +7647,239 @@ async def get_member_nutrition_plans_for_current_user(request: Request):
         print(f"Error getting member nutrition plans: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+# Get detailed nutrition plan with meal data
+@app.get("/api/member/nutrition/plans/{plan_id}/details")
+async def get_member_nutrition_plan_details(plan_id: int, request: Request):
+    """Get detailed nutrition plan with meal data for the current member user"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'member':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get detailed nutrition plan including plan_data
+        plan_query = """
+            SELECT 
+                id,
+                plan_name,
+                daily_calories,
+                daily_protein,
+                daily_carbs,
+                daily_fat,
+                notes,
+                plan_data,
+                created_at,
+                is_active as status
+            FROM nutrition_plans
+            WHERE id = %s AND member_id = %s
+        """
+        
+        cursor.execute(plan_query, (plan_id, user['id']))
+        plan = cursor.fetchone()
+        
+        if not plan:
+            raise HTTPException(status_code=404, detail="Plan not found or access denied")
+        
+        # Convert datetime objects
+        if plan['created_at']:
+            plan['created_at'] = plan['created_at'].isoformat()
+        plan['updated_at'] = plan['created_at']
+        plan['status'] = 'active' if plan['status'] else 'inactive'
+        
+        # Parse plan_data JSON if it exists
+        if plan['plan_data']:
+            try:
+                import json
+                plan['plan_data'] = json.loads(plan['plan_data'])
+            except (json.JSONDecodeError, TypeError):
+                plan['plan_data'] = None
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "plan": plan
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting nutrition plan details: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# Get member's selected nutrition plan
+@app.get("/api/member/nutrition/selected-plan")
+async def get_member_selected_plan(request: Request):
+    """Get the currently selected nutrition plan for the member"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'member':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Get member's selected plan
+        selected_plan_query = """
+            SELECT 
+                np.id,
+                np.plan_name,
+                np.daily_calories,
+                np.daily_protein,
+                np.daily_carbs,
+                np.daily_fat,
+                np.notes,
+                np.created_at,
+                np.is_active as status,
+                mps.is_default
+            FROM member_plan_selections mps
+            JOIN nutrition_plans np ON mps.selected_plan_id = np.id
+            WHERE mps.member_id = %s
+        """
+        
+        cursor.execute(selected_plan_query, (user['id'],))
+        selected_plan = cursor.fetchone()
+        
+        # If no selected plan, get the most recent plan
+        if not selected_plan:
+            recent_plan_query = """
+                SELECT 
+                    id,
+                    plan_name,
+                    daily_calories,
+                    daily_protein,
+                    daily_carbs,
+                    daily_fat,
+                    notes,
+                    created_at,
+                    is_active as status
+                FROM nutrition_plans
+                WHERE member_id = %s
+                ORDER BY created_at DESC
+                LIMIT 1
+            """
+            cursor.execute(recent_plan_query, (user['id'],))
+            selected_plan = cursor.fetchone()
+            
+            if selected_plan:
+                selected_plan['is_default'] = True
+                # Convert datetime objects
+                if selected_plan['created_at']:
+                    selected_plan['created_at'] = selected_plan['created_at'].isoformat()
+                selected_plan['status'] = 'active' if selected_plan['status'] else 'inactive'
+        
+        # If still no plan, return default values
+        if not selected_plan:
+            selected_plan = {
+                'id': None,
+                'plan_name': 'Default Plan',
+                'daily_calories': 2000,
+                'daily_protein': 150,
+                'daily_carbs': 250,
+                'daily_fat': 70,
+                'notes': 'Default nutrition goals',
+                'created_at': None,
+                'status': 'default',
+                'is_default': True
+            }
+        else:
+            # Convert datetime objects
+            if selected_plan['created_at']:
+                selected_plan['created_at'] = selected_plan['created_at'].isoformat()
+            selected_plan['status'] = 'active' if selected_plan['status'] else 'inactive'
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "plan": selected_plan
+        }
+        
+    except Exception as e:
+        print(f"Error getting member selected plan: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# Set member's selected nutrition plan
+@app.post("/api/member/nutrition/select-plan")
+async def select_member_plan(request: Request):
+    """Set a nutrition plan as the member's active plan"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'member':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        body = await request.json()
+        plan_id = body.get('plan_id')
+        
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Verify the plan belongs to this member
+        if plan_id:
+            verify_query = """
+                SELECT id FROM nutrition_plans 
+                WHERE id = %s AND member_id = %s
+            """
+            cursor.execute(verify_query, (plan_id, user['id']))
+            plan_exists = cursor.fetchone()
+            
+            if not plan_exists:
+                raise HTTPException(status_code=404, detail="Plan not found or access denied")
+        
+        # Check if member already has a selection
+        check_query = """
+            SELECT id FROM member_plan_selections 
+            WHERE member_id = %s
+        """
+        cursor.execute(check_query, (user['id'],))
+        existing_selection = cursor.fetchone()
+        
+        if existing_selection:
+            # Update existing selection
+            if plan_id:
+                update_query = """
+                    UPDATE member_plan_selections 
+                    SET selected_plan_id = %s, is_default = FALSE, updated_at = NOW()
+                    WHERE member_id = %s
+                """
+                cursor.execute(update_query, (plan_id, user['id']))
+            else:
+                # Set to default (no plan selected)
+                update_query = """
+                    UPDATE member_plan_selections 
+                    SET selected_plan_id = NULL, is_default = TRUE, updated_at = NOW()
+                    WHERE member_id = %s
+                """
+                cursor.execute(update_query, (user['id'],))
+        else:
+            # Create new selection
+            insert_query = """
+                INSERT INTO member_plan_selections 
+                (member_id, selected_plan_id, is_default, created_at, updated_at)
+                VALUES (%s, %s, %s, NOW(), NOW())
+            """
+            is_default = not bool(plan_id)
+            cursor.execute(insert_query, (user['id'], plan_id, is_default))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": "Plan selected successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error selecting member plan: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 # Member today's nutrition data endpoint
 @app.get("/api/member/nutrition/today")
 async def get_member_today_nutrition(request: Request):
@@ -7474,19 +7931,106 @@ async def get_member_today_nutrition(request: Request):
         cursor.execute(meals_query, (user['id'],))
         meals_data = cursor.fetchall()
         
+        # Get member's selected nutrition plan
+        selected_plan_query = """
+            SELECT 
+                np.id,
+                np.plan_name,
+                np.daily_calories,
+                np.daily_protein,
+                np.daily_carbs,
+                np.daily_fat,
+                np.notes,
+                np.is_active,
+                mps.is_default
+            FROM member_plan_selections mps
+            JOIN nutrition_plans np ON mps.selected_plan_id = np.id
+            WHERE mps.member_id = %s
+        """
+        
+        cursor.execute(selected_plan_query, (user['id'],))
+        selected_plan = cursor.fetchone()
+        
+        # If no selected plan, get the most recent plan
+        if not selected_plan:
+            recent_plan_query = """
+                SELECT 
+                    id,
+                    plan_name,
+                    daily_calories,
+                    daily_protein,
+                    daily_carbs,
+                    daily_fat,
+                    notes,
+                    is_active
+                FROM nutrition_plans
+                WHERE member_id = %s
+                ORDER BY created_at DESC
+                LIMIT 1
+            """
+            cursor.execute(recent_plan_query, (user['id'],))
+            selected_plan = cursor.fetchone()
+            
+            if selected_plan:
+                selected_plan['is_default'] = True
+        
+        # If still no plan, use default values
+        if not selected_plan:
+            selected_plan = {
+                'id': None,
+                'plan_name': 'Default Plan',
+                'daily_calories': 2000,
+                'daily_protein': 150,
+                'daily_carbs': 250,
+                'daily_fat': 70,
+                'notes': 'Default nutrition goals',
+                'is_active': 0,
+                'is_default': True
+            }
+        
+        # Calculate totals (handle None values)
+        total_calories = float(today_data['total_calories'] or 0)
+        total_protein = float(today_data['total_protein'] or 0)
+        total_carbs = float(today_data['total_carbs'] or 0)
+        total_fat = float(today_data['total_fat'] or 0)
+        
+        # Calculate progress percentages based on selected plan
+        calories_progress = (total_calories / selected_plan['daily_calories']) * 100 if selected_plan['daily_calories'] > 0 else 0
+        protein_progress = (total_protein / selected_plan['daily_protein']) * 100 if selected_plan['daily_protein'] > 0 else 0
+        carbs_progress = (total_carbs / selected_plan['daily_carbs']) * 100 if selected_plan['daily_carbs'] > 0 else 0
+        fat_progress = (total_fat / selected_plan['daily_fat']) * 100 if selected_plan['daily_fat'] > 0 else 0
+        
+        # Convert datetime objects for meals
+        for meal in meals_data:
+            if meal['created_at']:
+                meal['created_at'] = meal['created_at'].isoformat()
+        
         cursor.close()
         conn.close()
         
         return {
             "success": True,
             "today": {
-                "total_calories": float(today_data['total_calories'] or 0),
-                "total_protein": float(today_data['total_protein'] or 0),
-                "total_carbs": float(today_data['total_carbs'] or 0),
-                "total_fat": float(today_data['total_fat'] or 0),
+                "total_calories": total_calories,
+                "total_protein": total_protein,
+                "total_carbs": total_carbs,
+                "total_fat": total_fat,
                 "entries_count": int(today_data['entries_count'] or 0)
             },
-            "meals": meals_data
+            "goals": {
+                "daily_calorie_goal": selected_plan['daily_calories'],
+                "daily_protein_goal": selected_plan['daily_protein'],
+                "daily_carbs_goal": selected_plan['daily_carbs'],
+                "daily_fat_goal": selected_plan['daily_fat']
+            },
+            "progress": {
+                "calories": calories_progress,
+                "protein": protein_progress,
+                "carbs": carbs_progress,
+                "fat": fat_progress
+            },
+            "meals": meals_data,
+            "selected_plan": selected_plan
         }
         
     except Exception as e:
@@ -8806,16 +9350,22 @@ async def export_member_schedule(
 @app.get("/api/export/sessions/coach")
 async def export_coach_sessions(
     format: str = "xlsx",
+    dateRange: str = "all",
+    status: str = "all",
+    member: str = "all",
+    search: str = "",
+    searchType: str = "all",
     current_user: dict = Depends(get_current_user_dependency)
 ):
-    """Export coach sessions data to Excel"""
+    """Export coach sessions data to Excel with filters"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
         
         # Get coach ID from current user
-        coach_id = current_user.get('id')  # Changed from 'user_id' to 'id'
+        coach_id = current_user.get('id')
         
+        # Base query
         query = """
         SELECT 
             m.name as member_name,
@@ -8830,10 +9380,37 @@ async def export_coach_sessions(
         FROM sessions s
         JOIN members m ON s.member_id = m.id
         WHERE s.coach_id = %s
-        ORDER BY s.session_date DESC, s.session_time DESC
         """
+        params = [coach_id]
         
-        cursor.execute(query, [coach_id])
+        # Add date range filter
+        if dateRange != "all":
+            if dateRange == "today":
+                query += " AND s.session_date = CURDATE()"
+            elif dateRange == "week":
+                query += " AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+            elif dateRange == "month":
+                query += " AND s.session_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)"
+        
+        # Add status filter
+        if status != "all":
+            query += " AND s.status = %s"
+            params.append(status)
+        
+        # Add member filter
+        if member != "all":
+            query += " AND s.member_id = %s"
+            params.append(member)
+        
+        # Add search condition
+        if search:
+            query += " AND (m.name LIKE %s OR m.email LIKE %s OR s.notes LIKE %s)"
+            params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
+        
+        # Add order by
+        query += " ORDER BY s.session_date DESC, s.session_time DESC"
+        
+        cursor.execute(query, params)
         sessions = cursor.fetchall()
         
         # Convert to DataFrame
@@ -8854,7 +9431,7 @@ async def export_coach_sessions(
         return StreamingResponse(
             io.BytesIO(output.getvalue()),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=\"coach_sessions_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+            headers={"Content-Disposition": f"attachment; filename=\"coach_sessions_filtered_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
         )
         
     except Exception as e:
@@ -8865,10 +9442,15 @@ async def export_coach_sessions(
 
 @app.get("/api/export/sessions/gym")
 async def export_gym_sessions(
-    format: str = "xlsx",
-    request: Request = None
+    request: Request,
+    format: str = "xlsx"
 ):
     """Export gym sessions data to Excel"""
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
@@ -8889,10 +9471,11 @@ async def export_gym_sessions(
         FROM sessions s
         JOIN members m ON s.member_id = m.id
         JOIN coaches c ON s.coach_id = c.id
+        WHERE s.gym_id = %s
         ORDER BY s.session_date DESC, s.session_time DESC
         """
         
-        cursor.execute(query)
+        cursor.execute(query, [user["id"]])
         sessions = cursor.fetchall()
         
         # Convert to DataFrame
@@ -8924,23 +9507,28 @@ async def export_gym_sessions(
 
 @app.get("/api/export/members/coach")
 async def export_coach_members(
-    format: str = "xlsx",
-    current_user: dict = Depends(get_current_user_dependency)
+    request: Request,
+    format: str = "xlsx"
 ):
     """Export coach members data to Excel"""
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "coach":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
         
         # Get coach ID from current user
-        coach_id = current_user.get('id')
+        coach_id = user.get('id')
         
         query = """
         SELECT 
             m.name,
             m.email,
             m.membership_type,
-            m.join_date,
+            m.created_at,
             COUNT(s.id) as total_sessions,
             COUNT(CASE WHEN s.status = 'Completed' THEN 1 END) as completed_sessions,
             MAX(s.session_date) as last_session_date
@@ -8948,7 +9536,7 @@ async def export_coach_members(
         JOIN member_coach mc ON m.id = mc.member_id
         LEFT JOIN sessions s ON m.id = s.member_id AND s.coach_id = %s
         WHERE mc.coach_id = %s
-        GROUP BY m.id, m.name, m.email, m.membership_type, m.join_date
+        GROUP BY m.id, m.name, m.email, m.membership_type, m.created_at
         ORDER BY m.name
         """
         
@@ -8958,7 +9546,7 @@ async def export_coach_members(
         # Convert to DataFrame
         if not members:
             # Create empty DataFrame with the same columns
-            df = pd.DataFrame(columns=['name', 'email', 'membership_type', 'join_date', 'total_sessions', 'completed_sessions', 'last_session_date'])
+            df = pd.DataFrame(columns=['name', 'email', 'membership_type', 'created_at', 'total_sessions', 'completed_sessions', 'last_session_date'])
         else:
             df = pd.DataFrame(members)
         
@@ -8984,10 +9572,15 @@ async def export_coach_members(
 
 @app.get("/api/export/members/gym")
 async def export_gym_members(
-    format: str = "xlsx",
-    request: Request = None
+    request: Request,
+    format: str = "xlsx"
 ):
     """Export gym members data to Excel"""
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
@@ -9001,17 +9594,18 @@ async def export_gym_members(
             c.name as coach_name,
             c.email as coach_email,
             COUNT(s.id) as total_sessions,
-            COUNT(CASE WHEN s.status = 'completed' THEN 1 END) as completed_sessions,
+            COUNT(CASE WHEN s.status = 'Completed' THEN 1 END) as completed_sessions,
             MAX(s.session_date) as last_session_date
         FROM members m
         LEFT JOIN member_coach mc ON m.id = mc.member_id
         LEFT JOIN coaches c ON mc.coach_id = c.id
         LEFT JOIN sessions s ON m.id = s.member_id
+        WHERE m.gym_id = %s
         GROUP BY m.id, m.name, m.email, m.membership_type, m.created_at, c.name, c.email
         ORDER BY m.name
         """
         
-        cursor.execute(query)
+        cursor.execute(query, [user["id"]])
         members = cursor.fetchall()
         
         # Convert to DataFrame
@@ -9043,10 +9637,15 @@ async def export_gym_members(
 
 @app.get("/api/export/coaches/gym")
 async def export_gym_coaches(
-    format: str = "xlsx",
-    request: Request = None
+    request: Request,
+    format: str = "xlsx"
 ):
     """Export gym coaches data to Excel"""
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
@@ -9060,15 +9659,17 @@ async def export_gym_coaches(
             c.created_at,
             COUNT(DISTINCT m.id) as assigned_members,
             COUNT(s.id) as total_sessions,
-            COUNT(CASE WHEN s.status = 'completed' THEN 1 END) as completed_sessions
+            COUNT(CASE WHEN s.status = 'Completed' THEN 1 END) as completed_sessions
         FROM coaches c
-        LEFT JOIN members m ON c.id = m.coach_id
+        LEFT JOIN member_coach mc ON c.id = mc.coach_id
+        LEFT JOIN members m ON mc.member_id = m.id
         LEFT JOIN sessions s ON c.id = s.coach_id
+        WHERE c.gym_id = %s
         GROUP BY c.id, c.name, c.email, c.specialization, c.status, c.created_at
         ORDER BY c.name
         """
         
-        cursor.execute(query)
+        cursor.execute(query, [user["id"]])
         coaches = cursor.fetchall()
         
         # Convert to DataFrame
@@ -9102,15 +9703,16 @@ async def export_gym_coaches(
 async def export_coach_progress(
     format: str = "xlsx",
     time_range: str = "month",
+    member_id: str = "0",
     current_user: dict = Depends(get_current_user_dependency)
 ):
-    """Export coach progress data to Excel"""
+    """Export coach progress data to Excel with member filtering"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
         
         # Get coach ID from current user
-        coach_id = current_user.get('id')  # Changed from 'user_id' to 'id'
+        coach_id = current_user.get('id')
         
         # Calculate date range
         end_date = datetime.now()
@@ -9123,6 +9725,7 @@ async def export_coach_progress(
         else:
             start_date = end_date - timedelta(days=365)
         
+        # Base query
         query = """
         SELECT 
             m.name as member_name,
@@ -9136,17 +9739,24 @@ async def export_coach_progress(
         FROM sessions s
         JOIN members m ON s.member_id = m.id
         WHERE s.coach_id = %s AND s.session_date >= %s
-        ORDER BY s.session_date DESC, s.session_time DESC
         """
+        params = [coach_id, start_date.strftime('%Y-%m-%d')]
         
-        cursor.execute(query, [coach_id, start_date.strftime('%Y-%m-%d')])
+        # Add member filter if specific member is selected
+        if member_id != "0":
+            query += " AND s.member_id = %s"
+            params.append(member_id)
+        
+        query += " ORDER BY s.session_date DESC, s.session_time DESC"
+        
+        cursor.execute(query, params)
         sessions = cursor.fetchall()
         
         if not sessions:
-            raise HTTPException(status_code=404, detail="No progress data found")
-        
-        # Convert to DataFrame
-        df = pd.DataFrame(sessions)
+            # Create empty DataFrame with the same columns
+            df = pd.DataFrame(columns=['member_name', 'member_email', 'session_date', 'session_time', 'workout_type', 'status', 'duration', 'notes'])
+        else:
+            df = pd.DataFrame(sessions)
         
         # Create Excel file in memory
         output = io.BytesIO()
@@ -9159,7 +9769,7 @@ async def export_coach_progress(
         return StreamingResponse(
             io.BytesIO(output.getvalue()),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=\"coach_progress_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
+            headers={"Content-Disposition": f"attachment; filename=\"coach_progress_filtered_{datetime.now().strftime('%Y%m%d')}.xlsx\""}
         )
         
     except Exception as e:
@@ -9297,43 +9907,55 @@ async def export_member_nutrition(
 ):
     """Export member nutrition data to Excel"""
     try:
+        print(f"Export member nutrition called with current_user: {current_user}")  # Debug log
         conn = get_db_connection()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
         
         # Get member ID from current user
         member_id = current_user.get('id')  # Changed from 'user_id' to 'id'
+        print(f"Member ID: {member_id}")  # Debug log
         
         query = """
         SELECT 
-            created_at as entry_date,
-            meal_type,
-            COALESCE(custom_food_name, fi.name) as food_name,
-            quantity,
-            unit,
-            total_calories as calories,
-            total_protein as protein,
-            total_carbs as carbs,
-            total_fat as fat,
-            notes
+            nl.created_at as entry_date,
+            nl.meal_type,
+            COALESCE(nl.custom_food_name, fi.name) as food_name,
+            nl.quantity,
+            nl.unit,
+            nl.total_calories as calories,
+            nl.total_protein as protein,
+            nl.total_carbs as carbs,
+            nl.total_fat as fat,
+            nl.notes
         FROM nutrition_logs nl
         LEFT JOIN food_items fi ON nl.food_item_id = fi.id
         WHERE nl.member_id = %s
         ORDER BY nl.created_at DESC, nl.meal_type
         """
         
+        print(f"Executing query with member_id: {member_id}")  # Debug log
         cursor.execute(query, [member_id])
         entries = cursor.fetchall()
+        print(f"Found {len(entries)} nutrition entries")  # Debug log
         
         if not entries:
             # Create empty DataFrame with the same columns
             df = pd.DataFrame(columns=['entry_date', 'meal_type', 'food_name', 'quantity', 'unit', 'calories', 'protein', 'carbs', 'fat', 'notes'])
+            print("Created empty DataFrame")  # Debug log
         else:
             df = pd.DataFrame(entries)
+            print(f"Created DataFrame with {len(df)} rows")  # Debug log
         
         # Create Excel file in memory
+        print("Creating Excel file...")  # Debug log
         output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name='My Nutrition', index=False)
+        try:
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='My Nutrition', index=False)
+            print("Excel file created successfully")  # Debug log
+        except Exception as e:
+            print(f"Error creating Excel file: {str(e)}")  # Debug log
+            raise
         
         output.seek(0)
         
@@ -9345,6 +9967,10 @@ async def export_member_nutrition(
         )
         
     except Exception as e:
+        print(f"Export failed with error: {str(e)}")  # Debug log
+        print(f"Error type: {type(e)}")  # Debug log
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")  # Debug log
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
     finally:
         if 'conn' in locals():
@@ -9488,10 +10114,15 @@ async def export_member_dashboard(
 
 @app.get("/api/export/dashboard/gym")
 async def export_gym_dashboard(
-    format: str = "xlsx",
-    request: Request = None
+    request: Request,
+    format: str = "xlsx"
 ):
     """Export gym dashboard data to Excel"""
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
@@ -9511,11 +10142,12 @@ async def export_gym_dashboard(
         FROM sessions s
         JOIN members m ON s.member_id = m.id
         JOIN coaches c ON s.coach_id = c.id
+        WHERE s.gym_id = %s
         ORDER BY s.session_date DESC, s.session_time DESC
         LIMIT 50
         """
         
-        cursor.execute(query)
+        cursor.execute(query, [user["id"]])
         sessions = cursor.fetchall()
         
         # Convert to DataFrame
@@ -9547,10 +10179,15 @@ async def export_gym_dashboard(
 
 @app.get("/api/export/analytics/gym")
 async def export_gym_analytics(
-    format: str = "xlsx",
-    request: Request = None
+    request: Request,
+    format: str = "xlsx"
 ):
     """Export gym analytics data to Excel"""
+    # Get user from session
+    user = get_current_user(request)
+    if not user or user["user_type"] != "gym":
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
@@ -9567,11 +10204,12 @@ async def export_gym_analytics(
             ROUND(COUNT(CASE WHEN s.status = 'completed' THEN 1 END) * 100.0 / COUNT(s.id), 2) as completion_rate
         FROM coaches c
         LEFT JOIN sessions s ON c.id = s.coach_id
+        WHERE c.gym_id = %s
         GROUP BY c.id, c.name, c.email, c.specialization
         ORDER BY total_sessions DESC
         """
         
-        cursor.execute(query)
+        cursor.execute(query, [user["id"]])
         analytics = cursor.fetchall()
         
         # Convert to DataFrame
