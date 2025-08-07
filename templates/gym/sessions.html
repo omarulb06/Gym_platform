@@ -49,15 +49,29 @@
  <!-- Filters -->
  <div class="bg-white shadow rounded-lg mb-4 sm:mb-6">
  <div class="px-4 py-5 sm:p-4 sm:p-6">
- <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+ <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+ <!-- Search Bar -->
+ <div class="sm:col-span-2">
+ <label for="searchFilter" class="block text-sm font-medium text-gray-700">Search Member/Coach</label>
+ <div class="mt-1 relative">
+ <input type="text" 
+ id="searchFilter" 
+ placeholder="Type member or coach name..."
+ class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:border-indigo-500 sm:text-sm rounded-md">
+ <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+ <i class="fas fa-search text-gray-400"></i>
+ </div>
+ </div>
+ </div>
+
  <!-- Date Range -->
  <div>
  <label for="dateRange" class="block text-sm font-medium text-gray-700">Date Range</label>
  <select id="dateRange" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:border-indigo-500 sm:text-sm rounded-md">
+ <option value="all">All Time</option>
  <option value="today">Today</option>
  <option value="week">This Week</option>
  <option value="month">This Month</option>
- <option value="all">All Time</option>
  </select>
  </div>
 
@@ -72,22 +86,12 @@
  </select>
  </div>
 
- <!-- Member -->
- <div>
- <label for="memberFilter" class="block text-sm font-medium text-gray-700">Member</label>
- <select id="memberFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:border-indigo-500 sm:text-sm rounded-md">
- <option value="all">All Members</option>
- <!-- Members will be populated here -->
- </select>
- </div>
-
- <!-- Coach -->
- <div>
- <label for="coachFilter" class="block text-sm font-medium text-gray-700">Coach</label>
- <select id="coachFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:border-indigo-500 sm:text-sm rounded-md">
- <option value="all">All Coaches</option>
- <!-- Coaches will be populated here -->
- </select>
+ <!-- Clear Filters -->
+ <div class="flex items-end">
+ <button onclick="clearFilters()" 
+ class="w-full bg-gray-500 text-white px-3 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:outline-none transition-colors">
+ <i class="fas fa-times mr-2"></i>Clear Filters
+ </button>
  </div>
  </div>
  </div>
@@ -265,9 +269,9 @@
  sessionCard.onclick = () => viewSessionDetails(session.id);
  
  sessionCard.innerHTML = `
- <div class="text-sm font-medium text-gray-900">${session.time}</div>
- <div class="text-xs text-gray-500">${session.member.name}</div>
- <div class="text-xs text-gray-500">${session.coach.name}</div>
+ <div class="text-sm font-medium text-gray-900">${session.time || 'No time'}</div>
+ <div class="text-xs text-gray-500">${session.member.name || 'Unknown Member'}</div>
+ <div class="text-xs text-gray-500">${session.coach.name || 'Unknown Coach'}</div>
  <div class="mt-1">
  <span class="px-2 py-1 text-xs rounded-full ${
  session.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
@@ -286,33 +290,104 @@
  }
  }
 
+ // Store all sessions globally
+ let allSessions = [];
+ let filteredSessions = [];
+
  // Load sessions data
- async function loadSessionsData(filters = {}) {
+ async function loadSessionsData() {
  try {
- const queryParams = new URLSearchParams(filters).toString();
- const response = await fetch(`/api/gym/sessions?${queryParams}`);
- sessions = await response.json();
+ const response = await fetch('/api/gym/sessions');
+ allSessions = await response.json();
+ filteredSessions = [...allSessions];
+ applyFilters();
+ } catch (error) {
+ console.error('Error loading sessions data:', error);
+ }
+ }
+
+ // Apply filters to sessions
+ function applyFilters() {
+ const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
+ const dateRange = document.getElementById('dateRange').value;
+ const statusFilter = document.getElementById('statusFilter').value;
+
+ // Filter by search term (member or coach name)
+ let filtered = allSessions.filter(session => {
+ const memberName = session.member.name.toLowerCase();
+ const coachName = session.coach.name.toLowerCase();
+ return memberName.includes(searchTerm) || coachName.includes(searchTerm);
+ });
+
+ // Filter by date range
+ if (dateRange !== 'all') {
+ const today = new Date();
+ const todayStr = today.toISOString().split('T')[0];
  
- // Update sessions table
+ filtered = filtered.filter(session => {
+ const sessionDate = new Date(session.date);
+ 
+ switch (dateRange) {
+ case 'today':
+ return session.date === todayStr;
+ case 'week':
+ const weekAgo = new Date(today);
+ weekAgo.setDate(today.getDate() - 7);
+ return sessionDate >= weekAgo && sessionDate <= today;
+ case 'month':
+ const monthAgo = new Date(today);
+ monthAgo.setMonth(today.getMonth() - 1);
+ return sessionDate >= monthAgo && sessionDate <= today;
+ default:
+ return true;
+ }
+ });
+ }
+
+ // Filter by status
+ if (statusFilter !== 'all') {
+ filtered = filtered.filter(session => 
+ session.status.toLowerCase() === statusFilter.toLowerCase()
+ );
+ }
+
+ filteredSessions = filtered;
+ displaySessions(filteredSessions);
+ }
+
+ // Display sessions in table
+ function displaySessions(sessions) {
  const sessionsTable = document.getElementById('sessions-table');
  sessionsTable.innerHTML = '';
+ 
+ if (sessions.length === 0) {
+ sessionsTable.innerHTML = `
+ <tr>
+ <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+ <i class="fas fa-search text-2xl mb-2"></i>
+ <p>No sessions found matching your filters</p>
+ </td>
+ </tr>
+ `;
+ return;
+ }
  
  sessions.forEach(session => {
  const row = document.createElement('tr');
  row.innerHTML = `
  <td class="px-6 py-4 whitespace-nowrap">
- <div class="text-sm font-medium text-gray-900">${session.member.name}</div>
- <div class="text-sm text-gray-500">${session.member.email}</div>
+ <div class="text-sm font-medium text-gray-900">${session.member.name || 'Unknown Member'}</div>
+ <div class="text-sm text-gray-500">${session.member.email || 'No email'}</div>
  </td>
  <td class="px-6 py-4 whitespace-nowrap">
- <div class="text-sm font-medium text-gray-900">${session.coach.name}</div>
- <div class="text-sm text-gray-500">${session.coach.specialization}</div>
+ <div class="text-sm font-medium text-gray-900">${session.coach.name || 'Unknown Coach'}</div>
+ <div class="text-sm text-gray-500">${session.coach.specialization || 'No specialization'}</div>
  </td>
  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.date}</td>
  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.time}</td>
  <td class="px-6 py-4 whitespace-nowrap">
- <div class="text-sm text-gray-900">${session.workout.type}</div>
- <div class="text-sm text-gray-500">${session.workout.exercises.length} exercises</div>
+ <div class="text-sm text-gray-900">${session.workout.type || 'General Training'}</div>
+ <div class="text-sm text-gray-500">${session.workout.exercises ? session.workout.exercises.length : 0} exercises</div>
  </td>
  <td class="px-6 py-4 whitespace-nowrap">
  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
@@ -331,73 +406,42 @@
  `;
  sessionsTable.appendChild(row);
  });
- } catch (error) {
- console.error('Error loading sessions data:', error);
- }
  }
 
- // Load members for filter
- async function loadMembers() {
- try {
- const response = await fetch('/api/gym/members');
- const members = await response.json();
- 
- const memberFilter = document.getElementById('memberFilter');
- members.forEach(member => {
- const option = document.createElement('option');
- option.value = member.id;
- option.textContent = member.name;
- memberFilter.appendChild(option);
- });
- } catch (error) {
- console.error('Error loading members:', error);
- }
- }
 
- // Load coaches for filter
- async function loadCoaches() {
- try {
- const response = await fetch('/api/gym/coaches');
- const coaches = await response.json();
- 
- const coachFilter = document.getElementById('coachFilter');
- coaches.forEach(coach => {
- const option = document.createElement('option');
- option.value = coach.id;
- option.textContent = coach.name;
- coachFilter.appendChild(option);
- });
- } catch (error) {
- console.error('Error loading coaches:', error);
- }
- }
 
  // View session details
  function viewSessionDetails(sessionId) {
- const session = sessions.find(s => s.id === sessionId);
+ const session = filteredSessions.find(s => s.id === sessionId);
  if (!session) {
  console.error('Session not found');
  return;
  }
 
  const modal = document.getElementById('sessionModal');
- document.getElementById('modalMemberName').textContent = session.member.name;
- document.getElementById('modalMemberEmail').textContent = session.member.email;
- document.getElementById('modalCoachName').textContent = session.coach.name;
- document.getElementById('modalCoachSpecialization').textContent = session.coach.specialization;
+ document.getElementById('modalMemberName').textContent = session.member.name || 'Unknown Member';
+ document.getElementById('modalMemberEmail').textContent = session.member.email || 'No email';
+ document.getElementById('modalCoachName').textContent = session.coach.name || 'Unknown Coach';
+ document.getElementById('modalCoachSpecialization').textContent = session.coach.specialization || 'No specialization';
  document.getElementById('modalDateTime').textContent = `${session.date} at ${session.time}`;
  document.getElementById('modalDuration').textContent = `${session.duration} minutes`;
- document.getElementById('modalWorkoutType').textContent = session.workout.type;
+ document.getElementById('modalWorkoutType').textContent = session.workout.type || 'General Training';
  document.getElementById('modalStatus').textContent = session.status.charAt(0).toUpperCase() + session.status.slice(1);
 
  // Populate exercises
  const exercisesList = document.getElementById('modalExercises');
  exercisesList.innerHTML = '';
+ if (session.workout.exercises && session.workout.exercises.length > 0) {
  session.workout.exercises.forEach(exercise => {
  const li = document.createElement('li');
  li.textContent = exercise;
  exercisesList.appendChild(li);
  });
+ } else {
+ const li = document.createElement('li');
+ li.textContent = 'No exercises specified';
+ exercisesList.appendChild(li);
+ }
 
  modal.classList.remove('hidden');
  }
@@ -406,54 +450,51 @@
  document.getElementById('sessionModal').classList.add('hidden');
  }
 
+ // Clear filters function
+ function clearFilters() {
+ document.getElementById('searchFilter').value = '';
+ document.getElementById('dateRange').value = 'all';
+ document.getElementById('statusFilter').value = 'all';
+ applyFilters();
+ }
+
  // Add event listeners for filters
+ document.getElementById('searchFilter').addEventListener('input', () => {
+ applyFilters();
+ });
+
  document.getElementById('dateRange').addEventListener('change', () => {
- const filters = {
- date_range: document.getElementById('dateRange').value,
- status: document.getElementById('statusFilter').value,
- member: document.getElementById('memberFilter').value,
- coach: document.getElementById('coachFilter').value
- };
- loadSessionsData(filters);
+ applyFilters();
  });
 
  document.getElementById('statusFilter').addEventListener('change', () => {
- const filters = {
- date_range: document.getElementById('dateRange').value,
- status: document.getElementById('statusFilter').value,
- member: document.getElementById('memberFilter').value,
- coach: document.getElementById('coachFilter').value
- };
- loadSessionsData(filters);
+ applyFilters();
  });
 
- document.getElementById('memberFilter').addEventListener('change', () => {
- const filters = {
- date_range: document.getElementById('dateRange').value,
- status: document.getElementById('statusFilter').value,
- member: document.getElementById('memberFilter').value,
- coach: document.getElementById('coachFilter').value
- };
- loadSessionsData(filters);
- });
-
- document.getElementById('coachFilter').addEventListener('change', () => {
- const filters = {
- date_range: document.getElementById('dateRange').value,
- status: document.getElementById('statusFilter').value,
- member: document.getElementById('memberFilter').value,
- coach: document.getElementById('coachFilter').value
- };
- loadSessionsData(filters);
- });
+ // Load gym sidebar stats
+ async function loadGymSidebarStats() {
+ try {
+ const response = await fetch('/api/gym/dashboard');
+ const data = await response.json();
+ 
+ const sidebarTotalMembers = document.getElementById('sidebarTotalMembers');
+ const sidebarActiveCoaches = document.getElementById('sidebarActiveCoaches');
+ const sidebarTodaySessions = document.getElementById('sidebarTodaySessions');
+ 
+ if (sidebarTotalMembers) sidebarTotalMembers.textContent = data.stats.total_members || 0;
+ if (sidebarActiveCoaches) sidebarActiveCoaches.textContent = data.stats.active_coaches || 0;
+ if (sidebarTodaySessions) sidebarTodaySessions.textContent = data.stats.today_sessions || 0;
+ } catch (error) {
+ console.error('Error loading gym sidebar stats:', error);
+ }
+ }
 
  // Initialize page
  document.addEventListener('DOMContentLoaded', () => {
  setDefaultDateRange();
- loadMembers();
- loadCoaches();
  loadSessionsData();
  loadSchedule();
+ loadGymSidebarStats();
  });
 
  // Export gym sessions function

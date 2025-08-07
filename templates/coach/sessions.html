@@ -321,16 +321,46 @@
  searchTimeout = setTimeout(handleFilterChange, 300);
  });
 
+ // Load coach sidebar stats
+ async function loadCoachSidebarStats() {
+ try {
+ const response = await fetch('/api/coach/dashboard');
+ const data = await response.json();
+ 
+ const sidebarActiveMembers = document.getElementById('activeMembers');
+ const sidebarWeekSessions = document.getElementById('weekSessions');
+ const sidebarProgressBar = document.getElementById('progressBar');
+ 
+ if (sidebarActiveMembers) sidebarActiveMembers.textContent = data.stats.active_members || 0;
+ if (sidebarWeekSessions) sidebarWeekSessions.textContent = `${data.stats.week_sessions || 0} sessions`;
+ if (sidebarProgressBar) sidebarProgressBar.style.width = `${data.stats.performance_rating || 85}%`;
+ } catch (error) {
+ console.error('Error loading coach sidebar stats:', error);
+ }
+}
+
  // Load data when page loads
  document.addEventListener('DOMContentLoaded', () => {
  loadMembers();
  loadSessionsData();
- });
+ loadCoachSidebarStats(); // Add this line
+});
 
  // Export sessions function
  async function exportSessions(format) {
  try {
- const url = `/api/export/sessions/coach?format=${format}`;
+ // Get current filter values
+ const filters = {
+ dateRange: document.getElementById('dateRange').value,
+ status: document.getElementById('statusFilter').value,
+ member: document.getElementById('memberFilter').value,
+ search: document.getElementById('searchInput').value,
+ searchType: 'all'
+ };
+ 
+ // Build query string for filtered export
+ const queryParams = new URLSearchParams(filters).toString();
+ const url = `/api/export/sessions/coach?format=${format}&${queryParams}`;
  const response = await fetch(url);
  
  if (!response.ok) {
@@ -342,7 +372,7 @@
  const url2 = window.URL.createObjectURL(blob);
  const a = document.createElement('a');
  a.href = url2;
- a.download = `coach_sessions_${new Date().toISOString().split('T')[0]}.${format}`;
+ a.download = `coach_sessions_filtered_${new Date().toISOString().split('T')[0]}.${format}`;
  document.body.appendChild(a);
  a.click();
  window.URL.revokeObjectURL(url2);

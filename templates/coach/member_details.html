@@ -76,23 +76,24 @@
  </div>
  </div>
 
- <!-- Recent Sessions -->
+ <!-- All Sessions -->
  <div class="mt-8">
  <div class="flex justify-between items-center mb-4">
- <h2 class="text-lg font-medium text-gray-900">Recent Sessions</h2>
- <div class="flex items-center space-x-2 sm:space-x-4">
- <div class="relative">
- <input type="text" 
- id="sessionSearch" 
- placeholder="Search by workout type, date, or status..." 
- class="w-64 px-3 py-2 sm:px-4 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
- <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
- </div>
- </div>
+ <h2 class="text-lg font-medium text-gray-900">All Sessions</h2>
+                 <div class="flex items-center space-x-2 sm:space-x-4">
+                    <div class="relative">
+                        <input type="text"
+                            id="sessionSearch"
+                            placeholder="Search by workout type, date, or status..."
+                            class="w-64 px-3 py-2 sm:px-4 border border-gray-300 rounded-md focus:outline-none focus:outline-none focus:border-indigo-500">
+                        <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                    </div>
+                </div>
  </div>
  <div class="space-y-4" id="recentSessions">
  <div class="text-center text-gray-500">Loading sessions...</div>
  </div>
+ 
  </div>
  </div>
  </main>
@@ -277,7 +278,7 @@
  // Get member ID from URL
 const memberId = window.location.pathname.split('/').pop();
 // Get coach ID from template context
-const coachId = "{{ user.id }}";
+const coachId = parseInt("{{ user.id }}");
 
 console.log('=== MEMBER DETAILS PAGE DEBUG ===');
 console.log('Member ID from URL:', memberId);
@@ -397,6 +398,72 @@ async function fetchMemberPreferences() {
         } else {
             console.error('Preferences container not found!');
         }
+    }
+}
+
+ // Fetch all sessions for the member
+async function fetchAllSessions() {
+    console.log('=== FETCHING ALL SESSIONS ===');
+    console.log('Fetching all sessions for member ID:', memberId);
+    
+    try {
+        // Fetch all sessions with a large limit to get everything
+        const response = await fetch(`/api/coach/members/${memberId}/sessions?page=1&limit=1000`);
+        console.log('All sessions response status:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('All sessions response error:', errorText);
+            throw new Error('Failed to fetch all sessions');
+        }
+        
+        const data = await response.json();
+        console.log('=== RECEIVED ALL SESSIONS DATA ===');
+        console.log('All sessions data:', data);
+        
+        return data;
+    } catch (error) {
+        console.error('=== ERROR FETCHING ALL SESSIONS ===');
+        console.error('Error:', error);
+        console.error('Error message:', error.message);
+        throw error;
+    }
+}
+
+ // Load all sessions
+async function loadAllSessions() {
+    console.log('=== LOADING ALL SESSIONS ===');
+    
+    try {
+        const sessionsContainer = document.getElementById('recentSessions');
+        
+        sessionsContainer.innerHTML = '<div class="text-center text-gray-500">Loading all sessions...</div>';
+        
+        const data = await fetchAllSessions();
+        
+        if (!data || !data.sessions) {
+            throw new Error('Invalid response: missing sessions data');
+        }
+        
+        const { sessions, total } = data;
+        console.log('Sessions received:', sessions.length);
+        console.log('Total sessions:', total);
+        
+        // Store sessions globally for filtering
+        window.allSessions = sessions;
+        
+        // Display sessions
+        displaySessions(sessions);
+        
+        console.log('=== ALL SESSIONS LOADED ===');
+        console.log('Total sessions loaded:', sessions.length);
+        
+    } catch (error) {
+        console.error('=== ERROR LOADING ALL SESSIONS ===');
+        console.error('Error:', error);
+        
+        const sessionsContainer = document.getElementById('recentSessions');
+        sessionsContainer.innerHTML = `<div class="text-center text-red-500">Failed to load sessions: ${error.message}</div>`;
     }
 }
 
@@ -578,9 +645,9 @@ function updateMemberDetails(data) {
         console.log('Updated last session to:', lastSession);
     }
     
-    console.log('Calling displaySessions...');
-    // Display all sessions initially
-    displaySessions(recent_sessions || []);
+    console.log('Calling loadAllSessions...');
+    // Automatically fetch and display all sessions
+    loadAllSessions();
     
     console.log('=== MEMBER DETAILS UPDATE COMPLETE ===');
 }
@@ -612,18 +679,30 @@ function displaySessions(sessions) {
             console.log('Processing session:', session);
             
             // Ensure session has required properties
-            const sessionDate = session.date || 'Unknown date';
-            const sessionTime = session.time || 'Unknown time';
+            const sessionDate = session.session_date || 'Unknown date';
+            const sessionTime = session.session_time || 'Unknown time';
             const workoutType = session.workout?.type || 'Unknown workout';
             const sessionStatus = session.status || 'Unknown';
             const exercises = session.workout?.exercises || [];
+            const duration = session.duration || 'Unknown duration';
+            const coachName = session.coach_name || 'Unknown coach';
+            const gymName = session.gym_name || 'Unknown gym';
+            const notes = session.notes || 'No notes';
+            const createdDate = session.created_at || 'Unknown';
+            const sessionId = session.id || 'Unknown';
             
             console.log('Session processed data:', {
+                id: sessionId,
                 date: sessionDate,
                 time: sessionTime,
                 type: workoutType,
                 status: sessionStatus,
-                exercises: exercises
+                exercises: exercises,
+                duration: duration,
+                coach: coachName,
+                gym: gymName,
+                notes: notes,
+                created: createdDate
             });
             
             const statusClass = sessionStatus.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
@@ -631,26 +710,67 @@ function displaySessions(sessions) {
                                'bg-blue-100 text-blue-800';
             
             const exercisesHTML = exercises.length > 0 ? `
-                <div class="mt-2">
-                    <h4 class="text-sm font-medium text-gray-700">Exercises:</h4>
-                    <ul class="mt-1 text-sm text-gray-600">
-                        ${exercises.map(exercise => `<li>${exercise}</li>`).join('')}
+                <div class="mt-3">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Exercises:</h4>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        ${exercises.map(exercise => `<li class="flex items-center">
+                            <span class="w-2 h-2 bg-indigo-400 rounded-full mr-2"></span>
+                            ${exercise}
+                        </li>`).join('')}
                     </ul>
                 </div>
             ` : '';
             
+            const notesHTML = notes && notes !== 'No notes' ? `
+                <div class="mt-3">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Notes:</h4>
+                    <p class="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">${notes}</p>
+                </div>
+            ` : '';
+            
             return `
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-medium text-gray-900">${sessionDate} at ${sessionTime}</h3>
-                            <p class="text-sm text-gray-500">${workoutType}</p>
+                <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h3 class="text-lg font-semibold text-gray-900">${sessionDate} at ${sessionTime}</h3>
+                                <span class="px-3 py-1 text-xs rounded-full ${statusClass} font-medium">
+                                    ${sessionStatus.charAt(0).toUpperCase() + sessionStatus.slice(1)}
+                                </span>
+                            </div>
+                            <p class="text-md text-gray-700 font-medium">${workoutType}</p>
                         </div>
-                        <span class="px-2 py-1 text-sm rounded-full ${statusClass}">
-                            ${sessionStatus.charAt(0).toUpperCase() + sessionStatus.slice(1)}
-                        </span>
+                        <div class="text-right text-sm text-gray-500">
+                            <div>ID: ${sessionId}</div>
+                            <div>Created: ${createdDate}</div>
+                        </div>
                     </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="space-y-2">
+                            <div class="flex items-center text-sm">
+                                <span class="font-medium text-gray-700 w-20">Duration:</span>
+                                <span class="text-gray-600">${duration}</span>
+                            </div>
+                            <div class="flex items-center text-sm">
+                                <span class="font-medium text-gray-700 w-20">Coach:</span>
+                                <span class="text-gray-600">${coachName}</span>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center text-sm">
+                                <span class="font-medium text-gray-700 w-20">Gym:</span>
+                                <span class="text-gray-600">${gymName}</span>
+                            </div>
+                            <div class="flex items-center text-sm">
+                                <span class="font-medium text-gray-700 w-20">Member ID:</span>
+                                <span class="text-gray-600">${session.member_id || 'Unknown'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
                     ${exercisesHTML}
+                    ${notesHTML}
                 </div>
             `;
         }).join('');
@@ -673,13 +793,13 @@ document.getElementById('sessionSearch').addEventListener('input', function(e) {
     const filteredSessions = window.allSessions.filter(session => {
         const matches = (
             session.workout.type.toLowerCase().includes(searchTerm) ||
-            session.date.toLowerCase().includes(searchTerm) ||
+            session.session_date.toLowerCase().includes(searchTerm) ||
             session.status.toLowerCase().includes(searchTerm) ||
             session.workout.exercises.some(exercise => 
                 exercise.toLowerCase().includes(searchTerm)
             )
         );
-        console.log(`Session ${session.date} matches:`, matches);
+        console.log(`Session ${session.session_date} matches:`, matches);
         return matches;
     });
     
@@ -710,6 +830,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Fetch member details immediately
     fetchMemberDetails();
+    
+
     
     // Enhanced Modal logic with Schedule View
     const assignBtn = document.getElementById('assignBestWorkoutBtn');
@@ -1038,7 +1160,7 @@ document.addEventListener('DOMContentLoaded', function() {
  <p class="text-xs text-gray-500">${preferenceText}</p>
  </div>
  <div class="text-right">
- <div class="text-lg font-bold text-green-600">#{index + 1}</div>
+ <div class="text-lg font-bold text-green-600">${index + 1}</div>
  <div class="text-xs text-gray-500">Score: ${match.preference_score}</div>
  <button class="mt-1 bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700">
  Assign
@@ -1091,7 +1213,7 @@ document.addEventListener('DOMContentLoaded', function() {
  try {
  const data = {
  coach_id: coachId,
- member_id: memberId,
+ member_id: parseInt(memberId),
  session_date: date,
  session_time: timeStr,
  duration: parseInt(formData.get('duration'), 10),
@@ -1099,13 +1221,38 @@ document.addEventListener('DOMContentLoaded', function() {
  notes: formData.get('notes')
  };
 
+ console.log('=== ASSIGNING WORKOUT FROM SCHEDULE ===');
+ console.log('Sending data:', data);
+ console.log('Coach ID type:', typeof coachId, 'Value:', coachId);
+ console.log('Member ID type:', typeof memberId, 'Value:', memberId);
+ console.log('Session date:', date);
+ console.log('Session time:', timeStr);
+ console.log('Duration:', parseInt(formData.get('duration'), 10));
+ console.log('Workout type:', formData.get('workout_type'));
+
  const res = await fetch('/api/coach/assign_workout_from_schedule', {
  method: 'POST',
  headers: {'Content-Type': 'application/json'},
  body: JSON.stringify(data)
  });
 
+ console.log('Response status:', res.status);
+ console.log('Response headers:', Object.fromEntries(res.headers.entries()));
+
+ if (!res.ok) {
+ const errorText = await res.text();
+ console.error('API Error Response:', errorText);
+ try {
+ const errorData = JSON.parse(errorText);
+ alert(`Failed to assign session: ${errorData.detail || errorData.message || 'Unknown error'}`);
+ } catch (e) {
+ alert(`Failed to assign session: ${errorText || 'Unknown error'}`);
+ }
+ return;
+ }
+
  const result = await res.json();
+ console.log('API Success Response:', result);
 
  if (result.success) {
  alert('Session assigned successfully!');
@@ -1118,6 +1265,24 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('Error assigning session:', error);
     alert('Error assigning session: ' + error.message);
 }
+}
+
+// Load coach sidebar stats
+async function loadCoachSidebarStats() {
+ try {
+ const response = await fetch('/api/coach/dashboard');
+ const data = await response.json();
+ 
+ const sidebarActiveMembers = document.getElementById('activeMembers');
+ const sidebarWeekSessions = document.getElementById('weekSessions');
+ const sidebarProgressBar = document.getElementById('progressBar');
+ 
+ if (sidebarActiveMembers) sidebarActiveMembers.textContent = data.stats.active_members || 0;
+ if (sidebarWeekSessions) sidebarWeekSessions.textContent = `${data.stats.week_sessions || 0} sessions`;
+ if (sidebarProgressBar) sidebarProgressBar.style.width = `${data.stats.performance_rating || 85}%`;
+ } catch (error) {
+ console.error('Error loading coach sidebar stats:', error);
+ }
 }
 });
 </script>

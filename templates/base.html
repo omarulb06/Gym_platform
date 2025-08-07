@@ -286,9 +286,68 @@
  }
  }
 
+ // Load gym sidebar stats
+ async function loadGymSidebarStats() {
+ try {
+ console.log('Loading gym sidebar stats...');
+ const response = await fetch('/api/gym/dashboard');
+ if (!response.ok) {
+ throw new Error(`HTTP error! status: ${response.status}`);
+ }
+ const data = await response.json();
+ console.log('Gym dashboard data:', data);
+ 
+ // Update sidebar stats if they exist
+ const sidebarTotalMembers = document.getElementById('sidebarTotalMembers');
+ const sidebarActiveCoaches = document.getElementById('sidebarActiveCoaches');
+ const sidebarTodaySessions = document.getElementById('sidebarTodaySessions');
+ 
+ console.log('Sidebar elements found:', {
+ sidebarTotalMembers: !!sidebarTotalMembers,
+ sidebarActiveCoaches: !!sidebarActiveCoaches,
+ sidebarTodaySessions: !!sidebarTodaySessions
+ });
+ 
+ if (sidebarTotalMembers && data.stats) {
+ const totalMembers = data.stats.total_members || 0;
+ sidebarTotalMembers.textContent = totalMembers;
+ console.log('Updated sidebar total members:', totalMembers);
+ }
+ if (sidebarActiveCoaches && data.stats) {
+ const activeCoaches = data.stats.active_coaches || 0;
+ sidebarActiveCoaches.textContent = activeCoaches;
+ console.log('Updated sidebar active coaches:', activeCoaches);
+ }
+ if (sidebarTodaySessions && data.stats) {
+ const todaySessions = data.stats.today_sessions || 0;
+ sidebarTodaySessions.textContent = todaySessions;
+ console.log('Updated sidebar today sessions:', todaySessions);
+ }
+ } catch (error) {
+ console.error('Error loading gym sidebar stats:', error);
+ }
+ }
+
  // Smooth page transitions
  document.addEventListener('DOMContentLoaded', function() {
  loadUserData();
+ 
+ // Load gym sidebar stats if user is a gym (with delay to ensure sidebar is loaded)
+ setTimeout(() => {
+ // Check if this is a gym page by looking for gym-specific sidebar elements or URL
+ const isGymPage = document.getElementById('sidebarTotalMembers') || 
+ document.getElementById('sidebarActiveCoaches') || 
+ document.getElementById('sidebarTodaySessions') ||
+ document.querySelector('[href*="/gym/"]') ||
+ window.location.pathname.includes('/gym/');
+ 
+ if (isGymPage) {
+ console.log('Gym page detected, loading sidebar stats...');
+ loadGymSidebarStats();
+ } else {
+ console.log('Not a gym page, skipping sidebar stats load');
+ }
+ }, 100);
  
  // Add hover effects to cards
  const cards = document.querySelectorAll('.bg-white, .bg-gray-50');

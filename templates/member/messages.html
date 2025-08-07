@@ -109,4 +109,30 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+// Load member sidebar stats
+async function loadMemberSidebarStats() {
+ try {
+ const response = await fetch('/api/member/dashboard');
+ const data = await response.json();
+ 
+ const sidebarWeekSessions = document.getElementById('weekSessions');
+ const sidebarStreakDays = document.getElementById('streakDays');
+ const sidebarProgressPercent = document.getElementById('progressPercent');
+ const sidebarProgressBar = document.getElementById('progressBar');
+ 
+ if (sidebarWeekSessions) sidebarWeekSessions.textContent = `${data.stats.week_sessions || 0} sessions`;
+ if (sidebarStreakDays) sidebarStreakDays.textContent = `${data.stats.streak_days || 0} days`;
+ if (sidebarProgressPercent) sidebarProgressPercent.textContent = `${data.stats.week_progress || 0}%`;
+ if (sidebarProgressBar) sidebarProgressBar.style.width = `${data.stats.week_progress || 0}%`;
+ } catch (error) {
+ console.error('Error loading member sidebar stats:', error);
+ }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+ loadMemberSidebarStats(); // Add this line
+});
+</script>
 {% endblock %} 

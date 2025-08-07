@@ -124,17 +124,19 @@ def init_db():
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 member_id INT NOT NULL,
                 meal_type ENUM('breakfast', 'lunch', 'dinner', 'snack') NOT NULL,
-                food_name VARCHAR(200) NOT NULL,
+                custom_food_name VARCHAR(200),
+                food_item_id INT,
                 quantity DECIMAL(7,2) NOT NULL,
                 unit ENUM('grams', 'ml', 'pieces', 'cups', 'tablespoons', 'serving') DEFAULT 'grams',
-                calories DECIMAL(7,2) NOT NULL,
-                protein DECIMAL(7,2) DEFAULT 0,
-                carbs DECIMAL(7,2) DEFAULT 0,
-                fat DECIMAL(7,2) DEFAULT 0,
+                total_calories DECIMAL(7,2) NOT NULL,
+                total_protein DECIMAL(7,2) DEFAULT 0,
+                total_carbs DECIMAL(7,2) DEFAULT 0,
+                total_fat DECIMAL(7,2) DEFAULT 0,
                 photo_path VARCHAR(500),
                 notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (member_id) REFERENCES members(id),
+                FOREIGN KEY (food_item_id) REFERENCES food_items(id),
                 INDEX idx_member_date (member_id, created_at)
             )
         """)
@@ -220,6 +222,23 @@ def init_db():
                 INDEX idx_member (member_id),
                 INDEX idx_coach (coach_id),
                 INDEX idx_created (created_at)
+            )
+        """)
+
+        # Member plan selections - tracks which plan each member has selected
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS member_plan_selections (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_id INT NOT NULL,
+                selected_plan_id INT,
+                is_default BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (member_id) REFERENCES members(id),
+                FOREIGN KEY (selected_plan_id) REFERENCES nutrition_plans(id) ON DELETE SET NULL,
+                UNIQUE KEY unique_member_selection (member_id),
+                INDEX idx_member (member_id),
+                INDEX idx_plan (selected_plan_id)
             )
         """)
 

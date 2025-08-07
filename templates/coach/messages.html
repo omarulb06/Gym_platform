@@ -109,4 +109,28 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+// Load coach sidebar stats
+async function loadCoachSidebarStats() {
+ try {
+ const response = await fetch('/api/coach/dashboard');
+ const data = await response.json();
+ 
+ const sidebarActiveMembers = document.getElementById('activeMembers');
+ const sidebarWeekSessions = document.getElementById('weekSessions');
+ const sidebarProgressBar = document.getElementById('progressBar');
+ 
+ if (sidebarActiveMembers) sidebarActiveMembers.textContent = data.stats.active_members || 0;
+ if (sidebarWeekSessions) sidebarWeekSessions.textContent = `${data.stats.week_sessions || 0} sessions`;
+ if (sidebarProgressBar) sidebarProgressBar.style.width = `${data.stats.performance_rating || 85}%`;
+ } catch (error) {
+ console.error('Error loading coach sidebar stats:', error);
+ }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+ loadCoachSidebarStats(); // Add this line
+});
+</script>
 {% endblock %} 

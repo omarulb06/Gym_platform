@@ -109,4 +109,26 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+ // Load gym sidebar stats
+ async function loadGymSidebarStats() {
+ try {
+ const response = await fetch('/api/gym/dashboard');
+ const data = await response.json();
+ 
+ const sidebarTotalMembers = document.getElementById('sidebarTotalMembers');
+ const sidebarActiveCoaches = document.getElementById('sidebarActiveCoaches');
+ const sidebarTodaySessions = document.getElementById('sidebarTodaySessions');
+ 
+ if (sidebarTotalMembers) sidebarTotalMembers.textContent = data.stats.total_members || 0;
+ if (sidebarActiveCoaches) sidebarActiveCoaches.textContent = data.stats.active_coaches || 0;
+ if (sidebarTodaySessions) sidebarTodaySessions.textContent = data.stats.today_sessions || 0;
+ } catch (error) {
+ console.error('Error loading gym sidebar stats:', error);
+ }
+ }
+
+ // Load sidebar stats when page loads
+ document.addEventListener('DOMContentLoaded', loadGymSidebarStats);
+</script>
 {% endblock %} 
