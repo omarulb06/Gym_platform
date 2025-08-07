@@ -776,7 +776,6 @@ async def get_login_page():
                 <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
                         id="role" name="role" required>
                     <option value="">Select Role</option>
-                    <option value="admin">Admin</option>
                     <option value="gym">Gym</option>
                     <option value="coach">Coach</option>
                     <option value="member">Member</option>
@@ -7708,6 +7707,113 @@ async def get_member_nutrition_plan_details(plan_id: int, request: Request):
         raise
     except Exception as e:
         print(f"Error getting nutrition plan details: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+# Get member's selected nutrition plan (for coaches)
+@app.get("/api/coach/nutrition/member/{member_id}/selected-plan")
+async def get_coach_member_selected_plan(member_id: int, request: Request):
+    """Get the currently selected nutrition plan for a member (coach access)"""
+    user = get_current_user(request)
+    if not user or user.get('user_type') != 'coach':
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        # Verify the member belongs to this coach
+        coach_member_query = """
+            SELECT mc.member_id 
+            FROM member_coach mc 
+            WHERE mc.coach_id = %s AND mc.member_id = %s
+        """
+        cursor.execute(coach_member_query, (user['id'], member_id))
+        coach_member = cursor.fetchone()
+        
+        if not coach_member:
+            raise HTTPException(status_code=403, detail="Member not assigned to this coach")
+        
+        # Get member's selected plan
+        selected_plan_query = """
+            SELECT 
+                np.id,
+                np.plan_name,
+                np.daily_calories,
+                np.daily_protein,
+                np.daily_carbs,
+                np.daily_fat,
+                np.notes,
+                np.created_at,
+                np.is_active as status,
+                mps.is_default
+            FROM member_plan_selections mps
+            JOIN nutrition_plans np ON mps.selected_plan_id = np.id
+            WHERE mps.member_id = %s
+        """
+        
+        cursor.execute(selected_plan_query, (member_id,))
+        selected_plan = cursor.fetchone()
+        
+        # If no selected plan, get the most recent plan
+        if not selected_plan:
+            recent_plan_query = """
+                SELECT 
+                    id,
+                    plan_name,
+                    daily_calories,
+                    daily_protein,
+                    daily_carbs,
+                    daily_fat,
+                    notes,
+                    created_at,
+                    is_active as status
+                FROM nutrition_plans
+                WHERE member_id = %s
+                ORDER BY created_at DESC
+                LIMIT 1
+            """
+            cursor.execute(recent_plan_query, (member_id,))
+            selected_plan = cursor.fetchone()
+            
+            if selected_plan:
+                selected_plan['is_default'] = True
+                # Convert datetime objects
+                if selected_plan['created_at']:
+                    selected_plan['created_at'] = selected_plan['created_at'].isoformat()
+                selected_plan['status'] = 'active' if selected_plan['status'] else 'inactive'
+        
+        # If still no plan, return default values
+        if not selected_plan:
+            selected_plan = {
+                'id': None,
+                'plan_name': 'Default Plan',
+                'daily_calories': 2000,
+                'daily_protein': 150,
+                'daily_carbs': 250,
+                'daily_fat': 70,
+                'notes': 'Default nutrition goals',
+                'created_at': None,
+                'status': 'default',
+                'is_default': True
+            }
+        else:
+            # Convert datetime objects
+            if selected_plan['created_at']:
+                selected_plan['created_at'] = selected_plan['created_at'].isoformat()
+            selected_plan['status'] = 'active' if selected_plan['status'] else 'inactive'
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "success": True,
+            "plan": selected_plan
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting coach member selected plan: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 # Get member's selected nutrition plan
