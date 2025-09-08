@@ -1,3 +1,4 @@
+# Hi, I’m Omar 👋. This project was developed as part of an academic program 🎓 at the University of Haifa 🏫 under the supervision of Prof. Roi Poranne 👨‍🏫.
 # PowerFit - Gym Management Platform
 
 A modern web-based gym management system that connects gyms, coaches, and members in a seamless platform.
